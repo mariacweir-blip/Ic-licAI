@@ -14,7 +14,7 @@ class PDF(FPDF):
         self.set_text_color(0, 0, 0)
         self.set_font("Helvetica", "", 9)
         self.set_xy(15, 22)
-        self.cell(0, 6, f"Generated {datetime.datetime.utcnow().isoformat()} (UTC) • IC-LicAI Demo", ln=1)
+        self.cell(0, 6, f"Generated {datetime.datetime.utcnow().isoformat()} (UTC) - IC-LicAI Demo", ln=1)
         self.set_draw_color(*PRIMARY)
         self.set_line_width(0.4)
         self.line(15, 30, 195, 30)
@@ -40,7 +40,7 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     pdf.add_page(); pdf.header_title = "Intangible Capital Map (4-Leaf)"
     pdf.set_font("Helvetica", "", 10)
     for leaf, items in (data.get("ic_map") or {}).items():
-        pdf.set_font("Helvetica", "B", 11); pdf.cell(0, 7, f"• {leaf}", ln=1)
+        pdf.set_font("Helvetica", "B", 11); pdf.cell(0, 7, f"* {leaf}", ln=1)
         pdf.set_font("Helvetica", "", 10)
         for it in items[:6]:
             pdf.cell(6); pdf.multi_cell(0, 6, f"- {it}")
@@ -59,7 +59,7 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     # Licensing options
     pdf.add_page(); pdf.header_title = "Licensing Options (advisory)"
     for opt in data.get("licensing", []):
-        pdf.set_font("Helvetica", "B", 11); pdf.cell(0, 7, f"• {opt['model']}", ln=1)
+        pdf.set_font("Helvetica", "B", 11); pdf.cell(0, 7, f"* {opt['model']}", ln=1)
         pdf.set_font("Helvetica", "", 10)
         pdf.cell(6); pdf.multi_cell(0, 6, opt["notes"])
         pdf.ln(1)
