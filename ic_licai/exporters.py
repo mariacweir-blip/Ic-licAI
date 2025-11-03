@@ -6,19 +6,17 @@ import io, json, datetime
 PRIMARY = (10, 38, 64)  # #0A2640
 
 class PDF(FPDF):
-    def _bullet(pdf: FPDF, text: str, indent: int = 10):
+    def _bullet(self: text: str, indent: int = 10):
     """
     Safe indented line: moves cursor to left margin + indent and
     uses an explicit width that always fits the page.
     """
     # Move to a safe X position: left margin + indent
-    pdf.set_x(pdf.l_margin + indent)
-    # Compute usable width from that X to right margin
-    usable_w = pdf.w - pdf.r_margin - pdf.get_x()
-    if usable_w < 20:  # belt-and-braces fallback
-        pdf.set_x(pdf.l_margin)
-        usable_w = pdf.w - pdf.l_margin - pdf.r_margin
-    pdf.multi_cell(usable_w, 6, text)
+    self.set_x(self.l_margin + indent)
+    usable_w = self.w - self.r_margin - self.get_x()
+    if usable_w < 20:
+       self.set_x(self.l_margin)
+    self.multi_cell(usable_w, 6, text)
     def header(self):
         self.set_text_color(*PRIMARY)
         self.set_font("Helvetica", "B", 16)
