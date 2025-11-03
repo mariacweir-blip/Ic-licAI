@@ -6,7 +6,7 @@ import io, json, datetime
 PRIMARY = (10, 38, 64)  # #0A2640
 
 class PDF(FPDF):
-    def _bullet(self: text: str, indent: int = 10):
+    def _bullet(self, text: str, indent: int = 10):
     """
     Safe indented line: moves cursor to left margin + indent and
     uses an explicit width that always fits the page.
