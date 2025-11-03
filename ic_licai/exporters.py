@@ -6,6 +6,19 @@ import io, json, datetime
 PRIMARY = (10, 38, 64)  # #0A2640
 
 class PDF(FPDF):
+    def _bullet(pdf: FPDF, text: str, indent: int = 10):
+    """
+    Safe indented line: moves cursor to left margin + indent and
+    uses an explicit width that always fits the page.
+    """
+    # Move to a safe X position: left margin + indent
+    pdf.set_x(pdf.l_margin + indent)
+    # Compute usable width from that X to right margin
+    usable_w = pdf.w - pdf.r_margin - pdf.get_x()
+    if usable_w < 20:  # belt-and-braces fallback
+        pdf.set_x(pdf.l_margin)
+        usable_w = pdf.w - pdf.l_margin - pdf.r_margin
+    pdf.multi_cell(usable_w, 6, text)
     def header(self):
         self.set_text_color(*PRIMARY)
         self.set_font("Helvetica", "B", 16)
@@ -43,7 +56,7 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
         pdf.set_font("Helvetica", "B", 11); pdf.cell(0, 7, f"* {leaf}", ln=1)
         pdf.set_font("Helvetica", "", 10)
         for it in items[:6]:
-            pdf.cell(6); pdf.multi_cell(0, 6, f"- {it}")
+            _bullet(pdf, f"- {it}")
         pdf.ln(2)
 
     # 10 Steps readiness
@@ -53,7 +66,7 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
         pdf.cell(0, 6, f"Step {row['step']}: {row['name']} (score {row['score']}/3)", ln=1)
         pdf.set_font("Helvetica", "", 10)
         for t in row["tasks"]:
-            pdf.cell(6); pdf.multi_cell(0, 6, f"- {t}")
+            _bullet(pdf, f"- {t}")
         pdf.ln(2)
 
     # Licensing options
@@ -61,7 +74,7 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     for opt in data.get("licensing", []):
         pdf.set_font("Helvetica", "B", 11); pdf.cell(0, 7, f"* {opt['model']}", ln=1)
         pdf.set_font("Helvetica", "", 10)
-        pdf.cell(6); pdf.multi_cell(0, 6, opt["notes"])
+        _bullet(pdf, opt["notes"])
         pdf.ln(1)
 
     # Governance note
