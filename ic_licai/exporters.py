@@ -98,7 +98,8 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     _wrap_text(pdf, "This report is generated using an advisory-first workflow with human approval. Evidence sources and decisions are auditable.")
 
     # Return PDF bytes (fpdf2)
-    return pdf.output(dest="S").encode("latin-1")
+    data = pdf.output(dest="S")
+    return data.encode("latin-1") if isinstance(data, str) else data
 
 
 def export_xlsx(ic_map: Dict[str, List[str]]) -> bytes:
