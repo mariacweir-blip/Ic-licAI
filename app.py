@@ -77,7 +77,7 @@ if st.button("▶ Run IC‑LicAI Analysis"):
     # Exporters
     pdf_bytes = export_pdf(bundle)
     # Ensure Streamlit receives bytes, not str (fpdf2 sometimes returns str)
-    if isinstance(pdf_bytes, str):
+        if isinstance(pdf_bytes, str):
     pdf_bytes = pdf_bytes.encode("latin-1")
 
     xlsx_bytes = export_xlsx(assessment["ic_map"])
