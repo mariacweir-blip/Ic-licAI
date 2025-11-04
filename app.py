@@ -96,11 +96,8 @@ xlsx_bytes = _to_bytes(xlsx_bytes)
 json_bytes = _to_bytes(json_bytes, "utf-8")
 
 # Downloads
-st.download_button("⬇ Download Advisory Report (PDF)", data=pdf_bytes,
-                   file_name="ICLicAI_Advisory_Report.pdf", mime="application/pdf")
-st.download_button("⬇ Download IA Register (XLSX)", data=xlsx_bytes,
-                   file_name="ICLicAI_IA_Register.xlsx",
-                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-st.download_button("⬇ Download Case Data (JSON)", data=json_bytes,
-                   file_name="ICLicAI_Case.json", mime="application/
+st.download_button("⬇ Download Advisory Report (PDF)", data=pdf_bytes,file_name="ICLicAI_Advisory_Report.pdf", mime="application/pdf")
+st.download_button("⬇ Download IA Register (XLSX)", data=xlsx_bytes,file_name="ICLicAI_IA_Register.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+st.download_button("⬇ Download Case Data (JSON)", data=json_bytes,file_name="ICLicAI_Case.json", mime="application/json)
+
 st.caption("Note: Demo uses heuristics for speed. Replace with your 4‑Leaf / 10‑Steps / IAS 38 / FRAND engines.")
