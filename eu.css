@@ -1,0 +1,20 @@
+:root {
+  --eu-blue: #143f8f;
+  --eu-gold: #ffcc00;
+  --text-main: #0f1b2a;
+}
+header, .stApp { background: #ffffff; }
+section.main .block-container { max-width: 860px; }
+h1, h2, h3 { color: var(--eu-blue) !important; }
+.stButton button, .stDownloadButton button {
+  border-radius: 10px;
+  background: var(--eu-blue);
+  color: white;
+  border: 0;
+}
+.stButton button:hover, .stDownloadButton button:hover { filter: brightness(0.92); }
+.badge {
+  display: inline-block; padding: 2px 8px; margin-right: 6px;
+  border-radius: 999px; font-size: 12px; border: 1px solid var(--eu-blue); color: var(--eu-blue);
+}
+hr { border-top: 1px solid #e6ecf5; }
