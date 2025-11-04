@@ -74,38 +74,38 @@ if st.button("▶ Run IC‑LicAI Analysis"):
         "licensing": assessment.get("licensing", []),
      }
 
-   # Exporters
-pdf_bytes = export_pdf(bundle)
-# Ensure Streamlit receives bytes, not str (fpdf2 sometimes returns str)
-if isinstance(pdf_bytes, str):
+    # Exporters
+    pdf_bytes = export_pdf(bundle)
+    # Ensure Streamlit receives bytes, not str (fpdf2 sometimes returns str)
+    if isinstance(pdf_bytes, str):
     pdf_bytes = pdf_bytes.encode("latin-1")
 
-xlsx_bytes = export_xlsx(assessment["ic_map"])
-json_bytes = export_json(bundle)
+    xlsx_bytes = export_xlsx(assessment["ic_map"])
+    json_bytes = export_json(bundle)
 
-# ---- normalize to bytes for download buttons ----
-def _to_bytes(x, encoding="utf-8"):
-    if x is None:
-        return b""
-    if isinstance(x, bytes):
-        return x
-    if hasattr(x, "getvalue"):  # BytesIO or similar
-        return x.getvalue()
-    if isinstance(x, str):
-        return x.encode(encoding)
-    try:
-        return bytes(x)
-    except Exception:
-        return str(x).encode(encoding)
+    # ---- normalize to bytes for download buttons ----
+    def _to_bytes(x, encoding="utf-8"):
+        if x is None:
+             return b""
+        if isinstance(x, bytes):
+             return x
+        if hasattr(x, "getvalue"):  # BytesIO or similar
+            return x.getvalue()
+        if isinstance(x, str):
+            return x.encode(encoding)
+        try:
+            return bytes(x)
+        except Exception:
+            return str(x).encode(encoding)
 
-# PDF is latin-1 from fpdf2; others are utf-8/bytes
-pdf_bytes  = _to_bytes(pdf_bytes,  "latin-1")
-xlsx_bytes = _to_bytes(xlsx_bytes)
-json_bytes = _to_bytes(json_bytes, "utf-8")
+    # PDF is latin-1 from fpdf2; others are utf-8/bytes
+    pdf_bytes  = _to_bytes(pdf_bytes,  "latin-1")
+    xlsx_bytes = _to_bytes(xlsx_bytes)
+    json_bytes = _to_bytes(json_bytes, "utf-8")
 
-# Downloads
-st.download_button("⬇ Download Advisory Report (PDF)", data=pdf_bytes,file_name="ICLicAI_Advisory_Report.pdf", mime="application/pdf")
-st.download_button("⬇ Download IA Register (XLSX)", data=xlsx_bytes,file_name="ICLicAI_IA_Register.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-st.download_button("⬇ Download Case Data (JSON)", data=json_bytes,file_name="ICLicAI_Case.json", mime="application/json")
+    # Downloads
+    st.download_button("⬇ Download Advisory Report (PDF)", data=pdf_bytes,file_name="ICLicAI_Advisory_Report.pdf", mime="application/pdf")
+    st.download_button("⬇ Download IA Register (XLSX)", data=xlsx_bytes,file_name="ICLicAI_IA_Register.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.download_button("⬇ Download Case Data (JSON)", data=json_bytes,file_name="ICLicAI_Case.json", mime="application/json")
 
-st.caption("Note: Demo uses heuristics for speed. Replace with your 4‑Leaf / 10‑Steps / IAS 38 / FRAND engines.")
+    st.caption("Note: Demo uses heuristics for speed. Replace with your 4‑Leaf / 10‑Steps / IAS 38 / FRAND engines.")
