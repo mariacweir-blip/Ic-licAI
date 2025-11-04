@@ -65,6 +65,14 @@ if st.button("▶ Run IC‑LicAI Analysis"):
 
     st.subheader("Licensing Options (advisory)")
     st.table(pd.DataFrame(assessment["licensing"]))
+    # Prepare outputs bundle (ensure it's defined right before exports)
+    bundle = {
+        "case": case,
+        "summary": f"Advisory overview for {case}.",
+        "ic_map": assessment.get("ic_map", {}),
+        "readiness": assessment.get("readiness", []),
+        "licensing": assessment.get("licensing", []),
+     }
 
    # Exporters
 pdf_bytes = export_pdf(bundle)
