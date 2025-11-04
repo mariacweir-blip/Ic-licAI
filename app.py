@@ -2,9 +2,16 @@ import streamlit as st
 from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
 from ic_licai.exporters import export_pdf, export_xlsx, export_json
 import os
-
+# --- EU Theme injection ---
+import pathlib
+def inject_eu_theme():
+    try:
+        css = (pathlib.Path("theme") / "eu.css").read_text(encoding="utf-8")
+        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    except Exception:
+        pass
 st.set_page_config(page_title="IC‑LicAI Demo", page_icon="🔐", layout="centered")
-
+inject_eu_theme()
 # --- Simple demo gate ---
 st.title("IC‑LicAI: Licensing Advisory (Demo)")
 pw = st.text_input("Enter demo password", type="password", help="Demo gate")
