@@ -1,7 +1,7 @@
 import streamlit as st
 from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
 from ic_licai.exporters import export_pdf, export_xlsx, export_json
-from narratives import build_narrative
+import importlib
 import os
 from pathlib import Path
 
@@ -72,15 +72,18 @@ if st.button("▶ Run IC‑LicAI Analysis"):
         except Exception as e:
             st.warning(f"Parser note: {e}")
 
-    # run assessment (heuristics demo)
+     # run assessment (heuristics demo)
     assessment = draft_ic_assessment((text_input or "") + "\n".join(parsed.get("texts", [])))
-    # Build advisory narrative
-    narrative = build_narrative(
+
+    # Build advisory narrative (safe import)
+    import importlib
+    narratives_mod = importlib.import_module("narratives")
+    narrative = narratives_mod.build_narrative(
         case,
         assessment["ic_map"],
         assessment["readiness"],
         assessment["licensing"],
-)
+    )
 
     # bundle for exports
     bundle = {
