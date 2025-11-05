@@ -14,13 +14,6 @@ def inject_eu_theme():
 st.set_page_config(page_title="IC‑LicAI Demo", page_icon="🔐", layout="centered")
 inject_eu_theme()
 st.markdown("<style>body { background:#ffeaea !important; }</style>", unsafe_allow_html=True)
-import pathlib
-try:
-    _css_path = pathlib.Path("theme") / "eu.css"
-    _css_text = _css_path.read_text(encoding="utf-8")
-    st.info(f"EU theme loaded: {_css_path} ({len(_css_text)} chars)")
-except Exception as e:
-    st.warning(f"EU theme NOT loaded from {_css_path}: {e}")
 # --- Simple demo gate ---
 st.title("IC‑LicAI: Licensing Advisory (Demo)")
 pw = st.text_input("Enter demo password", type="password", help="Demo gate")
