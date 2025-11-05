@@ -3,14 +3,18 @@ from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
 from ic_licai.exporters import export_pdf, export_xlsx, export_json
 from narratives import build_narrative
 import os
-# --- EU Theme injection ---
 import pathlib
+
+# --- EU Theme injection ---
 def inject_eu_theme():
     try:
         css = (pathlib.Path("theme") / "eu.css").read_text(encoding="utf-8")
         st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
     except Exception:
         pass
+
+st.set_page_config(page_title="IC-LicAI Demo", page_icon="🔎", layout="centered")
+inject_eu_theme()
 st.set_page_config(page_title="IC‑LicAI Demo", page_icon="🔐", layout="centered")
 inject_eu_theme()
 st.markdown("<style>body { background:#ffeaea !important; }</style>", unsafe_allow_html=True)
