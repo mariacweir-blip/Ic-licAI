@@ -1,6 +1,7 @@
 import streamlit as st
 from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
 from ic_licai.exporters import export_pdf, export_xlsx, export_json
+from narratives import build_narrative
 import os
 # --- EU Theme injection ---
 import pathlib
