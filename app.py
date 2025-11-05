@@ -95,13 +95,25 @@ if st.button("▶ Run IC‑LicAI Analysis"):
     assessment = draft_ic_assessment((text_input or "") + "\n".join(parsed.get("texts", [])))
 
     # Build advisory narrative (safe import)
-    import importlib
-    narratives_mod = importlib.import_module("narratives")
+    # Build advisory narrative using the selected profile
+import importlib
+narratives_mod = importlib.import_module("narratives")
+
+if hasattr(narratives_mod, "build_narrative_profiled"):
+    narrative = narratives_mod.build_narrative_profiled(
+        case,
+        assessment.get("ic_map", {}),
+        assessment.get("readiness", []),
+        assessment.get("licensing", []),
+        profile=profile,  # <-- uses size/sector from the UI
+    )
+else:
+    # Fallback (shouldn't be needed, but safe)
     narrative = narratives_mod.build_narrative(
         case,
-        assessment["ic_map"],
-        assessment["readiness"],
-        assessment["licensing"],
+        assessment.get("ic_map", {}),
+        assessment.get("readiness", []),
+        assessment.get("licensing", []),
     )
 
     # bundle for exports
