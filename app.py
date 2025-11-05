@@ -12,6 +12,7 @@ def inject_eu_theme():
         pass
 st.set_page_config(page_title="IC‑LicAI Demo", page_icon="🔐", layout="centered")
 inject_eu_theme()
+st.markdown("<style>body { background:#ffeaea !important; }</style>", unsafe_allow_html=True)
 # --- Simple demo gate ---
 st.title("IC‑LicAI: Licensing Advisory (Demo)")
 pw = st.text_input("Enter demo password", type="password", help="Demo gate")
