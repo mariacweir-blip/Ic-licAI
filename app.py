@@ -23,8 +23,12 @@ except Exception as e:
 # --- Simple demo gate ---
 st.title("IC‑LicAI: Licensing Advisory (Demo)")
 pw = st.text_input("Enter demo password", type="password", help="Demo gate")
-if pw != "ICdemo2025!":
-    st.info("Hint: use the demo password you were given.")
+if pw:
+    if pw != "ICdemo2025!":
+        st.error("Incorrect password.")
+        st.stop()
+else:
+    st.warning("Please enter password to continue.")
     st.stop()
 
 # --- Inputs ---
