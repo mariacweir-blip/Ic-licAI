@@ -122,3 +122,52 @@ def build_narrative(case: str, ic_map: Dict[str, List[str]], readiness: List[Dic
         "frand": _asc(frand),
         "governance": _asc(governance),
     }
+
+    def build_narrative_sandy(case: str, ic_map, readiness, licensing):
+    """Case-specific narrative tuned for the 'Sandy Beach' demo."""
+    assets_total = sum(len(v) for v in ic_map.values()) if isinstance(ic_map, dict) else 0
+
+    executive = (
+        f"{case} combines strong brand identity, proprietary formulations, and coastal-origin know-how "
+        f"with {assets_total} mapped intangible assets.  The company’s market position rests on "
+        "protected recipes, training content, and long-term distributor relationships.  "
+        "Licensing readiness is high in Human and Customer Capital; the next milestone is "
+        "formalising product and training bundles for franchise-style or co-brand licences."
+    )
+
+    plan_90 = (
+        "W1–2: Consolidate evidence for recipes, training modules, and brand guidelines.  "
+        "Tag each asset to owner, origin, and verification record.\n"
+        "W3–4: Apply 10-Steps discipline to document explicit processes (mixing, packaging, training).  "
+        "Protect trade-secret elements under NDAs.\n"
+        "W5–6: Draft FRAND-aligned partner and franchise licence templates: "
+        "territory, audit rights, brand-use, environmental standards.\n"
+        "W7–8: Build a pilot bundle — 'Sandy Beach At Home' or 'Beach Essentials' — "
+        "with product, training, and brand pack.  Select 2 pilot licensees.\n"
+        "W9–12: Evaluate pilots; set price corridor and renewal cadence; "
+        "issue investor briefing on intangible-asset-driven scalability."
+    )
+
+    frand = (
+        "1) Brand + Recipe Licence: royalty 3 % of net sales; grant-back limited to quality improvements.\n"
+        "2) Training and Certification Licence: annual per-trainer fee; uniform conditions; audit right.\n"
+        "3) Co-Brand Distribution Licence: blended royalty 1.5 % plus regional marketing contribution; "
+        "MFN across equivalent partners."
+    )
+
+    governance = (
+        "IC Lead to chair monthly Brand & IP Board.  "
+        "Each franchise or partner licence recorded in the IA register with evidence links, "
+        "expiry, and audit schedule.  "
+        "Quarterly review ensures compliance with sustainability, quality, and customer-experience metrics."
+    )
+
+    def _asc(s: str) -> str:
+        return (s or "").encode("latin-1", "ignore").decode("latin-1")
+
+    return {
+        "executive": _asc(executive),
+        "plan_90": _asc(plan_90),
+        "frand": _asc(frand),
+        "governance": _asc(governance),
+    }
