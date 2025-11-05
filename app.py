@@ -32,6 +32,25 @@ else:
 # --- Inputs ---
 st.subheader("1) Case & Evidence")
 case = st.text_input("Case name", value="Demo Case")
+# --- Case profile (drives narrative tone) ---
+st.subheader("Company profile")
+size_label = st.selectbox(
+    "Company size",
+    ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Enterprise (250+)"],
+    index=0,  # default Micro
+    help="Select the typical size for this case to adapt the advisory narrative."
+)
+sector = st.text_input("Sector (optional)", value="", help="e.g., food, medtech, services")
+
+# Normalise size for the narrative engine
+size_map = {
+    "micro (1–10)": "micro",
+    "small (11–50)": "small",
+    "medium (51–250)": "medium",
+    "enterprise (250+)": "enterprise",
+}
+size_key = size_map.get(size_label.lower(), "micro")
+profile = {"size": size_key, "sector": sector.strip().lower()}
 uploaded = st.file_uploader("Upload evidence (PDF, TXT, DOCX, etc.) — optional", type=None, accept_multiple_files=True)
 notes = st.text_area("Paste interview notes or summary (optional)", height=160)
 
