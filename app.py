@@ -77,6 +77,13 @@ if st.button("▶ Run IC‑LicAI Analysis"):
 
     # run assessment (heuristics demo)
     assessment = draft_ic_assessment((text_input or "") + "\n".join(parsed.get("texts", [])))
+    # Build advisory narrative
+    narrative = build_narrative(
+        case,
+        assessment["ic_map"],
+        assessment["readiness"],
+        assessment["licensing"],
+)
 
     # bundle for exports
     bundle = {
@@ -85,6 +92,7 @@ if st.button("▶ Run IC‑LicAI Analysis"):
         "ic_map": assessment.get("ic_map", {}),
         "readiness": assessment.get("readiness", []),
         "licensing": assessment.get("licensing", []),
+        "narrative": narrative,
     }
 
     # --- Show results ---
