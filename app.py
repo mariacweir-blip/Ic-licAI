@@ -1,8 +1,8 @@
-import streamlit as st
-from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
-from ic_licai.exporters import export_pdf, export_xlsx, export_json
-import os, importlib
-from pathlib import Path
+if True:  # guard to neutralize any stray leading whitespace/charimport streamlit as st
+    from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
+    from ic_licai.exporters import export_pdf, export_xlsx, export_json
+    import os, importlib
+    from pathlib import Path
 st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
 inject_eu_theme()
 
