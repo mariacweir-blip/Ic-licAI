@@ -4,3 +4,8 @@ backgroundColor = "#F8F7F4"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#0A2640"
 font = "sans serif"
+
+[server]
+headless = true
+fileWatcherType = "none"
+mainFile = "app_clean.py"
