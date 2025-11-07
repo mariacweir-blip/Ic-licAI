@@ -1,38 +1,27 @@
+# -*- coding: utf-8 -*-
 import streamlit as st
 from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
 
-# Import exporters safely for Streamlit Cloud and local dev
+# Import exporters safely (works on Streamlit Cloud and local)
 try:
     from ic_licai.exporters import export_pdf, export_xlsx, export_json
 except ModuleNotFoundError:
-    from exporters import export_pdf, export_xlsx, export_json 
-import importlib
+    from exporters import export_pdf, export_xlsx, export_json
+
 import os
+import importlib
 from pathlib import Path
 
 # --- EU Theme injection ---
 def inject_eu_theme():
     try:
-        css = (pathlib.Path("theme") / "eu.css").read_text(encoding="utf-8")
+        css = (Path("theme") / "eu.css").read_text(encoding="utf-8")
         st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
     except Exception:
         pass
 
-st.set_page_config(page_title="IC-LicAI Demo", page_icon="🔎", layout="centered")
+st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
 inject_eu_theme()
-st.set_page_config(page_title="IC‑LicAI Demo", page_icon="🔐", layout="centered")
-inject_eu_theme()
-st.markdown("<style>body { background:#ffeaea !important; }</style>", unsafe_allow_html=True)
-# --- Simple demo gate ---
-st.title("IC‑LicAI: Licensing Advisory (Demo)")
-pw = st.text_input("Enter demo password", type="password", help="Demo gate")
-if pw:
-    if pw != "ICdemo2025!":
-        st.error("Incorrect password.")
-        st.stop()
-else:
-    st.warning("Please enter password to continue.")
-    st.stop()
 
 # --- Inputs ---
 st.subheader("1) Case & Evidence")
