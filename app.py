@@ -1,10 +1,11 @@
 import streamlit as st
 from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
-# or fallback
+
+# Import exporters safely for Streamlit Cloud and local dev
 try:
     from ic_licai.exporters import export_pdf, export_xlsx, export_json
 except ModuleNotFoundError:
-    from exporters import export_pdf, export_xlsx, export_json
+    from exporters import export_pdf, export_xlsx, export_json 
 import importlib
 import os
 from pathlib import Path
