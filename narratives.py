@@ -1,7 +1,7 @@
-# narratives.py  (clean, ASCII-safe)
+# narratives.py (clean ASCII-only version)
 from typing import Dict, Any, List
 
-def _bullet_lines(items: List[str], prefix: str="- "):
+def _bullet_lines(items: List[str], prefix: str = "- "):
     lines = []
     for it in (items or []):
         it = str(it).strip()
@@ -33,7 +33,7 @@ def render_basic_narrative(data: Dict[str, Any]) -> str:
         name = row.get("name", "")
         score = row.get("score", 0)
         tasks = row.get("tasks", [])[:4]
-        readiness_lines.append(f"Step {step}: {name} — Score {score}/3")
+        readiness_lines.append(f"Step {step}: {name} - Score {score}/3")
         for t in tasks:
             readiness_lines.append(f"- {t}")
     readiness_block = "\n".join(readiness_lines) if readiness_lines else "(readiness tasks will be listed here)"
@@ -47,7 +47,7 @@ def render_basic_narrative(data: Dict[str, Any]) -> str:
 
     evidence_block = _bullet_lines(evidence[:8])
 
-    text = f"""# {case} — Intangible Capital & Licensing Advisory (Demo)
+    text = f"""# {case} - Intangible Capital & Licensing Advisory (Demo)
 
 Executive Summary
 Initial licensing-forward assessment using the Four-Leaf Model and 10-Steps. Actions focus on licence-readiness under FRAND-aligned terms.
@@ -81,89 +81,74 @@ Defensible Licensing Strategy (Demo)
 Evidence Extracts (for audit trail)
 {evidence_block or "- (add snippets by uploading evidence)"}
 """
-    return text.replace("-", "-").replace("–", "-").replace("—", "-").replace("’", "'")
+    return text.replace("–", "-").replace("—", "-").replace("’", "'")
 
-def build_narrative(case: str, ic_map: Dict[str, List[str]], readiness: List[Dict[str, Any]], licensing: List[Dict[str, Any]]) -> Dict[str, str]:
-    """Expanded advisory narrative for IC-LicAI demo (ASCII-safe)."""
-    assets_total = sum(len(v) for v in ic_map.values()) if isinstance(ic_map, dict) else 0
-
-    executive = (
-        f"{case} holds {assets_total} mapped intangible items across the Four-Leaf Model. "
-        "Licensing readiness is emerging. Immediate focus: convert tacit into explicit artefacts, "
-        "capture evidence, and prepare FRAND-aligned terms (field-of-use, territory, royalty base, audit)."
-    )
-
-    plan_90 = (
-        "W1–2: Evidence intake; IA register with owner/source/evidence/next step.\n"
-        "W3–4: Apply 10-Steps: identify, separate, protect, safeguard, manage, control.\n"
-        "W5–6: Draft FRAND templates (price corridor, MFN, audit, termination, renewal cadence).\n"
-        "W7–8: Package one licence-ready bundle; select 2–3 pilot licensees with success metrics.\n"
-        "W9–12: Close pilots; governance log and renewal diary; publish rate card and decision log."
-    )
-
-    frand = (
-        "1) Grant-back limited to licensed field; 2–3% royalty benchmark; SME discount tier.\n"
-        "2) Field-of-use split: healthcare 2.2% tier; adjacent fields +1.0% uplift; MFN within tier; annual cap.\n"
-        "3) Usage credits: prepaid blocks; intra-group transfer permitted; floor price and audit log."
-    )
-
-    governance = (
-        "Nominate IC Lead; monthly IC Board; all licences recorded in IA register with evidence links and versions; "
-        "risk table per asset; renewal cadence and compliance checkpoints."
-    )
-
-    # Ensure ASCII compatibility for FPDF
-    def _asc(s: str) -> str:
-        return (s or "").encode("latin-1", "ignore").decode("latin-1")
-
-    return {
-        "executive": _asc(executive),
-        "plan_90": _asc(plan_90),
-        "frand": _asc(frand),
-        "governance": _asc(governance),
-    }
-
-    def build_narrative_sandy(case: str, ic_map, readiness, licensing):
-    """Case-specific narrative tuned for the 'Sandy Beach' demo."""
-    assets_total = sum(len(v) for v in ic_map.values()) if isinstance(ic_map, dict) else 0
-
-    executive = (
-        f"{case} combines strong brand identity, proprietary formulations, and coastal-origin know-how "
-        f"with {assets_total} mapped intangible assets.  The company’s market position rests on "
-        "protected recipes, training content, and long-term distributor relationships.  "
-        "Licensing readiness is high in Human and Customer Capital; the next milestone is "
-        "formalising product and training bundles for franchise-style or co-brand licences."
-    )
-
-    plan_90 = (
-        "W1–2: Consolidate evidence for recipes, training modules, and brand guidelines.  "
-        "Tag each asset to owner, origin, and verification record.\n"
-        "W3–4: Apply 10-Steps discipline to document explicit processes (mixing, packaging, training).  "
-        "Protect trade-secret elements under NDAs.\n"
-        "W5–6: Draft FRAND-aligned partner and franchise licence templates: "
-        "territory, audit rights, brand-use, environmental standards.\n"
-        "W7–8: Build a pilot bundle — 'Sandy Beach At Home' or 'Beach Essentials' — "
-        "with product, training, and brand pack.  Select 2 pilot licensees.\n"
-        "W9–12: Evaluate pilots; set price corridor and renewal cadence; "
-        "issue investor briefing on intangible-asset-driven scalability."
-    )
-
-    frand = (
-        "1) Brand + Recipe Licence: royalty 3 % of net sales; grant-back limited to quality improvements.\n"
-        "2) Training and Certification Licence: annual per-trainer fee; uniform conditions; audit right.\n"
-        "3) Co-Brand Distribution Licence: blended royalty 1.5 % plus regional marketing contribution; "
-        "MFN across equivalent partners."
-    )
-
-    governance = (
-        "IC Lead to chair monthly Brand & IP Board.  "
-        "Each franchise or partner licence recorded in the IA register with evidence links, "
-        "expiry, and audit schedule.  "
-        "Quarterly review ensures compliance with sustainability, quality, and customer-experience metrics."
-    )
+def build_narrative_profiled(case: str,
+                             ic_map: Dict[str, List[str]],
+                             readiness: List[Dict[str, Any]],
+                             licensing: List[Dict[str, Any]],
+                             profile: Dict[str, str] | None = None) -> Dict[str, str]:
+    p = profile or {}
+    size = str(p.get("size", "micro")).lower()
 
     def _asc(s: str) -> str:
         return (s or "").encode("latin-1", "ignore").decode("latin-1")
+
+    assets_total = sum(len(v) for v in ic_map.values()) if isinstance(ic_map, dict) else 0
+
+    if size == "micro":
+        exec_note = (
+            f"{case} is a Micro-SME (1-10 staff). Priority is quick, low-admin packaging of know-how "
+            "into simple, licence-ready bundles with a short path to first revenue. Evidence capture and "
+            "lightweight governance are kept practical (owner sign-off, basic register, rate card)."
+        )
+        plan_90 = (
+            "W1-2: Snapshot evidence (brand guides, methods/recipes, training notes). Create a one-page IA register.\n"
+            "W3-4: Apply the 10-Steps at a micro scale (identify, separate, protect, safeguard, manage, control). "
+            "Define one productised offer (template + checklist + brief demo).\n"
+            "W5-6: Prepare FRAND-aligned micro templates: simple territory/field-of-use, fixed fee or low royalty, "
+            "clear audit and termination. Publish a short rate card.\n"
+            "W7-8: Pilot with 1-2 friendly customers/partners. Capture outcomes and testimonials.\n"
+            "W9-12: Close first licences; set renewal dates; maintain a monthly evidence snapshot."
+        )
+        frand = (
+            "1) Fixed-fee Starter Licence (micro): flat fee per 6-12 months; uniform terms; audit on request.\n"
+            "2) Simple Royalty Licence: 2.0% of net sales with an annual cap; MFN across equivalent micro licensees.\n"
+            "3) Evaluation-to-Commercial path: 60-day evaluation at nominal fee; pre-agreed conversion price corridor."
+        )
+        governance = (
+            "Owner/IC Lead approves each asset entry in a simple register (origin, owner, proof). "
+            "One-page governance note, monthly review slot, renewal diary in calendar."
+        )
+    elif size == "small":
+        exec_note = (
+            f"{case} is a Small enterprise (11-50 staff). Focus on documenting repeatable methods and roles, "
+            "and introducing light approvals for licence deals."
+        )
+        plan_90 = (
+            "W1-2: Expand IA register with owners and repositories; W3-4: 10-Steps playbook; "
+            "W5-6: FRAND templates with rate bands; W7-8: Pilot bundle; W9-12: First licences and board sign-off."
+        )
+        frand = (
+            "1) Tiered Royalty (2.0-3.0% by volume),\n2) Field-of-use splits by channel,\n3) Service-plus-Licence hybrid."
+        )
+        governance = "IC Lead and monthly IC board; contract checklist; renewal workflow."
+    else:
+        exec_note = (
+            f"{case}: profile not specified - applying generic advisory narrative aligned to 4-Leaf/10-Steps/FRAND."
+        )
+        plan_90 = (
+            "W1-2 evidence; W3-4 10-Steps; W5-6 FRAND templates; W7-8 pilot; W9-12 close and governance."
+        )
+        frand = (
+            "1) Grant-back limited to field;\n2) Field-of-use tiers;\n3) Usage credits with audit log."
+        )
+        governance = "Appoint IC Lead; monthly review; IA register with evidence links and renewal diary."
+
+    executive = (
+        f"{exec_note} Currently mapped assets: {assets_total} across the Four-Leaf Model. "
+        "Focus is converting tacit to explicit artefacts, capturing evidence, and publishing uniform terms."
+    )
 
     return {
         "executive": _asc(executive),
