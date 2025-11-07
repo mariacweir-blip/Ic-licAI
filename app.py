@@ -82,39 +82,44 @@ if uploaded:
 st.divider()
 
 # --- Run ---
-if st.button("▶ Run IC‑LicAI Analysis"):
+if st.button("▶ Run IC-LicAI Analysis"):
     # light parse (currently demo scope)
     parsed = {"texts": [], "meta": []}
+    files_data = []
+    if uploaded:
+        for f in uploaded:
+            try:
+                files_data.append((f.name, f.getvalue()))
+            except Exception:
+                pass
     if files_data:
         try:
-            parsed = parse_uploaded_files(files_data)  # returns {"texts": [...], "meta": [...]}
+            parsed = parse_uploaded_files(files_data)  # returns {"texts":[...], "meta":[...]}
         except Exception as e:
             st.warning(f"Parser note: {e}")
 
-     # run assessment (heuristics demo)
-    assessment = draft_ic_assessment((text_input or "") + "\n".join(parsed.get("texts", [])))
+    # run assessment (heuristics demo)
+    text_input = (notes or "") + "\n".join(parsed.get("texts", []))
+    assessment = draft_ic_assessment(text_input)
 
-    # Build advisory narrative (safe import)
     # Build advisory narrative using the selected profile
-import importlib
-narratives_mod = importlib.import_module("narratives")
-
-if hasattr(narratives_mod, "build_narrative_profiled"):
-    narrative = narratives_mod.build_narrative_profiled(
-        case,
-        assessment.get("ic_map", {}),
-        assessment.get("readiness", []),
-        assessment.get("licensing", []),
-        profile=profile,  # <-- uses size/sector from the UI
-    )
-else:
-    # Fallback (shouldn't be needed, but safe)
-    narrative = narratives_mod.build_narrative(
-        case,
-        assessment.get("ic_map", {}),
-        assessment.get("readiness", []),
-        assessment.get("licensing", []),
-    )
+    import importlib
+    narratives_mod = importlib.import_module("narratives")
+    if hasattr(narratives_mod, "build_narrative_profiled"):
+        narrative = narratives_mod.build_narrative_profiled(
+            case,
+            assessment.get("ic_map", {}),
+            assessment.get("readiness", []),
+            assessment.get("licensing", []),
+            profile  # <-- size/sector from the UI
+        )
+    else:
+        narrative = narratives_mod.build_narrative(
+            case,
+            assessment.get("ic_map", {}),
+            assessment.get("readiness", []),
+            assessment.get("licensing", []),
+        )
 
     # bundle for exports
     bundle = {
@@ -127,37 +132,34 @@ else:
     }
 
     # --- Show results ---
-    st.subheader("Intangible Capital Map (4‑Leaf)")
+    st.subheader("Intangible Capital Map (4–Leaf)")
     for leaf, items in bundle["ic_map"].items():
         st.write(f"**{leaf}**")
         for it in items[:6]:
-            st.write(f"* {it}")
+            st.write(f"- {it}")
 
-    st.subheader("10‑Steps Readiness Summary")
+    st.subheader("10–Steps Readiness (summary)")
     for row in bundle["readiness"]:
-        st.write(f"**Step {row['step']}: {row['name']}** — Score {row['score']}/3")
+        st.write(f"**Step {row['step']}: {row['name']}** – Score {row['score']}/3")
         for t in row["tasks"]:
             st.write(f"- {t}")
 
     st.subheader("Licensing Options (advisory)")
     for opt in bundle["licensing"]:
         st.write(f"**{opt['model']}**")
-        st.write(opt["notes"])
+        for t in opt["notes"]:
+            st.write(f"- {t}")
 
-    # --- Exports ---
-    pdf_bytes = export_pdf(bundle)
-    if isinstance(pdf_bytes, str):
-        pdf_bytes = pdf_bytes.encode("latin-1")
-    xlsx_bytes = export_xlsx(bundle["ic_map"])
-    json_bytes = export_json(bundle)
+    st.subheader("Advisory Narrative")
+    st.write(bundle["narrative"])
 
-    # normalize to bytes
+    # ---- normalize to bytes for download buttons -----
     def _to_bytes(x, encoding="utf-8"):
         if x is None:
             return b""
         if isinstance(x, bytes):
             return x
-        if hasattr(x, "getvalue"):
+        if hasattr(x, "getvalue"):  # BytesIO or similar
             return x.getvalue()
         if isinstance(x, str):
             return x.encode(encoding)
@@ -166,23 +168,17 @@ else:
         except Exception:
             return str(x).encode(encoding)
 
-    pdf_bytes  = _to_bytes(pdf_bytes,  "latin-1")
-    xlsx_bytes = _to_bytes(xlsx_bytes)
-    json_bytes = _to_bytes(json_bytes, "utf-8")
+    # PDF likely latin-1 from fpdf2; others utf-8/bytes
+    pdf_bytes  = _to_bytes(export_pdf(bundle), "latin-1")
+    xlsx_bytes = _to_bytes(export_xlsx(assessment.get("ic_map", {})))  # already bytes, safe
+    json_bytes = _to_bytes(export_json(bundle), "utf-8")
 
-    st.download_button("⬇ Download Advisory Report (PDF)",
-                       data=pdf_bytes,
-                       file_name="ICLicAI_Advisory_Report.pdf",
-                       mime="application/pdf")
-
-    st.download_button("⬇ Download IA Register (XLSX)",
-                       data=xlsx_bytes,
-                       file_name="ICLicAI_IA_Register.xlsx",
-                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-    st.download_button("⬇ Download Case Data (JSON)",
-                       data=json_bytes,
-                       file_name="ICLicAI_Case.json",
-                       mime="application/json")
-
-    st.caption("Note: Demo uses heuristics for speed. Replace with your 4‑Leaf / 10‑Steps / IAS 38 / FRAND engines.")
+    # Downloads
+    st.download_button("⬇ Download Advisory Report (PDF)", data=pdf_bytes,
+                       file_name="ICLicAI_Advisory_Report.pdf", mime="application/pdf")
+    st.download_button("⬇ Download IA Register (XLSX)", data=xlsx_bytes,
+                       file_name="ICLicAI_IA_Register.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.download_button("⬇ Download Case Data (JSON)", data=json_bytes,
+                       file_name="ICLicAI_Case.json", mime="application/json")
+else:
+    st.info("Upload case files and click **Run IC-LicAI Analysis** to generate outputs.")
