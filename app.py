@@ -1,6 +1,5 @@
 import streamlit as st
 from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
-from ic_licai.exporters import export_pdf, export_xlsx, export_json  # if running locally
 # or fallback
 try:
     from ic_licai.exporters import export_pdf, export_xlsx, export_json
