@@ -1,24 +1,8 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
 from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
-
-# Safe exporters import (for Streamlit Cloud or local)
-try:
-    from ic_licai.exporters import export_pdf, export_xlsx, export_json
-except ModuleNotFoundError:
-    from exporters import export_pdf, export_xlsx, export_json
-
-import os
-import importlib
+from ic_licai.exporters import export_pdf, export_xlsx, export_json
+import os, importlib
 from pathlib import Path
-
-# --- EU Theme injection ---
-def inject_eu_theme():
-    try:
-        css = (Path("theme") / "eu.css").read_text(encoding="utf-8")
-        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
-    except Exception:
-        pass
 
 st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
 inject_eu_theme()
