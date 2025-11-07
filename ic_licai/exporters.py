@@ -69,6 +69,13 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
         for it in items[:6]:
             pdf._bullet(f"- {it}")
         pdf.ln(2)
+        
+    # Narrative page
+    pdf.add_page()
+    pdf.header_title = "Advisory Narrative"
+    pdf.set_font("Helvetica", "", 11)
+    _wrap_text(pdf, data.get("narrative", ""), width=int(pdf.w - pdf.l_margin - pdf.r_margin))
+    pdf.ln(2)
 
     # 10 Steps readiness
     pdf.add_page()
@@ -86,9 +93,13 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     pdf.header_title = "Licensing Options (advisory)"
     for opt in data.get("licensing", []):
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 7, f"* {opt.get('model')}", ln=1)
+        pdf.cell(0, 7, f"{opt.get('model')}", ln=1)
         pdf.set_font("Helvetica", "", 10)
-        pdf._bullet(opt.get("notes", ""))
+        notes = opt.get("notes", [])
+        if isinstance(notes, str):
+        notes = [notes]
+        for t in notes:
+        _bullet(pdf, f"- {t}")
         pdf.ln(1)
 
     # Governance note
