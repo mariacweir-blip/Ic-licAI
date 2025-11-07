@@ -145,10 +145,17 @@ if st.button("▶ Run IC-LicAI Analysis"):
             st.write(f"- {t}")
 
     st.subheader("Licensing Options (advisory)")
-    for opt in bundle["licensing"]:
-        st.write(f"**{opt['model']}**")
-        for t in opt["notes"]:
-            st.write(f"- {t}")
+
+lic = bundle.get("licensing", [])
+for opt in lic:
+    # Heading
+    st.markdown(f"**{opt.get('model', '').strip()}**")
+    # Notes can be a string or a list -> normalize to list
+    notes = opt.get("notes", [])
+    if isinstance(notes, str):
+        notes = [notes]
+    for line in notes:
+        st.write(f"- {line}")
 
     st.subheader("Advisory Narrative")
     st.write(bundle["narrative"])
