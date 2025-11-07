@@ -1,8 +1,16 @@
 import streamlit as st
-from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
+import importlib, os
+from pathlib import Path
+
+# Safe imports to work in both Streamlit Cloud and local folders
 try:
+    from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
     from ic_licai.exporters import export_pdf, export_xlsx, export_json
-except Exception:
+except ModuleNotFoundError:
+    # Fallback if Streamlit doesn't see the ic_licai package
+    import sys
+    sys.path.append(str(Path(__file__).resolve().parent))
+    from processing import parse_uploaded_files, draft_ic_assessment
     from exporters import export_pdf, export_xlsx, export_json
 import os, importlib
 from pathlib import Path
