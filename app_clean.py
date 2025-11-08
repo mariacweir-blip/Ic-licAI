@@ -208,28 +208,46 @@ def _to_bytes(x, encoding="utf-8"):
         return str(x).encode(encoding)
 
 
-# --- Prepare downloadable data ---
-pdf_bytes = _to_bytes(export_pdf(bundle))
-xlsx_bytes = _to_bytes(export_xlsx(bundle))
-json_bytes = _to_bytes(export_json(bundle))
+# --- Prepare downloadable data (safe) ---
+pdf_bytes = xlsx_bytes = json_bytes = None
 
+try:
+    pdf_bytes = _to_bytes(export_pdf(bundle))
+except Exception as e:
+    st.error(f"PDF export failed: {e}")
+
+try:
+    xlsx_bytes = _to_bytes(export_xlsx(bundle.get("ic_map", {})))
+except Exception as e:
+    st.error(f"XLSX export failed: {e}")
+
+try:
+    json_bytes = _to_bytes(export_json(bundle))
+except Exception as e:
+    st.error(f"JSON export failed: {e}")
 
 # --- Downloads ---
-st.download_button(
-    "Download Advisory Report (PDF)",
-    data=pdf_bytes,
-    file_name=f"{case}_ICLicAI_Advisory_Report.pdf",
-    mime="application/pdf",
-)
-st.download_button(
-    "Download IA Register (XLSX)",
-    data=xlsx_bytes,
-    file_name=f"{case}_ICLicAI_IA_Register.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-)
-st.download_button(
-    "Download Case Data (JSON)",
-    data=json_bytes,
-    file_name=f"{case}_ICLicAI_Case.json",
-    mime="application/json",
-)
+if any([pdf_bytes, xlsx_bytes, json_bytes]):
+    if pdf_bytes:
+        st.download_button(
+            "Download Advisory Report (PDF)",
+            data=pdf_bytes,
+            file_name=f"{case}_ICLicAI_Advisory_Report.pdf",
+            mime="application/pdf",
+        )
+    if xlsx_bytes:
+        st.download_button(
+            "Download IA Register (XLSX)",
+            data=xlsx_bytes,
+            file_name=f"{case}_ICLicAI_IA_Register.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    if json_bytes:
+        st.download_button(
+            "Download Case Data (JSON)",
+            data=json_bytes,
+            file_name=f"{case}_ICLicAI_Case.json",
+            mime="application/json",
+        )
+else:
+    st.info("Upload case files and click **Run IC-LicAI Analysis** to generate downloads.")
