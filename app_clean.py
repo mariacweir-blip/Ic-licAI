@@ -136,7 +136,13 @@ if hasattr(narratives_mod, "build_narrative_profiled"):
     )
     st.subheader("Advisory Narrative")
     narrative = locals().get("narrative", "") or ""
-    narr = narrative.strip()
+
+   # Convert dicts or lists to string safely
+if isinstance(narrative, (dict, list)):
+    import json
+    narr = json.dumps(narrative, indent=2)
+else:
+    narr = str(narrative).strip()
     st.text_area("Preview (copyable)", narr, height=260)
     st.download_button(
         "Download Narrative (.txt)",
