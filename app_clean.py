@@ -191,31 +191,45 @@ st.subheader("Advisory Narrative")
 st.write(bundle["narrative"])
 
     # ---- normalize to bytes for download buttons -----
-    def _to_bytes(x, encoding="utf-8"):
-        if x is None:
-            return b""
-        if isinstance(x, bytes):
-            return x
-        if hasattr(x, "getvalue"):  # BytesIO or similar
-            return x.getvalue()
-        if isinstance(x, str):
-            return x.encode(encoding)
-        try:
-            return bytes(x)
-        except Exception:
-            return str(x).encode(encoding)
+# --- Normalize to bytes for download buttons ---
+def _to_bytes(x, encoding="utf-8"):
+    if x is None:
+        return b""
+    if isinstance(x, (bytes, bytearray)):
+        return x
+    if hasattr(x, "getvalue"):  # BytesIO or similar
+        return x.getvalue()
+    if isinstance(x, str):
+        return x.encode(encoding)
+    try:
+        import json
+        return json.dumps(x).encode(encoding)
+    except Exception:
+        return str(x).encode(encoding)
 
-    # PDF likely latin-1 from fpdf2; others utf-8/bytes
-    pdf_bytes  = _to_bytes(export_pdf(bundle), "latin-1")
-    xlsx_bytes = _to_bytes(export_xlsx(assessment.get("ic_map", {})))  # already bytes, safe
-    json_bytes = _to_bytes(export_json(bundle), "utf-8")
 
-    # Downloads
-    st.download_button("⬇ Download Advisory Report (PDF)", data=pdf_bytes,
-                       file_name="ICLicAI_Advisory_Report.pdf", mime="application/pdf")
-    st.download_button("⬇ Download IA Register (XLSX)", data=xlsx_bytes,
-                       file_name="ICLicAI_IA_Register.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    st.download_button("⬇ Download Case Data (JSON)", data=json_bytes,
-                       file_name="ICLicAI_Case.json", mime="application/json")
-else:
-    st.info("Upload case files and click **Run IC-LicAI Analysis** to generate outputs.")
+# --- Prepare downloadable data ---
+pdf_bytes = _to_bytes(export_pdf(bundle))
+xlsx_bytes = _to_bytes(export_xlsx(bundle))
+json_bytes = _to_bytes(export_json(bundle))
+
+
+# --- Downloads ---
+st.download_button(
+    "Download Advisory Report (PDF)",
+    data=pdf_bytes,
+    file_name=f"{case}_ICLicAI_Advisory_Report.pdf",
+    mime="application/pdf",
+)
+st.download_button(
+    "Download IA Register (XLSX)",
+    data=xlsx_bytes,
+    file_name=f"{case}_ICLicAI_IA_Register.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+)
+st.download_button(
+    "Download Case Data (JSON)",
+    data=json_bytes,
+    file_name=f"{case}_ICLicAI_Case.json",
+    mime="application/json",
+)
