@@ -20,13 +20,37 @@ class PDF(FPDF):
             self.set_font("Helvetica", "B", 12)
             self.cell(0, 8, self.header_title, ln=1)
 
-def _wrap_text(pdf: PDF, text: str, width: int) -> None:
+# simple text wrapper that works with FPDF.multi_cell
+def _wrap_text(pdf, text, width=None):
+    # normalize to string
+    if not isinstance(text, str):
+        text = "" if text is None else str(text)
+
+    # compute usable width if not provided
+    if width is None:
+        width = int(pdf.w - pdf.l_margin - pdf.r_margin)
+
+    # ensure auto page break is on
+    pdf.set_auto_page_break(auto=True, margin=18)
+
+    # print paragraph line by line (blank lines = small spacer)
+    for line in (text or "").split("\n"):
+        if not line.strip():
+            pdf.ln(2)
+            continue
+        pdf.multi_cell(width, 6, line)
+       
+def _wrap_text(pdf: PDF, text: str | None, width: int | None = None) -> None:
+    """Safe paragraph printing: tolerate None/empty strings and blank lines."""
     if not text:
         return
-    pdf.set_font("Helvetica", "", 10)
-    # Multi_cell handles wrapping for us
-    pdf.multi_cell(0, 6, text)
-
+    if width is None:
+        width = int(pdf.w - pdf.l_margin - pdf.r_margin)
+    for line in str(text).split("\n"):
+        if not line.strip():
+            pdf.ln(2)  # small spacer for blank lines
+            continue
+        pdf.multi_cell(width, 6, line)
 def _bullet(pdf: PDF, text: str) -> None:
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(5, 6, "•")
