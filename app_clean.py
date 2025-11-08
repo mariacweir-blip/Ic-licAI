@@ -207,9 +207,14 @@ for opt in lic:
         notes = [notes]
     for line in notes:
         st.write(f"- {line}")
-
 st.subheader("Advisory Narrative")
+
+# Make sure `narrative` exists even if an earlier step didn’t set it
+narrative = locals().get("narrative", "") or ""
+
+# Use narrative directly (do NOT read from bundle here)
 narr = (narrative or "").strip()
+
 st.text_area("Preview (copyable)", narr, height=260)
 st.download_button(
     "Download Narrative (.txt)",
@@ -217,9 +222,6 @@ st.download_button(
     file_name=f"{case}_Advisory_Narrative.txt",
     mime="text/plain",
 )
-
-st.write(bundle["narrative"])
-
 # ---- normalize to bytes for download buttons ----
 def _to_bytes(x, encoding="utf-8"):
     if x is None:
