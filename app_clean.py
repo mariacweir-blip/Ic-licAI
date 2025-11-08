@@ -225,12 +225,13 @@ if isinstance(narrative, (dict, list)):
 else:
     narr = str(narrative or "").strip()
 
-st.text_area("Preview (copyable)", narr, height=260)
+st.text_area("Preview (copyable)", narr, height=260, key="narrative_preview_v2")
 st.download_button(
     "Download Narrative (.txt)",
     data=narr.encode("utf-8"),
     file_name=f"{case}_Advisory_Narrative.txt",
     mime="text/plain",
+    key="narrative_download_v2",
 )
 # ---- normalize to bytes for download buttons ----
 def _to_bytes(x, encoding="utf-8"):
