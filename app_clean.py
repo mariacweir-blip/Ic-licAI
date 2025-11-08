@@ -190,23 +190,25 @@ for opt in lic:
 st.subheader("Advisory Narrative")
 st.write(bundle["narrative"])
 
-    # ---- normalize to bytes for download buttons -----
-# --- Normalize to bytes for download buttons ---
+# ---- normalize to bytes for download buttons ----
 def _to_bytes(x, encoding="utf-8"):
     if x is None:
         return b""
+    # accept both bytes and bytearray
     if isinstance(x, (bytes, bytearray)):
-        return x
-    if hasattr(x, "getvalue"):  # BytesIO or similar
+        return bytes(x)
+    # BytesIO or similar
+    if hasattr(x, "getvalue"):
         return x.getvalue()
+    # plain string
     if isinstance(x, str):
         return x.encode(encoding)
+    # JSON-encode objects (last resort)
     try:
         import json
         return json.dumps(x).encode(encoding)
     except Exception:
         return str(x).encode(encoding)
-
 
 # --- Prepare downloadable data (safe) ---
 pdf_bytes = xlsx_bytes = json_bytes = None
