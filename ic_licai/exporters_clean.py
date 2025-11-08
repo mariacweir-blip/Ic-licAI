@@ -17,7 +17,7 @@ class PDF(FPDF):
 
     def header(self):
         if self.header_title:
-            self.set_font("Helvetica", "B", 12)
+            self.set_font("Arial", "B", 12)
             self.cell(0, 8, self.header_title, ln=1)
 
 # simple text wrapper that works with FPDF.multi_cell
@@ -52,7 +52,7 @@ def _wrap_text(pdf: PDF, text: str | None, width: int | None = None) -> None:
             continue
         pdf.multi_cell(width, 6, line)
 def _bullet(pdf: PDF, text: str) -> None:
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font("Arial", "", 10)
     pdf.cell(5, 6, "•")
     pdf.multi_cell(0, 6, text)
 
@@ -72,9 +72,9 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
 
     # Cover / Summary
     pdf.header_title = "Intangible Capital & Licensing Readiness Report"
-    pdf.set_font("Helvetica", "", 12)
+    pdf.set_font("Arial", "", 12)
     pdf.ln(2)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font("Arial", "", 10)
     pdf.cell(0, 6, f"Case: {data.get('case','(unspecified)')}", ln=1)
     pdf.ln(2)
     _wrap_text(pdf, data.get("summary", ""))
@@ -83,11 +83,11 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     pdf.add_page()
     pdf.header_title = "Intangible Capital Map (4-Leaf)"
     ic_map = data.get("ic_map", {}) or {}
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font("Aria;", "", 10)
     for leaf, items in ic_map.items():
-        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_font("Aria;", "B", 11)
         pdf.cell(0, 6, f"• {leaf}", ln=1)
-        pdf.set_font("Helvetica", "", 10)
+        pdf.set_font("Arial", "", 10)
         for it in (items or [])[:6]:
             _bullet(pdf, it)
         pdf.ln(2)
@@ -105,7 +105,7 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
         step = row.get("step")
         name = row.get("name")
         score = row.get("score")
-        pdf.set_font("Helvetica", "", 10)
+        pdf.set_font("Arial", "", 10)
         pdf.cell(0, 6, f"Step {step}: {name} (score {score}/3)", ln=1)
         for t in row.get("tasks", []):
             _bullet(pdf, t)
@@ -115,9 +115,9 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     pdf.add_page()
     pdf.header_title = "Licensing Options (advisory)"
     for opt in data.get("licensing", []):
-        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_font("Arial", "B", 11)
         pdf.cell(0, 6, f"{opt.get('model')}", ln=1)
-        pdf.set_font("Helvetica", "", 10)
+        pdf.set_font("Arial", "", 10)
         notes = opt.get("notes", [])
         if isinstance(notes, str):
             notes = [notes]
