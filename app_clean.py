@@ -1,4 +1,4 @@
-import streamlit as st
+ import streamlit as st
 import importlib, os, sys
 from pathlib import Path
 
@@ -129,7 +129,20 @@ if st.button("▶ Run IC-LicAI Analysis"):
             assessment.get("readiness", []),
             assessment.get("licensing", []),
         )
+# --- Build export bundle (safe fallbacks) ---
+case = locals().get("case", "") or st.session_state.get("case_name", "") or "Untitled Case"
+assessment = locals().get("assessment", {}) or {}
+narrative = locals().get("narrative", "") or ""
+summary_text = assessment.get("summary", "") or "Advisory summary (auto): initial IC map + 10-Steps readiness + FRAND options prepared."
 
+bundle = {
+    "case": case,
+    "summary": summary_text,
+    "ic_map": assessment.get("ic_map", {}) or {},
+    "readiness": assessment.get("readiness", []) or [],
+    "licensing": assessment.get("licensing", []) or [],
+    "narrative": narrative,
+}
     # bundle for exports
     bundle = {
         "case": case,
