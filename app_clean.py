@@ -154,20 +154,28 @@ bundle = {
     }
 
     # --- Show results ---
-    st.subheader("Intangible Capital Map (4–Leaf)")
-    for leaf, items in bundle["ic_map"].items():
-        st.write(f"**{leaf}**")
-        for it in items[:6]:
-            st.write(f"- {it}")
+# --- Show results ---
+st.subheader("Intangible Capital Map (4–Leaf)")
+for leaf, items in bundle["ic_map"].items():
+    st.write(f"**{leaf}**")
+    for it in items[:6]:
+        st.write(f"- {it}")
 
-    st.subheader("10–Steps Readiness (summary)")
-    for row in bundle["readiness"]:
-        st.write(f"**Step {row['step']}: {row['name']}** – Score {row['score']}/3")
-        for t in row["tasks"]:
-            st.write(f"- {t}")
+st.subheader("10–Steps Readiness Summary")
+for row in bundle["readiness"]:
+    st.write(f"**Step {row['step']}**: {row['name']} (Score {row['score']}/3)")
+    for t in row["tasks"]:
+        st.write(f"- {t}")
 
-    st.subheader("Licensing Options (advisory)")
-
+st.subheader("Licensing Options (advisory)")
+lic = bundle.get("licensing", [])
+for opt in lic:
+    st.markdown(f"**{opt['model']}**")
+    notes = opt.get("notes", [])
+    if isinstance(notes, str):
+        notes = [notes]
+    for t in notes:
+        st.write(f"- {t}")
 lic = bundle.get("licensing", [])
 for opt in lic:
     # Heading
@@ -179,8 +187,8 @@ for opt in lic:
     for line in notes:
         st.write(f"- {line}")
 
-    st.subheader("Advisory Narrative")
-    st.write(bundle["narrative"])
+st.subheader("Advisory Narrative")
+st.write(bundle["narrative"])
 
     # ---- normalize to bytes for download buttons -----
     def _to_bytes(x, encoding="utf-8"):
