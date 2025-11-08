@@ -1,11 +1,23 @@
-   # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from typing import Dict, Any, List
 from fpdf import FPDF
 import json
 import io
 import pandas as pd
 
-# -------- PDF helpers --------
+
+# ---------- helpers ----------
+
+def _latin1(text: str) -> str:
+    """Make text safe for FPDF core fonts (latin-1 only)."""
+    if text is None:
+        return ""
+    # Replace Unicode bullets etc. with ASCII
+    s = str(text).replace("•", "- ")
+    # Replace any remaining non-latin1 with '?'
+    return s.encode("latin-1", "replace").decode("latin-1")
+
+
 class PDF(FPDF):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -13,139 +25,155 @@ class PDF(FPDF):
         self.r_margin = 18
         self.t_margin = 18
         self.set_auto_page_break(auto=True, margin=18)
-        self.header_title = ""
 
     def header(self):
-        if self.header_title:
-            self.set_font("Arial", "B", 12)
-            self.cell(0, 8, self.header_title, ln=1)
+        # we’ll draw section titles in the body; keep header minimal
+        return
 
-# simple text wrapper that works with FPDF.multi_cell
-def _wrap_text(pdf, text, width=None):
-    # normalize to string
-    if not isinstance(text, str):
-        text = "" if text is None else str(text)
 
-    # compute usable width if not provided
-    if width is None:
-        width = int(pdf.w - pdf.l_margin - pdf.r_margin)
-
-    # ensure auto page break is on
-    pdf.set_auto_page_break(auto=True, margin=18)
-
-    # print paragraph line by line (blank lines = small spacer)
-    for line in (text or "").split("\n"):
-        if not line.strip():
-            pdf.ln(2)
-            continue
-        pdf.multi_cell(width, 6, line)
-       
 def _wrap_text(pdf: PDF, text: str | None, width: int | None = None) -> None:
-    """Safe paragraph printing: tolerate None/empty strings and blank lines."""
+    """
+    Safe paragraph printing with latin-1 sanitization. Skips empty lines.
+    """
     if not text:
         return
+    txt = _latin1(text)
     if width is None:
         width = int(pdf.w - pdf.l_margin - pdf.r_margin)
-    for line in str(text).split("\n"):
+
+    for line in txt.split("\n"):
         if not line.strip():
             pdf.ln(2)  # small spacer for blank lines
             continue
         pdf.multi_cell(width, 6, line)
-def _bullet(pdf: PDF, text: str) -> None:
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(5, 6, "•")
-    pdf.multi_cell(0, 6, text)
 
-# -------- Exporters --------
+
+def _bullet(pdf: PDF, text: str) -> None:
+    """
+    ASCII bullet (hyphen) to avoid Unicode issues with core fonts.
+    """
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(6, 6, "-")
+    pdf.multi_cell(0, 6, _latin1(text))
+
+
+# ---------- Exporters ----------
+
 def export_pdf(data: Dict[str, Any]) -> bytes:
     """
     Expected keys in data:
       - case: str
       - summary: str
-      - ic_map: Dict[str, List[str]]
-      - readiness: List[Dict[str, Any]]  (step/name/score,tasks)
-      - licensing: List[Dict[str, Any]]  (model, notes[str or list])
+      - ic_map: Dict[str, List[str]]  (leaf -> items)
+      - readiness: List[Dict[str, Any]] (step/name/score/tasks)
+      - licensing: List[Dict[str, Any]] (model, notes[str or list])
       - narrative: str
     """
     pdf = PDF(format="A4")
     pdf.add_page()
 
-    # Cover / Summary
-    pdf.header_title = "Intangible Capital & Licensing Readiness Report"
-    pdf.set_font("Arial", "", 12)
+    # Cover / Executive Summary
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 8, _latin1("Intangible Capital & Licensing Readiness Report"), ln=1)
     pdf.ln(2)
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(0, 6, f"Case: {data.get('case','(unspecified)')}", ln=1)
+
+    case = data.get("case") or "(unspecified)"
+    pdf.set_font("Arial", "", 11)
+    pdf.cell(0, 6, _latin1(f"Case: {case}"), ln=1)
     pdf.ln(2)
+
     _wrap_text(pdf, data.get("summary", ""))
 
-    # 4-Leaf IC map (first 6 items per leaf for brevity)
+    # 4-Leaf IC Map (first 6 per leaf for brevity)
     pdf.add_page()
-    pdf.header_title = "Intangible Capital Map (4-Leaf)"
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 8, _latin1("Intangible Capital Map (4-Leaf)"), ln=1)
+    pdf.ln(2)
+
     ic_map = data.get("ic_map", {}) or {}
-    pdf.set_font("Arial;", "", 10)
     for leaf, items in ic_map.items():
-        pdf.set_font("Arial;", "B", 11)
-        pdf.cell(0, 6, f"• {leaf}", ln=1)
+        pdf.set_font("Arial", "B", 11)
+        pdf.cell(0, 6, _latin1(f"• {leaf}"), ln=1)
         pdf.set_font("Arial", "", 10)
         for it in (items or [])[:6]:
             _bullet(pdf, it)
         pdf.ln(2)
 
-    # Narrative
+    # Advisory Narrative
     if data.get("narrative"):
         pdf.add_page()
-        pdf.header_title = "Advisory Narrative"
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 8, _latin1("Advisory Narrative"), ln=1)
+        pdf.ln(2)
         _wrap_text(pdf, data.get("narrative", ""))
 
-    # 10-Steps summary
+    # 10-Steps Readiness Summary
     pdf.add_page()
-    pdf.header_title = "10-Steps Readiness Summary"
-    for row in data.get("readiness", []):
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 8, _latin1("10-Steps Readiness Summary"), ln=1)
+    pdf.ln(1)
+
+    for row in data.get("readiness", []) or []:
         step = row.get("step")
-        name = row.get("name")
+        name = row.get("name", "")
         score = row.get("score")
         pdf.set_font("Arial", "", 10)
-        pdf.cell(0, 6, f"Step {step}: {name} (score {score}/3)", ln=1)
-        for t in row.get("tasks", []):
+        left = f"Step {step}: {name}"
+        right = f"Score {score}/3" if score is not None else ""
+        pdf.cell(0, 6, _latin1(f"{left}   {right}"), ln=1)
+        for t in row.get("tasks", []) or []:
             _bullet(pdf, t)
         pdf.ln(2)
 
-    # Licensing options (FIX: normalize notes to list)
+    # Licensing Options (advisory)
     pdf.add_page()
-    pdf.header_title = "Licensing Options (advisory)"
-    for opt in data.get("licensing", []):
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 8, _latin1("Licensing Options (advisory)"), ln=1)
+    pdf.ln(1)
+
+    for opt in data.get("licensing", []) or []:
+        model = _latin1(f"{opt.get('model', '')}")
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 6, f"{opt.get('model')}", ln=1)
+        pdf.cell(0, 6, model, ln=1)
         pdf.set_font("Arial", "", 10)
         notes = opt.get("notes", [])
         if isinstance(notes, str):
             notes = [notes]
-        for t in notes:
+        for t in notes or []:
             _bullet(pdf, t)
         pdf.ln(1)
 
-    # Governance
+    # Governance note
     pdf.add_page()
-    pdf.header_title = "Governance & Audit Note"
-    _wrap_text(pdf, "This report is generated using an advisory-first workflow with human approval. "
-                    "Evidence sources and decisions should be recorded in an IA register.")
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 8, _latin1("Governance & Audit Note"), ln=1)
+    pdf.ln(1)
+    _wrap_text(
+        pdf,
+        "This report is generated using an advisory-first workflow with human approval. "
+        "Evidence sources and decisions should be recorded in an IA register.",
+    )
 
-    return bytes(pdf.output(dest="S"))
+    # Return PDF bytes (latin-1) – safe because we sanitize text to latin-1
+    return pdf.output(dest="S").encode("latin-1")
+
 
 def export_xlsx(ic_map: Dict[str, List[str]]) -> bytes:
     """
     Simple IA Register sheet from ic_map.
     """
-    rows = []
-    for leaf, items in (ic_map or {}).items():
-        for it in items:
-            rows.append({"Capital": leaf, "Item": it})
+    rows: List[Dict[str, str]] = []
+    ic_map = ic_map or {}
+    for leaf, items in ic_map.items():
+        for it in items or []:
+            rows.append({"Capital": _latin1(leaf), "Item": _latin1(it)})
+
     df = pd.DataFrame(rows, columns=["Capital", "Item"])
     bio = io.BytesIO()
     with pd.ExcelWriter(bio, engine="xlsxwriter") as xw:
         df.to_excel(xw, index=False, sheet_name="IA Register")
     return bio.getvalue()
+
 
 def export_json(bundle: Dict[str, Any]) -> bytes:
     return json.dumps(bundle, ensure_ascii=False, indent=2).encode("utf-8")
