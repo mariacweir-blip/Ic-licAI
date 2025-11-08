@@ -218,7 +218,12 @@ st.subheader("Advisory Narrative")
 narrative = locals().get("narrative", "") or ""
 
 # Use narrative directly (do NOT read from bundle here)
-narr = (narrative or "").strip()
+# Ensure narrative is text before stripping
+if isinstance(narrative, (dict, list)):
+    import json
+    narr = json.dumps(narrative, indent=2)
+else:
+    narr = str(narrative or "").strip()
 
 st.text_area("Preview (copyable)", narr, height=260)
 st.download_button(
