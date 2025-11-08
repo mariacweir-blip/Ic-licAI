@@ -83,9 +83,9 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     pdf.add_page()
     pdf.header_title = "Intangible Capital Map (4-Leaf)"
     ic_map = data.get("ic_map", {}) or {}
-    pdf.set_font("Aria;", "", 10)
+    pdf.set_font("Arial;", "", 10)
     for leaf, items in ic_map.items():
-        pdf.set_font("Aria;", "B", 11)
+        pdf.set_font("Arial;", "B", 11)
         pdf.cell(0, 6, f"• {leaf}", ln=1)
         pdf.set_font("Arial", "", 10)
         for it in (items or [])[:6]:
