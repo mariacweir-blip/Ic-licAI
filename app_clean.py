@@ -32,10 +32,10 @@ except Exception:
     # ---- EU theme helper ----
     def inject_eu_theme():
         try:
-            css_path = Path("theme") / "eu.css"
-            if css_path.exists():
-            css = css_path.read_text(encoding="utf-8")
-            st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+                css_path = Path("theme") / "eu.css"
+                if css_path.exists():
+                css = css_path.read_text(encoding="utf-8")
+                st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
         except Exception:
             # silent if theme not present
             pass
