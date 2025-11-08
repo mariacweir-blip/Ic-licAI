@@ -91,16 +91,25 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     # Licensing options
     pdf.add_page()
     pdf.header_title = "Licensing Options (advisory)"
+    pdf.set_font("Helvetica", "B", 11)
+
     for opt in data.get("licensing", []):
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(0, 7, f"{opt.get('model')}", ln=1)
-        pdf.set_font("Helvetica", "", 10)
-        notes = opt.get("notes", [])
-        if isinstance(notes, str):
+    # Title line: e.g. "Traditional IP license"
+    pdf.cell(0, 7, f"{opt.get('model')}", ln=1)
+
+    # Normal body font
+    pdf.set_font("Helvetica", "", 10)
+
+    # Notes can be a string or a list; normalize to a list
+    notes = opt.get("notes", [])
+    if isinstance(notes, str):
         notes = [notes]
-        for t in notes:
+
+    # One bullet per note
+    for t in notes:
         _bullet(pdf, f"- {t}")
-        pdf.ln(1)
+
+    pdf.ln(1)  # small spacing between licensing models
 
     # Governance note
     pdf.add_page()
