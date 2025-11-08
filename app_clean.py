@@ -2,14 +2,19 @@ import streamlit as st
 import importlib, os, sys
 from pathlib import Path
 
-# Safe import block (avoids indentation / encoding issues)
+# Safe import block (works on Streamlit Cloud and locally)
 try:
     from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
     from ic_licai.exporters import export_pdf, export_xlsx, export_json
 except Exception:
-    sys.path.append(str(Path(__file__).resolve().parent))
-    from processing import parse_uploaded_files, draft_ic_assessment
-    from exporters import export_pdf, export_xlsx, export_json
+    # make sure Python can see the repo root and the ic_licai package
+    import sys
+    from pathlib import Path
+    here = Path(__file__).resolve().parent
+    sys.path.append(str(here))                 # repo root
+    sys.path.append(str(here / "ic_licai"))    # package folder
+    from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
+    from ic_licai.exporters import export_pdf, export_xlsx, export_json
 
 st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
 inject_eu_theme()
