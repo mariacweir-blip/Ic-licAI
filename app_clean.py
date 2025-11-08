@@ -113,33 +113,32 @@ if st.button("▶ Run IC-LicAI Analysis"):
 
     # Build advisory narrative using the selected profile
     import importlib
-    narratives_mod = importlib.import_module("narratives")
-    if hasattr(narratives_mod, "build_narrative_profiled"):
-        narrative = narratives_mod.build_narrative_profiled(
-            case,
-            assessment.get("ic_map", {}),
-            assessment.get("readiness", []),
-            assessment.get("licensing", []),
-            profile  # <-- size/sector from the UI
-        )
-        st.subheader("Advisory Narrative")
+narratives_mod = importlib.import_module("narratives")
 
-narr = (bundle.get("narrative") or "").strip()
-st.text_area("Preview (copyable)", narr, height=260)
-
-st.download_button(
-    "Download Narrative (.txt)",
-    data=narr.encode("utf-8"),
-    file_name=f"{case}_Advisory_Narrative.txt",
-    mime="text/plain",
-)
+if hasattr(narratives_mod, "build_narrative_profiled"):
+    narrative = narratives_mod.build_narrative_profiled(
+        case,
+        assessment.get("ic_map", {}),
+        assessment.get("readiness", []),
+        assessment.get("licensing", []),
+        profile  # <-- size/sector from the UI
+    )
+    st.subheader("Advisory Narrative")
+    narr = (bundle.get("narrative") or "").strip()
+    st.text_area("Preview (copyable)", narr, height=260)
+    st.download_button(
+        "Download Narrative (.txt)",
+        data=narr.encode("utf-8"),
+        file_name=f"{case}_Advisory_Narrative.txt",
+        mime="text/plain",
+    )
 else:
-      narrative = narratives_mod.build_narrative(
-          case,
-          assessment.get("ic_map", {}),
-          assessment.get("readiness", []),
-          assessment.get("licensing", []),
-        )
+    narrative = narratives_mod.build_narrative(
+        case,
+        assessment.get("ic_map", {}),
+        assessment.get("readiness", []),
+        assessment.get("licensing", []),
+    )
 # --- Build export bundle (safe fallbacks) ---
 case = locals().get("case", "") or st.session_state.get("case_name", "") or "Untitled Case"
 assessment = locals().get("assessment", {}) or {}
