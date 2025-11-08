@@ -134,19 +134,26 @@ if hasattr(narratives_mod, "build_narrative_profiled"):
         assessment.get("licensing", []),
         profile  # <-- size/sector from the UI
     )
-    st.subheader("Advisory Narrative")
-    narrative = locals().get("narrative", "") or ""
+    # ---- Advisory Narrative ----
+st.subheader("Advisory Narrative")
 
-   # Convert dicts or lists to string safely
+narrative = locals().get("narrative", "") or ""
+
+# Convert dicts/lists safely to string
 if isinstance(narrative, (dict, list)):
     import json
     narr = json.dumps(narrative, indent=2)
 else:
     narr = str(narrative).strip()
-    st.text_area("Preview (copyable)", narr, height=260)
-    st.download_button(
-        "Download Narrative (.txt)",
-        data=narr.encode("utf-8"),
+
+st.text_area("Preview (copyable)", narr, height=260)
+
+st.download_button(
+    "Download Narrative (.txt)",
+    data=narr.encode("utf-8"),
+    file_name=f"{case}_Advisory_Narrative.txt",
+    mime="text/plain",
+)
         
 # --- Build export bundle (safe fallbacks) ---
 case = locals().get("case", "") or st.session_state.get("case_name", "") or "Untitled Case"
