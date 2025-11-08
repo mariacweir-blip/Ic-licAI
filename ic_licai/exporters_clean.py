@@ -33,29 +33,52 @@ class PDF(FPDF):
 
 def _wrap_text(pdf: PDF, text: str | None, width: int | None = None) -> None:
     """
-    Safe paragraph printing with latin-1 sanitization. Skips empty lines.
+    Safe paragraph printing:
+    - latin-1 sanitize
+    - replace tabs
+    - hard-wrap tokens with no natural break (e.g., long URLs)
+    - use width=0 to let FPDF auto-calc available line width
     """
     if not text:
         return
-    txt = _latin1(text)
-    if width is None:
-        width = int(pdf.w - pdf.l_margin - pdf.r_margin)
 
-    for line in txt.split("\n"):
-        if not line.strip():
-            pdf.ln(2)  # small spacer for blank lines
+    def _hard_wrap_token(tok: str, maxlen: int = 60) -> list[str]:
+        # Split a single overlong token into chunks so FPDF can render it
+        return [tok[i:i + maxlen] for i in range(0, len(tok), maxlen)]
+
+    # sanitize + normalize
+    txt = _latin1(text).replace("\t", "    ")
+
+    # split into lines, then tokens; hard-wrap any token > maxlen
+    normalized_lines: list[str] = []
+    for raw_line in txt.split("\n"):
+        raw_line = raw_line.rstrip()
+        if not raw_line:
+            normalized_lines.append("")  # preserve blank lines
             continue
-        pdf.multi_cell(width, 6, line)
+        pieces: list[str] = []
+        for tok in raw_line.split(" "):
+            if len(tok) > 60:
+                pieces.extend(_hard_wrap_token(tok, 60))
+            else:
+                pieces.append(tok)
+        normalized_lines.append(" ".join(pieces))
+
+    pdf.set_auto_page_break(auto=True, margin=18)
+
+    # Use width=0 → FPDF auto width (avoids zero/negative width issues)
+    for line in normalized_lines:
+        if not line.strip():
+            pdf.ln(2)
+            continue
+        pdf.multi_cell(0, 6, line)
 
 
 def _bullet(pdf: PDF, text: str) -> None:
-    """
-    ASCII bullet (hyphen) to avoid Unicode issues with core fonts.
-    """
+    # ASCII bullet + safe wrap
+    line = f"- {_latin1(text)}"
     pdf.set_font("Arial", "", 10)
-    pdf.cell(6, 6, "-")
-    pdf.multi_cell(0, 6, _latin1(text))
-
+    pdf.multi_cell(0, 6, line)
 
 # ---------- Exporters ----------
 
