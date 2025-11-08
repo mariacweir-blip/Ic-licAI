@@ -209,6 +209,15 @@ for opt in lic:
         st.write(f"- {line}")
 
 st.subheader("Advisory Narrative")
+narr = (narrative or "").strip()
+st.text_area("Preview (copyable)", narr, height=260)
+st.download_button(
+    "Download Narrative (.txt)",
+    data=narr.encode("utf-8"),
+    file_name=f"{case}_Advisory_Narrative.txt",
+    mime="text/plain",
+)
+
 st.write(bundle["narrative"])
 
 # ---- normalize to bytes for download buttons ----
