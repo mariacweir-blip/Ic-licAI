@@ -122,8 +122,8 @@ text_input = (base_text + ("\n" if base_text and joined_docs else "") + joined_d
 
 # Run the lightweight IC assessment now, so `assessment` is defined
 assessment = draft_ic_assessment(text_input)
-    # Build advisory narrative using the selected profile
-    import importlib
+# Build advisory narrative using the selected profile
+import importlib
 narratives_mod = importlib.import_module("narratives")
 
 if hasattr(narratives_mod, "build_narrative_profiled"):
