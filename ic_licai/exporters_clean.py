@@ -131,7 +131,7 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     _wrap_text(pdf, "This report is generated using an advisory-first workflow with human approval. "
                     "Evidence sources and decisions should be recorded in an IA register.")
 
-    return pdf.output(dest="S").encode("latin-1")
+    return bytes(pdf.output(dest="S"))
 
 def export_xlsx(ic_map: Dict[str, List[str]]) -> bytes:
     """
