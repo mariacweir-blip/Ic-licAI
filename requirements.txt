@@ -8,3 +8,4 @@ streamlit
 fpdf2==2.7.9
 openpyxl
 PyPDF2==3.0.1
+XlsxWriter
