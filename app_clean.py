@@ -111,6 +111,17 @@ if st.button("▶ Run IC-LicAI Analysis"):
     text_input = (notes or "") + "\n".join(parsed.get("texts", []))
     assessment = draft_ic_assessment(text_input)
 
+# --- ensure assessment exists before building narrative ---
+# If no files were parsed, guarantee a safe default structure
+parsed = locals().get("parsed", {"texts": [], "meta": []})
+
+# Build the text body (notes + any parsed texts)
+base_text = (notes or "").strip()
+joined_docs = "\n".join(parsed.get("texts", []))
+text_input = (base_text + ("\n" if base_text and joined_docs else "") + joined_docs).strip()
+
+# Run the lightweight IC assessment now, so `assessment` is defined
+assessment = draft_ic_assessment(text_input)
     # Build advisory narrative using the selected profile
     import importlib
 narratives_mod = importlib.import_module("narratives")
