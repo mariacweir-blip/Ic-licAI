@@ -21,7 +21,7 @@ except Exception:
         return mod
 
     processing = _load_module("ic_processing", pkg / "processing.py")
-    exporters = _load_module("ic_exporters", pkg / "exporters.py")
+    exporters = _load_module("ic_exporters", pkg / "exporters_clean.py")
 
     # expose the functions we need
     parse_uploaded_files = processing.parse_uploaded_files
