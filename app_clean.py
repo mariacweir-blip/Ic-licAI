@@ -2,20 +2,33 @@ import streamlit as st
 import importlib, os, sys
 from pathlib import Path
 
-# Safe import block (works on Streamlit Cloud and locally)
+# Robust imports: try normal package import, else load modules by file path
 try:
     from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
     from ic_licai.exporters import export_pdf, export_xlsx, export_json
 except Exception:
-    # make sure Python can see the repo root and the ic_licai package
-    import sys
+    import importlib.util
     from pathlib import Path
-    here = Path(__file__).resolve().parent
-    sys.path.append(str(here))                 # repo root
-    sys.path.append(str(here / "ic_licai"))    # package folder
-    from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
-    from ic_licai.exporters import export_pdf, export_xlsx, export_json
 
+    here = Path(__file__).resolve().parent
+    pkg = here / "ic_licai"
+
+    def _load_module(name: str, file_path: Path):
+        spec = importlib.util.spec_from_file_location(name, str(file_path))
+        mod = importlib.util.module_from_spec(spec)
+        assert spec and spec.loader, f"Cannot load {file_path}"
+        spec.loader.exec_module(mod)
+        return mod
+
+    processing = _load_module("ic_processing", pkg / "processing.py")
+    exporters = _load_module("ic_exporters", pkg / "exporters.py")
+
+    # expose the functions we need
+    parse_uploaded_files = processing.parse_uploaded_files
+    draft_ic_assessment = processing.draft_ic_assessment
+    export_pdf = exporters.export_pdf
+    export_xlsx = exporters.export_xlsx
+    export_json = exporters.export_json
 st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
 inject_eu_theme()
 
