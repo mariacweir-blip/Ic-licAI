@@ -133,12 +133,12 @@ st.download_button(
     file_name=f"{case}_Advisory_Narrative.txt",
     mime="text/plain",
 )
-    else:
-        narrative = narratives_mod.build_narrative(
-            case,
-            assessment.get("ic_map", {}),
-            assessment.get("readiness", []),
-            assessment.get("licensing", []),
+else:
+      narrative = narratives_mod.build_narrative(
+          case,
+          assessment.get("ic_map", {}),
+          assessment.get("readiness", []),
+          assessment.get("licensing", []),
         )
 # --- Build export bundle (safe fallbacks) ---
 case = locals().get("case", "") or st.session_state.get("case_name", "") or "Untitled Case"
