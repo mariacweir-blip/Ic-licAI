@@ -116,7 +116,7 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     ic_map = data.get("ic_map", {}) or {}
     for leaf, items in ic_map.items():
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 6, _latin1(f"• {leaf}"), ln=1)
+        pdf.cell(0, 6, _latin1(f"- {leaf}"), ln=1)
         pdf.set_font("Arial", "", 10)
         for it in (items or [])[:6]:
             _bullet(pdf, it)
