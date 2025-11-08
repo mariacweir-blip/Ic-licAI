@@ -143,8 +143,8 @@ bundle = {
     "licensing": assessment.get("licensing", []) or [],
     "narrative": narrative,
 }
-    # bundle for exports
-    bundle = {
+# bundle for exports
+bundle = {
         "case": case,
         "summary": f"Advisory overview for {case}.",
         "ic_map": assessment.get("ic_map", {}),
