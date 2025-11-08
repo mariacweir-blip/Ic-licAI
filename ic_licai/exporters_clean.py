@@ -7,7 +7,6 @@ import pandas as pd
 
 
 # ---------- helpers ----------
-
 def _latin1(text: str) -> str:
     """Make text safe for FPDF core fonts (latin-1 only)."""
     if text is None:
@@ -16,7 +15,28 @@ def _latin1(text: str) -> str:
     s = str(text).replace("•", "- ")
     # Replace any remaining non-latin1 with '?'
     return s.encode("latin-1", "replace").decode("latin-1")
+def _usable_width(pdf: FPDF) -> float:
+    """Printable width that is never too small for FPDF."""
+    return max(20.0, float(pdf.w) - float(pdf.l_margin) - float(pdf.r_margin))
 
+def _safe_multicell(pdf: FPDF, text: str, h: float = 6.0) -> None:
+    """Multi-cell that never throws, with hard-wrap fallback."""
+    w = _usable_width(pdf)
+    try:
+        pdf.multi_cell(w, h, text)
+        return
+    except Exception:
+        pass
+    # Fallback 1: force-break every 60 chars
+    try:
+        chunks = [text[i:i+60] for i in range(0, len(text), 60)] or [text]
+        for c in chunks:
+            pdf.multi_cell(w, h, c)
+        return
+    except Exception:
+        pass
+    # Fallback 2: last resort
+    pdf.multi_cell(w, h, "?")
 
 class PDF(FPDF):
     def __init__(self, *args, **kwargs):
@@ -32,53 +52,40 @@ class PDF(FPDF):
 
 
 def _wrap_text(pdf: PDF, text: str | None, width: int | None = None) -> None:
-    """
-    Safe paragraph printing:
-    - latin-1 sanitize
-    - replace tabs
-    - hard-wrap tokens with no natural break (e.g., long URLs)
-    - use width=0 to let FPDF auto-calc available line width
-    """
     if not text:
         return
 
     def _hard_wrap_token(tok: str, maxlen: int = 60) -> list[str]:
-        # Split a single overlong token into chunks so FPDF can render it
         return [tok[i:i + maxlen] for i in range(0, len(tok), maxlen)]
 
-    # sanitize + normalize
-    txt = _latin1(text).replace("\t", "    ")
+    raw = _latin1(text).replace("\t", "    ")
+    raw = "".join(ch if (ord(ch) >= 32 or ch in "\n") else " " for ch in raw)
 
-    # split into lines, then tokens; hard-wrap any token > maxlen
-    normalized_lines: list[str] = []
-    for raw_line in txt.split("\n"):
-        raw_line = raw_line.rstrip()
-        if not raw_line:
-            normalized_lines.append("")  # preserve blank lines
+    lines: list[str] = []
+    for ln in raw.split("\n"):
+        ln = ln.rstrip()
+        if not ln:
+            lines.append("")
             continue
-        pieces: list[str] = []
-        for tok in raw_line.split(" "):
+        tokens: list[str] = []
+        for tok in ln.split(" "):
             if len(tok) > 60:
-                pieces.extend(_hard_wrap_token(tok, 60))
+                tokens.extend(_hard_wrap_token(tok, 60))
             else:
-                pieces.append(tok)
-        normalized_lines.append(" ".join(pieces))
+                tokens.append(tok)
+        lines.append(" ".join(tokens))
 
     pdf.set_auto_page_break(auto=True, margin=18)
-
-    # Use width=0 → FPDF auto width (avoids zero/negative width issues)
-    for line in normalized_lines:
-        if not line.strip():
+    for ln in lines:
+        if not ln.strip():
             pdf.ln(2)
             continue
-        pdf.multi_cell(0, 6, line)
-
+        _safe_multicell(pdf, ln)  
 
 def _bullet(pdf: PDF, text: str) -> None:
-    # ASCII bullet + safe wrap
-    line = f"- {_latin1(text)}"
     pdf.set_font("Arial", "", 10)
-    pdf.multi_cell(0, 6, line)
+    line = f"- {_latin1(text)}"
+    _safe_multicell(pdf, line)
 
 # ---------- Exporters ----------
 
@@ -94,6 +101,7 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     """
     pdf = PDF(format="A4")
     pdf.add_page()
+    pdf.set_font("Arial", "", 11)z
 
     # Cover / Executive Summary
     pdf.set_font("Arial", "B", 12)
