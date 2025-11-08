@@ -122,6 +122,17 @@ if st.button("▶ Run IC-LicAI Analysis"):
             assessment.get("licensing", []),
             profile  # <-- size/sector from the UI
         )
+        st.subheader("Advisory Narrative")
+
+narr = (bundle.get("narrative") or "").strip()
+st.text_area("Preview (copyable)", narr, height=260)
+
+st.download_button(
+    "Download Narrative (.txt)",
+    data=narr.encode("utf-8"),
+    file_name=f"{case}_Advisory_Narrative.txt",
+    mime="text/plain",
+)
     else:
         narrative = narratives_mod.build_narrative(
             case,
