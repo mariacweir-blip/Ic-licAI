@@ -29,6 +29,16 @@ except Exception:
     export_pdf = exporters.export_pdf
     export_xlsx = exporters.export_xlsx
     export_json = exporters.export_json
+    # ---- EU theme helper ----
+    def inject_eu_theme():
+    try:
+        css_path = Path("theme") / "eu.css"
+        if css_path.exists():
+            css = css_path.read_text(encoding="utf-8")
+            st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    except Exception:
+        # silent if theme not present
+        pass
 st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
 inject_eu_theme()
 
