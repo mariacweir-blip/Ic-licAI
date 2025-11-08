@@ -135,7 +135,8 @@ if hasattr(narratives_mod, "build_narrative_profiled"):
         profile  # <-- size/sector from the UI
     )
     st.subheader("Advisory Narrative")
-    narr = (bundle.get("narrative") or "").strip()
+    narrative = locals().get("narrative", "") or ""
+    narr = narrative.strip()
     st.text_area("Preview (copyable)", narr, height=260)
     st.download_button(
         "Download Narrative (.txt)",
