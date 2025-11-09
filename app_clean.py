@@ -282,10 +282,9 @@ st.download_button(
 )
         
 # --- Build export bundle (safe fallbacks) ---
-case = locals().get("case", "") or st.session_state.get("case_name", "") or "Untitled Case"
-assessment = locals().get("assessment", {}) or {}
-narrative = locals().get("narrative", "") or ""
-summary_text = assessment.get("summary", "") or "Advisory summary (auto): initial IC map + 10-Steps readiness + FRAND options prepared."
+case = ss.get("case", "Untitled Case")
+assessment = ss.get("assessment", {})
+narrative = ss.get("narrative", "")
 
 bundle = {
     "case": case,
@@ -296,7 +295,6 @@ bundle = {
     "narrative": narrative,
 }
 
-    # --- Show results ---
 # --- Show results ---
 st.subheader("Intangible Capital Map (4–Leaf)")
 for leaf, items in bundle["ic_map"].items():
