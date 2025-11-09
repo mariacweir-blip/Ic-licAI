@@ -70,7 +70,7 @@ with st.form("case_form"):
         ss["company_size"] = size_sel
         ss["sector"] = sector_sel
         ss["notes"] = notes
-        st.success("✅ Case details saved successfully").  
+        st.success("✅ Case details saved successfully")
     
     ss["sector"] = st.text_input("Sector / Industry", value=ss.get("sector", ""))
     ss["notes"] = st.text_area("Notes or description", value=ss.get("notes", ""), height=120)
