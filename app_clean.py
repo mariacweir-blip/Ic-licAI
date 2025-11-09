@@ -143,11 +143,11 @@ else:
         "further evidence gathering and IC-mapping are recommended before licensing."
             )
 
-        st.text_area(
-            "Generated Advisory Summary",
-            summary_text,
-            height=200,
-            key="advisory_summary",
+    st.text_area(
+        "Generated Advisory Summary",
+        summary_text,
+        height=200,
+        key="advisory_summary",
         )
 
 if st.button("Save Advisory Narrative"):
