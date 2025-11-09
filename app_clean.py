@@ -52,6 +52,22 @@ st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
 st.title("IC-LicAI Expert Console")
 st.caption("Upload → Guide → Advisory → Exports (licensing-first, human-in-the-loop)")
 
+# --- Upload Evidence Files ---
+st.subheader("📤 Upload Case Documents")
+
+uploaded_files = st.file_uploader(
+    "Upload evidence files (PDF, DOCX, TXT, CSV, ZIP, etc.)",
+    accept_multiple_files=True,
+    type=["pdf", "docx", "txt", "csv", "zip"],
+)
+
+if uploaded_files:
+    st.success(f"{len(uploaded_files)} file(s) uploaded successfully.")
+    # Store file metadata in session for reuse later
+    ss["uploaded_files"] = [f.name for f in uploaded_files]
+else:
+    st.info("No documents uploaded yet — you can still generate reports manually.")
+
 ss = st.session_state
 
 # --- Case capture (safe form with defaults) ---
