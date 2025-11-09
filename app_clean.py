@@ -134,8 +134,9 @@ with tabs[2]:
     assessment = analysis.get("assessment", {})
 
     if not isinstance(assessment, dict) or not assessment:
-        st.info("⚙️ Run IC Analysis on the Upload tab, then return here.")
-        st.stop()
+        st.warning("⚙️ No analysis data found. Please run IC Analysis first.")
+    else:
+        st.success("✅ Assessment loaded successfully — generating advisory narrative...")
 
     # Simple heuristic narrative (placeholder)
     guide = ss.get("guide", {})
