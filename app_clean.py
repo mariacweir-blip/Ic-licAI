@@ -136,81 +136,100 @@ notes = ss.get("notes", "No notes provided.")
 assessment = ss.get("analysis", {}).get("assessment", {})
 
 # --- 1. Expert Checklist ---
-if st.button("🧩 Generate Expert Checklist (PDF)"):
+if st.button("🧾 Generate Expert Checklist (PDF)"):
     try:
         checklist_bundle = {
             "case": case_name,
             "summary": f"Expert readiness checklist for {case_name} ({sector}, {company_size}).",
             "ic_map": assessment.get("ic_map", {}),
             "readiness": [
-                {"step": "1", "name": "Identify", "tasks": ["List core intangibles", "Tag as human, structural, customer, or strategic"]},
-                {"step": "2", "name": "Protect", "tasks": ["Confirm NDAs, IP filings, trade secret coverage"]},
-                {"step": "3", "name": "Value", "tasks": ["Apply 10-Step Areopa method", "Capture tacit/explicit proportions"]},
+                {"step": "1", "name": "Identify", "tasks": [
+                    "List core intangibles", "Tag as human, structural, customer, or strategic"
+                ]},
+                {"step": "2", "name": "Protect", "tasks": [
+                    "Confirm NDAs, IP filings, trade secret coverage"
+                ]},
+                {"step": "3", "name": "Value", "tasks": [
+                    "Apply 10-Step Areopa method", "Capture tacit/explicit proportions"
+                ]},
             ],
             "licensing": [],
             "narrative": "Checklist for experts guiding SMEs through IC identification and readiness.",
         }
         st.download_button(
-            "⬇ Download Expert Checklist",
+            "⬇️ Download Expert Checklist",
             data=export_pdf(checklist_bundle),
             file_name=f"{case_name}_Expert_Checklist.pdf",
-            mime="application/pdf"
+            mime="application/pdf",
+            key="dl_checklist_pdf",
         )
-     except Exception as e:
+    except Exception as e:
         st.error(f"Checklist export failed: {e}")
 
 # --- 2. Licensing Report ---
-if st.button("⚖️ Generate Licensing Report (PDF)"):
-try:
+if st.button("📄 Generate Licensing Report (PDF)"):
+    try:
         licensing_bundle = {
             "case": case_name,
             "summary": f"Licensing options and FRAND readiness for {case_name}.",
             "ic_map": assessment.get("ic_map", {}),
             "readiness": assessment.get("readiness", []),
             "licensing": [
-                {"model": "Revenue Licence", "notes": ["Royalty-based licence", "FRAND-aligned terms", "Annual audit clause"]},
-                {"model": "Defensive Licence", "notes": ["Protective IP pooling", "Non-assertion across cluster partners"]},
-                {"model": "Co-Creation Licence", "notes": ["Shared ownership of Foreground IP", "Revenue-sharing"]},
+                {"model": "Revenue Licence", "notes": [
+                    "Royalty-based licence", "FRAND-aligned terms", "Annual audit clause"
+                ]},
+                {"model": "Defensive Licence", "notes": [
+                    "Protective IP pooling", "Non-assertion across cluster partners"
+                ]},
+                {"model": "Co-Creation Licence", "notes": [
+                    "Shared ownership of Foreground IP", "Revenue-sharing"
+                ]},
             ],
             "narrative": "Licensing-first advisory report aligning IC assets with commercial models.",
         }
         st.download_button(
-            "⬇ Download Licensing Report",
+            "⬇️ Download Licensing Report",
             data=export_pdf(licensing_bundle),
             file_name=f"{case_name}_Licensing_Report.pdf",
-            mime="application/pdf"
+            mime="application/pdf",
+            key="dl_licensing_pdf",
         )
-except Exception as e:
+    except Exception as e:
         st.error(f"Licensing report failed: {e}")
 
 # --- 3. Full Intangible Capital Report ---
 if st.button("📘 Generate Full Intangible Capital Report (PDF)"):
-try:
+    try:
         ic_bundle = {
             "case": case_name,
             "summary": f"Full intangible capital analysis for {case_name}.",
             "ic_map": assessment.get("ic_map", {}),
             "readiness": assessment.get("readiness", []),
             "licensing": assessment.get("licensing", []),
-            "narrative": f"This report provides a structured valuation and readiness overview of {case_name}’s intangible assets across human, customer, structural, and strategic capital types, aligning with Areopa’s 4-Leaf Model and IAS 38 principles.",
+            "narrative": (
+                f"This report provides a structured valuation and readiness overview of {case_name}'s "
+                "intangible assets."
+            ),
         }
         st.download_button(
-            "⬇ Download Intangible Capital Report",
+            "⬇️ Download Intangible Capital Report",
             data=export_pdf(ic_bundle),
             file_name=f"{case_name}_Intangible_Capital_Report.pdf",
-            mime="application/pdf"
+            mime="application/pdf",
+            key="dl_ic_pdf",
         )
-except Exception as e:
+    except Exception as e:
         st.error(f"IC report failed: {e}")
 
 # --- 4. IA Register (XLSX) ---
 try:
     xlsx_b = export_xlsx(assessment.get("ic_map", {}))
     st.download_button(
-        "⬇ Download IA Register (XLSX)",
+        "⬇️ Download IA Register (XLSX)",
         data=xlsx_b,
         file_name=f"{case_name}_IA_Register.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key="dl_xlsx",
     )
 except Exception as e:
     st.error(f"IA Register export failed: {e}")
@@ -225,10 +244,11 @@ try:
         "notes": notes,
     })
     st.download_button(
-        "⬇ Download Case JSON",
+        "⬇️ Download Case JSON",
         data=json_bytes,
         file_name=f"{case_name}_ICLicAI_Case.json",
-        mime="application/json"
+        mime="application/json",
+        key="dl_json",
     )
 except Exception as e:
     st.error(f"JSON export failed: {e}")
