@@ -66,21 +66,28 @@ if case_name and case_name.strip():
         ss["case_name"] = case_name
         ss["notes"] = notes
 
-        # Parse uploaded files (safe fallback if nothing uploaded)
-        parsed = parse_uploaded_files(files) if files else {"texts": [], "tables": []}
+        # Parse uploaded files
+        parsed = parse_uploaded_files(uploads if 'uploads' in locals() else [])
+        notes = ss.get("notes", "")
+        text_input = (notes or "")
+        if notes:
+            text_input += "\n"
+        text_input += "\n".join(parsed.get("texts", []))
 
-      # Draft IC assessment (heuristics demo)
-concatenated_text = (notes or "") + "\n".join(parsed.get("texts", []))
-assessment = draft_ic_assessment(concatenated_text)
+        # Draft IC assessment (heuristics demo)
+        assessment = draft_ic_assessment(text_input)
 
-# Save analysis results in session state for later tabs
-ss["analysis"] = {
-    "assessment": assessment,
-    "case": ss.get("case_name", "Untitled Case"),
-    "notes": text_input,
-}
-        ss["analysis"] = {"parsed": parsed, "assessment": assessment}
-        st.success("Analysis complete. Continue to Expert Guide →")
+        # Persist: make sure case_name exists, then save analysis bundle to session
+        if ss.get("case_name", "").strip() == "":
+            ss["case_name"] = "Untitled Case"
+
+        ss["analysis"] = {
+            "assessment": assessment,
+            "case": ss.get("case_name", "Untitled Case"),
+            "notes": text_input,
+        }
+
+        st.success("✅ IC analysis saved. Move to Advisory →")
 
 # ---------------- TAB 2: EXPERT GUIDE ----------------
 with tabs[1]:
