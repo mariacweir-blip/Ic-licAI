@@ -50,6 +50,9 @@ with tabs[0]:
     st.subheader("Upload source materials")
 
     case_name = st.text_input("Client / Case name", ss["case_name"])
+    # keep case name in session as soon as user types it
+if case_name and case_name.strip():
+    ss["case_name"] = case_name.strip()
 
     files = st.file_uploader(
         "Upload evidence (PDF, DOCX, TXT, CSV, MD)",
