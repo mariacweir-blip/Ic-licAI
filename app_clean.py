@@ -23,12 +23,13 @@ except Exception:
     processing = _load_module("ic_processing", pkg / "processing.py")
     exporters = _load_module("ic_exporters", pkg / "exporters_clean.py")
 
-    # expose the functions we need
-    parse_uploaded_files = processing.parse_uploaded_files
-    draft_ic_assessment = processing.draft_ic_assessment
-    export_pdf = exporters.export_pdf
-    export_xlsx = exporters.export_xlsx
-    export_json = exporters.export_json
+# expose the functions we need
+parse_uploaded_files = processing.parse_uploaded_files
+draft_ic_assessment = processing.draft_ic_assessment
+export_pdf = exporters.export_pdf
+export_xlsx = exporters.export_xlsx
+export_json = exporters.export_json
+
     # ---- EU theme helper ----
     def inject_eu_theme(): pass
 
