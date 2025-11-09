@@ -30,6 +30,22 @@ export_pdf = exporters.export_pdf
 export_xlsx = exporters.export_xlsx
 export_json = exporters.export_json
 
+# ---------- PAGE ----------
+st.set_page_config(page_title="IC-LicAI – Advisory Console", layout="centered")
+
+# Session defaults (safe)
+ss = st.session_state
+ss.setdefault("case_name", "Sandy Beach")
+ss.setdefault("notes", "")
+ss.setdefault("analysis", {})        # parsed files + assessment
+ss.setdefault("guide", {})           # expert selections
+ss.setdefault("narrative", "")       # advisory text
+
+st.title("IC-LicAI — Advisory Console")
+
+# Temporary tabs placeholder (we'll fill these next)
+tabs = st.tabs(["Upload", "Expert Guide", "Advisory", "Exports"])
+
 # ---- EU theme helper ----
 def inject_eu_theme(): 
     pass
