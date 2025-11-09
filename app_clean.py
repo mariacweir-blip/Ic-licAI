@@ -289,7 +289,8 @@ case = ss.get("case_name", "Untitled Case")
 # --- Build export bundle (safe fallbacks) ---
 assessment = ss.get("assessment", {})
 narrative = ss.get("narrative", "")
-
+ss = st.session_state
+case = ss.get("case_name", "Untitled Case")
 bundle = {
     "case": case,
     "summary": summary_text,
