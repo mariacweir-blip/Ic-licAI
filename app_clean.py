@@ -1,437 +1,233 @@
-import streamlit as st
+# app_clean.py  — IC-LicAI Expert Console (licensing-first)
+import io
 import json
+from datetime import date
 from pathlib import Path
-import importlib
+import streamlit as st
 
-# Try normal package import first; if that fails, load by file path
+# ---- Optional: themed CSS (safe-noop if file missing)
+def inject_eu_theme():
+    css_path = Path("theme") / "eu.css"
+    if css_path.exists():
+        css = css_path.read_text(encoding="utf-8")
+        st.markdown("<style>" + css + "</style>", unsafe_allow_html=True)
+
+# ---- Import processing + exporters with tolerant fallbacks
 try:
     from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
-    from ic_licai.exporters import export_pdf, export_xlsx, export_json
 except Exception:
-    import importlib.util
+    from processing import parse_uploaded_files, draft_ic_assessment  # type: ignore
 
-    here = Path(__file__).resolve().parent
-    pkg = here / "ic_licai"
+try:
+    from ic_licai.exporters_clean import export_pdf, export_xlsx, export_json
+except Exception:
+    from exporters_clean import export_pdf, export_xlsx, export_json  # type: ignore
 
-    def _load_module(name: str, file_path: Path):
-        spec = importlib.util.spec_from_file_location(name, str(file_path))
-        mod = importlib.util.module_from_spec(spec)
-        assert spec and spec.loader, "Cannot load file path"
-        spec.loader.exec_module(mod)
-        return mod
-
-    processing = _load_module("ic_processing", pkg / "processing.py")
-    exporters  = _load_module("ic_exporters",  pkg / "exporters_clean.py")
-
-    # expose functions
-    parse_uploaded_files = processing.parse_uploaded_files
-    draft_ic_assessment  = processing.draft_ic_assessment
-    export_pdf  = exporters.export_pdf
-    export_xlsx = exporters.export_xlsx
-    export_json = exporters.export_json
-    
-# ---------- PAGE ----------
-st.set_page_config(page_title="IC-LicAI – Advisory Console", layout="centered")
-
-# Session defaults (safe)
+# ---- Session defaults so first load never crashes
 ss = st.session_state
-ss.setdefault("case_name", "Sandy Beach")
-ss.setdefault("notes", "")
-ss.setdefault("analysis", {})        # parsed files + assessment
-ss.setdefault("guide", {})           # expert selections
-ss.setdefault("narrative", "")       # advisory text
+ss.setdefault("case_name", "Untitled Case")
+ss.setdefault("analysis", {})       # {"assessment": {...}, "case": "...", "notes": "..."}
+ss.setdefault("guide", {})          # expert selections (booleans etc.)
+ss.setdefault("narrative", "")      # final advisory text
+ss.setdefault("licence_choice", "Fixed-Fee Starter")
+ss.setdefault("sector", "")
 
-st.title("IC-LicAI — Advisory Console")
+# ---- Page + theme
+st.set_page_config(page_title="IC-LicAI — Expert Console", layout="centered")
+inject_eu_theme()
 
-# Temporary tabs placeholder (we'll fill these next)
-tabs = st.tabs(["Upload", "Expert Guide", "Advisory", "Exports"])
-# ---------------- TAB 1: UPLOAD ----------------
+# ---- Tabs
+tabs = st.tabs(["1) Case Setup", "2) Evidence & Checklist", "3) Expert Report"])
+
+# =========================
+# TAB 1 — Case Setup
+# =========================
 with tabs[0]:
-    st.subheader("Upload source materials")
+    st.subheader("Case Setup")
 
-    case_name = st.text_input("Client / Case name", ss["case_name"])
-    # keep case name in session as soon as user types it
-if case_name and case_name.strip():
-    ss["case_name"] = case_name.strip()
+    ss["case_name"] = st.text_input("Case / Company name", value=ss.get("case_name", "Untitled Case"))
 
-    files = st.file_uploader(
-        "Upload evidence (PDF, DOCX, TXT, CSV, MD)",
-        type=["pdf", "docx", "txt", "csv", "md"],
+    size = st.selectbox("Company size", ["Micro (1-10)", "SME (11-250)", "Large (250+)"], index=0)
+    ss["sector"] = st.text_input("Sector (optional)", value=ss.get("sector", ""))
+
+    uploads = st.file_uploader(
+        "Upload evidence files (PDF, DOCX, TXT, CSV)",
+        type=["pdf", "docx", "txt", "csv"],
         accept_multiple_files=True
     )
+    notes = st.text_area("Paste interview notes or context (optional)", height=140)
 
-    notes = st.text_area("Short context notes (optional)", ss["notes"], height=120)
+    if st.button("Run IC + ESG Scan"):
+        try:
+            parsed = parse_uploaded_files(uploads or [])
+        except Exception:
+            parsed = {"texts": []}
 
-    if st.button("Run IC Analysis"):
-        ss["case_name"] = case_name
-        ss["notes"] = notes
-
-        # Parse uploaded files
-        parsed = parse_uploaded_files(uploads if 'uploads' in locals() else [])
-        notes = ss.get("notes", "")
-        text_input = (notes or "")
-        if notes:
-            text_input += "\n"
+        text_input = (notes.strip() + "\n" if notes else "")
         text_input += "\n".join(parsed.get("texts", []))
 
-        # Draft IC assessment (heuristics demo)
-        assessment = draft_ic_assessment(text_input)
-
-        # Persist: make sure case_name exists, then save analysis bundle to session
-        if ss.get("case_name", "").strip() == "":
-            ss["case_name"] = "Untitled Case"
+        assessment = {}
+        try:
+            assessment = draft_ic_assessment(text_input)
+        except Exception:
+            assessment = {}
 
         ss["analysis"] = {
             "assessment": assessment,
             "case": ss.get("case_name", "Untitled Case"),
-            "notes": text_input,
+            "notes": text_input
         }
+        st.success("IC / ESG artefacts mapped. Continue to Evidence & Checklist.")
 
-        st.success("✅ IC analysis saved. Move to Advisory →")
-
-# ---------------- TAB 2: EXPERT GUIDE ----------------
+# =========================
+# TAB 2 — Evidence & Checklist
+# =========================
 with tabs[1]:
-    st.subheader("Expert Guide — Licensing Readiness")
+    st.subheader("Evidence & Licensing Checklist")
 
-    st.markdown("Use this guide to assess SME maturity and identify assets suitable for licensing.")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        growth_intent = st.radio(
-            "Licensing Intent",
-            ["Defensive (protect IP)", "Revenue (licensing income)", "Collaborative (partner growth)"],
+    colA, colB = st.columns(2)
+    with colA:
+        lic_intent = st.radio(
+            "Licensing intent",
+            ["Defensive (protect IP)", "Revenue (licence income)", "Collaborative (co-creation)"],
             index=1
         )
-    with col2:
-        readiness_stage = st.select_slider(
-            "Readiness Stage",
-            options=["Concept", "Validated", "Market Tested", "Commercialised"],
-            value="Validated"
+        lic_type = st.selectbox(
+            "Proposed licence structure",
+            ["Fixed-Fee Starter", "Royalty with Cap", "Evaluation to Commercial", "Co-Creation & Shared-IP"],
+            index=["Fixed-Fee Starter", "Royalty with Cap", "Evaluation to Commercial", "Co-Creation & Shared-IP"].index(
+                ss.get("licence_choice", "Fixed-Fee Starter")
+            )
         )
 
-    st.markdown("### Evidence Checklist")
-    guide = {}
-    guide["assets_identified"] = st.checkbox("Key intangible assets identified (human, structural, customer, strategic)")
-    guide["contracts_reviewed"] = st.checkbox("Existing IP or collaboration contracts reviewed")
-    guide["governance_defined"] = st.checkbox("Evidence register and approval sign-off defined")
-    guide["valuation_understood"] = st.checkbox("Valuation and risk tolerance discussed")
+    guide_prev = ss.get("guide", {})
+    with colB:
+        assets_identified = st.checkbox("Key intangible assets identified", value=guide_prev.get("assets_identified", False))
+        esg_confirmed = st.checkbox("ESG artefacts confirmed or mapped", value=guide_prev.get("esg_confirmed", False))
+        contracts_reviewed = st.checkbox("Contracts/partnerships reviewed", value=guide_prev.get("contracts_reviewed", False))
+        governance_ok = st.checkbox("Governance and sign-off documented", value=guide_prev.get("governance_ok", False))
+        valuation_understood = st.checkbox("Valuation and risk tolerance understood", value=guide_prev.get("valuation_understood", False))
 
     if st.button("Save Expert Inputs"):
-        ss["guide"] = guide
-        st.success("Expert guide data saved successfully. Continue to Advisory →")
+        ss["guide"] = {
+            "lic_intent": lic_intent,
+            "assets_identified": assets_identified,
+            "esg_confirmed": esg_confirmed,
+            "contracts_reviewed": contracts_reviewed,
+            "governance_ok": governance_ok,
+            "valuation_understood": valuation_understood,
+        }
+        ss["licence_choice"] = lic_type
+        st.success("Expert inputs saved. Continue to Expert Report.")
 
-# ---------------- TAB 3: ADVISORY ----------------
+# =========================
+# TAB 3 — Expert Report (licensing-first)
+# =========================
 with tabs[2]:
-    st.subheader("Advisory Narrative")
+    st.subheader("Licensing Advisory Report")
 
-    try:
-        # --- lightweight debug so we see something even if parsing fails
-        ss = st.session_state
-        st.caption(f"DEBUG: session keys → {list(ss.keys())}")
+    analysis = ss.get("analysis", {}).get("assessment", {})
+    guide = ss.get("guide", {})
+    lic_choice = ss.get("licence_choice", "Fixed-Fee Starter")
 
-        # Load analysis that was saved on the Upload tab
-        analysis = ss.get("analysis") or {}
-        assessment = analysis.get("assessment") or {}
+    if not isinstance(analysis, dict) or not analysis:
+        st.info("Run IC + ESG Scan on Case Setup, then save Expert Inputs on the Checklist tab.")
+    else:
+        # Build a concise, licensing-first narrative
+        ic_map = analysis.get("ic_map", {}) if isinstance(analysis.get("ic_map", {}), dict) else {}
+        esg_map = analysis.get("esg_map", {}) if isinstance(analysis.get("esg_map", {}), dict) else {}
+        artefact_count = sum(len(v) for v in ic_map.values()) if ic_map else 0
 
-        if not isinstance(assessment, dict) or not assessment:
-            st.info("⚙️ Run IC analysis first on the Upload tab (then return here).")
-        else:
-            st.success("✅ Assessment loaded — generating advisory narrative…")
-
-        # Simple heuristic narrative (placeholder)
-        guide = ss.get("guide", {})
-        intent = guide.get("assets_identified", False)
-        readiness = guide.get("valuation_understood", False)
-
-        summary_text = "Based on current assessment, "
-        if intent and readiness:
-            summary_text += (
-                "the company demonstrates readiness for initial licensing steps. "
-                "Evidence and governance appear adequate for partner or FRAND models."
-            )
-        elif intent:
-            summary_text += (
-                "assets are identified but valuation and governance require further alignment."
-            )
-        else:
-            summary_text += (
-                "further evidence gathering and IC-mapping are recommended before licensing."
-            )
-
-        st.text_area(
-            "Generated Advisory Summary",
-            summary_text,
-            height=200,
-            key="advisory_summary",
+        intent = guide.get("lic_intent", "Collaborative (co-creation)")
+        readiness_score = (
+            (1 if guide.get("assets_identified") else 0) +
+            (1 if guide.get("esg_confirmed") else 0) +
+            (1 if guide.get("contracts_reviewed") else 0) +
+            (1 if guide.get("governance_ok") else 0) +
+            (1 if guide.get("valuation_understood") else 0)
         )
+        readiness = "strong" if readiness_score >= 4 else ("emerging" if readiness_score >= 2 else "early")
 
-    except Exception as e:
-        st.error("Advisory tab crashed.")
-        st.exception(e)
+        frand_block = {
+            "Fixed-Fee Starter": [
+                "Fixed-fee licence for 6 to 12 months, uniform FRAND terms.",
+                "MFN for similarly situated micro licensees.",
+                "Audit on notice; no more than once per year."
+            ],
+            "Royalty with Cap": [
+                "Royalty 2.0 percent of Net Sales with annual cap.",
+                "Clear Net Sales definition; MFN across comparable licensees.",
+                "Quarterly statements and right to audit."
+            ],
+            "Evaluation to Commercial": [
+                "60-day evaluation for internal uses only.",
+                "Pre-agreed conversion corridor: fee or 1.5 to 2.5 percent royalty.",
+                "On conversion, adopt short-form commercial licence."
+            ],
+            "Co-Creation & Shared-IP": [
+                "Joint Steering Committee and shared Foreground IP.",
+                "Background IP licensed for project uses on FRAND terms.",
+                "Commercial exploitation requires joint agreement."
+            ],
+        }
+        frand_lines = frand_block.get(lic_choice, [])
 
-if st.button("Save Advisory Narrative"):
-            ss["advisory_summary"] = summary_text
-            st.success("Advisory narrative saved. Continue to Exports →")
+        report_lines = []
+        report_lines.append("LICENSING READINESS SUMMARY")
+        report_lines.append("The organisation shows " + readiness + " readiness for " + intent.lower() + " licensing activities as of " + date.today().strftime("%d %b %Y") + ".")
+        report_lines.append("")
+        report_lines.append("EVIDENCE BASE (IC AND ESG)")
+        report_lines.append("Intangible artefacts mapped: " + str(artefact_count) + ".")
+        if esg_map:
+            report_lines.append("ESG artefacts present and mapped for alignment.")
+        else:
+            report_lines.append("ESG artefacts not confirmed; consider mapping for partner expectations.")
+        report_lines.append("")
+        report_lines.append("FRAND STRATEGY — " + lic_choice)
+        for line in frand_lines:
+            report_lines.append("- " + line)
+        report_lines.append("")
+        report_lines.append("RISK AND GOVERNANCE")
+        report_lines.append("- Maintain a short IA register with owner sign-off.")
+        report_lines.append("- Keep a renewal diary and evidence snapshots.")
+        report_lines.append("- Include audit and MFN terms appropriate to cohort.")
+        report_lines.append("")
+        report_lines.append("NEXT STEPS")
+        report_lines.append("- Prepare short-form templates and publish a rate card.")
+        report_lines.append("- Update IA register under IAS 38 and align with controls.")
+        report_lines.append("- Identify first partner candidates and set pilot metrics.")
 
-# ---- EU theme helper ----
-def inject_eu_theme(): 
-    pass
+        narrative = "\n".join(report_lines).strip()
+        ss["narrative"] = narrative
 
-st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
-inject_eu_theme()
-        
-st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
-inject_eu_theme()
+        st.text_area("Generated report (editable)", value=narrative, height=360, key="lic_report_text")
 
-# --- Inputs ---
-st.subheader("1) Case & Evidence")
-case = st.text_input("Case name", value="Demo Case")
-# --- Case profile (drives narrative tone) ---
-st.subheader("Company profile")
-size_label = st.selectbox(
-    "Company size",
-    ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Enterprise (250+)"],
-    index=0,  # default Micro
-    help="Select the typical size for this case to adapt the advisory narrative."
-)
-sector = st.text_input("Sector (optional)", value="", help="e.g., food, medtech, services")
+        bundle = {
+            "case": ss.get("case_name", "Untitled Case"),
+            "narrative": ss.get("lic_report_text", narrative),
+            "assessment": analysis,
+            "guide": guide,
+            "licence_choice": lic_choice,
+            "sector": ss.get("sector", ""),
+            "company_size": size if "size" in locals() else ""
+        }
 
-# Normalise size for the narrative engine
-size_map = {
-    "micro (1–10)": "micro",
-    "small (11–50)": "small",
-    "medium (51–250)": "medium",
-    "enterprise (250+)": "enterprise",
-}
-size_key = size_map.get(size_label.lower(), "micro")
-profile = {"size": size_key, "sector": sector.strip().lower()}
-uploaded = st.file_uploader("Upload evidence (PDF, TXT, DOCX, etc.) — optional", type=None, accept_multiple_files=True)
-notes = st.text_area("Paste interview notes or summary (optional)", height=160)
-
-# demo note helper
-demo_choice = st.selectbox("Or pick a demo note", ["(none)","VoltEdge","Capabilis","EuraLab"])
-demo_text = ""
-try:
-    if demo_choice == "VoltEdge":
-        demo_text = open("demo_assets/VoltEdge_note.txt", "r", encoding="utf-8").read()
-    elif demo_choice == "Capabilis":
-        demo_text = open("demo_assets/Capabilis_note.txt", "r", encoding="utf-8").read()
-    elif demo_choice == "EuraLab":
-        demo_text = open("demo_assets/EuraLab_note.txt", "r", encoding="utf-8").read()
-except Exception:
-    demo_text = demo_choice if demo_choice != "(none)" else ""
-
-# assemble text input
-text_input = "\n\n".join([t for t in [notes, demo_text] if t])
-
-# prepare file tuples
-files_data = []
-if uploaded:
-    for f in uploaded:
-        try:
-            files_data.append((f.name, f.getvalue()))
-        except Exception:
-            pass
-
-st.divider()
-
-# --- Run ---
-if st.button("▶ Run IC-LicAI Analysis"):
-    # light parse (currently demo scope)
-    parsed = {"texts": [], "meta": []}
-    files_data = []
-    if uploaded:
-        for f in uploaded:
+        c1, c2, c3 = st.columns(3)
+        with c1:
             try:
-                files_data.append((f.name, f.getvalue()))
-            except Exception:
-                pass
-    if files_data:
-        try:
-            parsed = parse_uploaded_files(files_data)  # returns {"texts":[...], "meta":[...]}
-        except Exception as e:
-            st.warning(f"Parser note: {e}")
-
-    # run assessment (heuristics demo)
-    text_input = (notes or "") + "\n".join(parsed.get("texts", []))
-    assessment = draft_ic_assessment(text_input)
-
-# --- ensure assessment exists before building narrative ---
-# If no files were parsed, guarantee a safe default structure
-parsed = locals().get("parsed", {"texts": [], "meta": []})
-
-# Build the text body (notes + any parsed texts)
-base_text = (notes or "").strip()
-joined_docs = "\n".join(parsed.get("texts", []))
-text_input = (base_text + ("\n" if base_text and joined_docs else "") + joined_docs).strip()
-
-# Run the lightweight IC assessment now, so `assessment` is defined
-assessment = draft_ic_assessment(text_input)
-# Build advisory narrative using the selected profile
-import importlib
-narratives_mod = importlib.import_module("narratives")
-
-if hasattr(narratives_mod, "build_narrative_profiled"):
-    narrative = narratives_mod.build_narrative_profiled(
-        case,
-        assessment.get("ic_map", {}),
-        assessment.get("readiness", []),
-        assessment.get("licensing", []),
-        profile  # <-- size/sector from the UI
-    )
-    # ---- Advisory Narrative ----
-st.subheader("Advisory Narrative")
-
-narrative = locals().get("narrative", "") or ""
-
-# Convert dicts/lists safely to string
-if isinstance(narrative, (dict, list)):
-    import json
-    narr = json.dumps(narrative, indent=2)
-else:
-    narr = str(narrative).strip()
-
-st.text_area("Preview (copyable)", narr, height=260)
-
-st.download_button(
-    "Download Narrative (.txt)",
-    data=narr.encode("utf-8"),
-    file_name=f"{case}_Advisory_Narrative.txt",
-    mime="text/plain",
-)
-
-# ---- Build export bundle (safe fallbacks) ----
-ss = st.session_state
-analysis = ss.get("analysis", {}) or {}
-case = ss.get("case_name", "Untitled Case")
-assessment = ss.get("assessment", {}) or {}
-narrative = ss.get("narrative", "") or ""
-summary_text = ss.get("summary", "") or (
-    "Advisory summary (auto): initial IC map + readiness + FRAND options."
-)
-
-bundle = {
-    "case": case,
-    "summary": summary_text,
-    "ic_map": assessment.get("ic_map", {}) or {},
-    "readiness": assessment.get("readiness", []) or [],
-    "licensing": assessment.get("licensing", []) or [],
-    "narrative": narrative,
-}
-
-# --- Show results ---
-st.subheader("Intangible Capital Map (4–Leaf)")
-for leaf, items in bundle["ic_map"].items():
-    st.write(f"**{leaf}**")
-    for it in items[:6]:
-        st.write(f"- {it}")
-
-st.subheader("10–Steps Readiness Summary")
-for row in bundle["readiness"]:
-    st.write(f"**Step {row['step']}**: {row['name']} (Score {row['score']}/3)")
-    for t in row["tasks"]:
-        st.write(f"- {t}")
-
-st.subheader("Licensing Options (advisory)")
-lic = bundle.get("licensing", [])
-for opt in lic:
-    st.markdown(f"**{opt['model']}**")
-    notes = opt.get("notes", [])
-    if isinstance(notes, str):
-        notes = [notes]
-    for t in notes:
-        st.write(f"- {t}")
-lic = bundle.get("licensing", [])
-for opt in lic:
-    # Heading
-    st.markdown(f"**{opt.get('model', '').strip()}**")
-    # Notes can be a string or a list -> normalize to list
-    notes = opt.get("notes", [])
-    if isinstance(notes, str):
-        notes = [notes]
-    for line in notes:
-        st.write(f"- {line}")
-st.subheader("Advisory Narrative")
-
-# Make sure `narrative` exists even if an earlier step didn’t set it
-narrative = locals().get("narrative", "") or ""
-
-# Use narrative directly (do NOT read from bundle here)
-# Ensure narrative is text before stripping
-if isinstance(narrative, (dict, list)):
-    import json
-    narr = json.dumps(narrative, indent=2)
-else:
-    narr = str(narrative or "").strip()
-
-st.text_area("Preview (copyable)", narr, height=260, key="narrative_preview_v2")
-st.download_button(
-    "Download Narrative (.txt)",
-    data=narr.encode("utf-8"),
-    file_name=f"{case}_Advisory_Narrative.txt",
-    mime="text/plain",
-    key="narrative_download_v2",
-)
-# ---- normalize to bytes for download buttons ----
-def _to_bytes(x, encoding="utf-8"):
-    if x is None:
-        return b""
-    # accept both bytes and bytearray
-    if isinstance(x, (bytes, bytearray)):
-        return bytes(x)
-    # BytesIO or similar
-    if hasattr(x, "getvalue"):
-        return x.getvalue()
-    # plain string
-    if isinstance(x, str):
-        return x.encode(encoding)
-    # JSON-encode objects (last resort)
-    try:
-        import json
-        return json.dumps(x).encode(encoding)
-    except Exception:
-        return str(x).encode(encoding)
-
-# --- Prepare downloadable data (safe) ---
-pdf_bytes = xlsx_bytes = json_bytes = None
-
-try:
-    pdf_bytes = _to_bytes(export_pdf(bundle))
-except Exception as e:
-    st.error(f"PDF export failed: {e}")
-
-try:
-    xlsx_bytes = _to_bytes(export_xlsx(bundle.get("ic_map", {})))
-except Exception as e:
-    st.error(f"XLSX export failed: {e}")
-
-try:
-    json_bytes = _to_bytes(export_json(bundle))
-except Exception as e:
-    st.error(f"JSON export failed: {e}")
-
-# --- Downloads ---
-if any([pdf_bytes, xlsx_bytes, json_bytes]):
-    if pdf_bytes:
-        st.download_button(
-            "Download Advisory Report (PDF)",
-            data=pdf_bytes,
-            file_name=f"{case}_ICLicAI_Advisory_Report.pdf",
-            mime="application/pdf",
-        )
-    if xlsx_bytes:
-        st.download_button(
-            "Download IA Register (XLSX)",
-            data=xlsx_bytes,
-            file_name=f"{case}_ICLicAI_IA_Register.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-    if json_bytes:
-        st.download_button(
-            "Download Case Data (JSON)",
-            data=json_bytes,
-            file_name=f"{case}_ICLicAI_Case.json",
-            mime="application/json",
-        )
-else:
-    st.info("Upload case files and click **Run IC-LicAI Analysis** to generate downloads.")
+                pdf_bytes = export_pdf(bundle)
+                st.download_button("Download PDF", data=pdf_bytes, file_name="ICLicAI_Licensing_Report.pdf", mime="application/pdf")
+            except Exception as e:
+                st.error("PDF export failed: " + str(e))
+        with c2:
+            try:
+                xlsx_bytes = export_xlsx(bundle)
+                st.download_button("Download XLSX", data=xlsx_bytes, file_name="ICLicAI_IA_Register.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            except Exception as e:
+                st.error("XLSX export failed: " + str(e))
+        with c3:
+            try:
+                json_bytes = export_json(bundle)
+                st.download_button("Download JSON", data=json_bytes, file_name="ICLicAI_Case.json", mime="application/json")
+            except Exception as e:
+                st.error("JSON export failed: " + str(e))
