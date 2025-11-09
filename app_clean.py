@@ -69,7 +69,12 @@ with tabs[0]:
         # Draft IC assessment (heuristics demo)
         concatenated_text = (notes or "") + "\n".join(parsed.get("texts", []))
         assessment = draft_ic_assessment(concatenated_text)
-
+        # Save analysis results in session state for later tabs
+        ss["analysis"] = {
+            "assessment": assessment,
+            "case": case,
+            "notes": text_input,
+        } 
         ss["analysis"] = {"parsed": parsed, "assessment": assessment}
         st.success("Analysis complete. Continue to Expert Guide →")
 
@@ -111,8 +116,11 @@ with tabs[2]:
     if "analysis" not in ss:
         st.info("⚙️ Run IC analysis first on the Upload tab.")
     else:
-        assessment = ss["analysis"]["assessment"]
-        guide = ss.get("guide", {})
+        analysis = ss.get("analysis") or {}
+assessment = analysis.get("assessment")
+if not assessment:
+    st.info("⚙️ Run IC analysis first on the Upload tab (then return here).")
+    st.stop()
 
         # Simple heuristic narrative (placeholder – connects to your IC logic later)
         intent = guide.get("assets_identified", False)
