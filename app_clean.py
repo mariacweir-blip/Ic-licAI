@@ -160,81 +160,99 @@ bundle = {
     "narrative": narrative,
 }
 
-# ------------------------------
-# Reports & Exports
-# ------------------------------
+# --- Case Information (single form) ---
+with st.form("case_form_main"):
+    st.subheader("Case Information")
+
+    case_name = st.text_input(
+        "Case / Company name",
+        value=ss.get("case_name", "Untitled Case")
+    )
+
+    COMPANY_SIZES = ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"]
+    size_idx = COMPANY_SIZES.index(ss.get("company_size", "Micro (1–10)"))
+    company_size = st.selectbox("Company size", COMPANY_SIZES, index=size_idx)
+
+    # SECTORS must be defined earlier in the file
+    sector_default = ss.get("sector", "Other") if "Other" in SECTORS else SECTORS[0]
+    sector_idx = SECTORS.index(sector_default)
+    sector = st.selectbox("Sector *", SECTORS, index=sector_idx)
+
+    notes = st.text_area("Notes / elevator pitch", value=ss.get("notes", ""))
+
+    saved = st.form_submit_button("Save Case Details")
+    if saved:
+        ss["case_name"] = case_name
+        ss["company_size"] = company_size
+        ss["sector"] = sector
+        ss["notes"] = notes
+        st.success("✅ Case details saved successfully")
+
 st.divider()
+
+# --- Generate Reports (outside the form!) ---
 st.subheader("Generate Reports")
 
+# Safe fallbacks for bundles
 case_name = ss.get("case_name", "Untitled Case")
+assessment = ss.get("assessment", {}) or {}
+notes = ss.get("notes", "")
+sector = ss.get("sector", "")
 company_size = ss.get("company_size", "Micro (1–10)")
-sector = ss.get("sector", "General")
-notes = ss.get("notes", "No notes provided.")
-assessment = ss.get("analysis", {}).get("assessment", {})
 
-# --- 1. Expert Checklist ---
-if st.button("🧾 Generate Expert Checklist (PDF)"):
-    try:
-        checklist_bundle = {
-            "case": case_name,
-            "summary": f"Expert readiness checklist for {case_name} ({sector}, {company_size}).",
-            "ic_map": assessment.get("ic_map", {}),
-            "readiness": [
-                {"step": "1", "name": "Identify", "tasks": [
-                    "List core intangibles", "Tag as human, structural, customer, or strategic"
-                ]},
-                {"step": "2", "name": "Protect", "tasks": [
-                    "Confirm NDAs, IP filings, trade secret coverage"
-                ]},
-                {"step": "3", "name": "Value", "tasks": [
-                    "Apply 10-Step Areopa method", "Capture tacit/explicit proportions"
-                ]},
-            ],
-            "licensing": [],
-            "narrative": "Checklist for experts guiding SMEs through IC identification and readiness.",
-        }
-        st.download_button(
-            "⬇️ Download Expert Checklist",
-            data=export_pdf(checklist_bundle),
-            file_name=f"{case_name}_Expert_Checklist.pdf",
-            mime="application/pdf",
-            key="dl_checklist_pdf",
-        )
-    except Exception as e:
-        st.error(f"Checklist export failed: {e}")
+col1, col2 = st.columns(2)
 
-# --- 2. Licensing Report ---
-if st.button("📄 Generate Licensing Report (PDF)"):
-    try:
-        licensing_bundle = {
-            "case": case_name,
-            "summary": f"Licensing options and FRAND readiness for {case_name}.",
-            "ic_map": assessment.get("ic_map", {}),
-            "readiness": assessment.get("readiness", []),
-            "licensing": [
-                {"model": "Revenue Licence", "notes": [
-                    "Royalty-based licence", "FRAND-aligned terms", "Annual audit clause"
-                ]},
-                {"model": "Defensive Licence", "notes": [
-                    "Protective IP pooling", "Non-assertion across cluster partners"
-                ]},
-                {"model": "Co-Creation Licence", "notes": [
-                    "Shared ownership of Foreground IP", "Revenue-sharing"
-                ]},
-            ],
-            "narrative": "Licensing-first advisory report aligning IC assets with commercial models.",
-        }
-        st.download_button(
-            "⬇️ Download Licensing Report",
-            data=export_pdf(licensing_bundle),
-            file_name=f"{case_name}_Licensing_Report.pdf",
-            mime="application/pdf",
-            key="dl_licensing_pdf",
-        )
-    except Exception as e:
-        st.error(f"Licensing report failed: {e}")
+with col1:
+    if st.button("🧰 Generate Expert Checklist (PDF)"):
+        try:
+            checklist_bundle = {
+                "case": case_name,
+                "summary": f"Expert readiness checklist for {case_name} ({sector}, {company_size}).",
+                "ic_map": assessment.get("ic_map", {}),
+                "readiness": [
+                    {"step": "1", "name": "Identify", "tasks": ["List core intangibles", "Tag as human/structural/customer/strategic"]},
+                    {"step": "2", "name": "Protect",  "tasks": ["Confirm NDAs, IP filings, trade-secret coverage"]},
+                    {"step": "3", "name": "Value",    "tasks": ["Apply 10-Step Areopa method", "Capture tacit/explicit proportions"]},
+                ],
+                "licensing": [],
+                "narrative": "Checklist for experts guiding SMEs through IC identification and readiness."
+            }
+            st.download_button(
+                "⬇️ Download Expert Checklist",
+                data=export_pdf(checklist_bundle),
+                file_name=f"{case_name}_Expert_Checklist.pdf",
+                mime="application/pdf",
+                key="dl_checklist_pdf"
+            )
+        except Exception as e:
+            st.error(f"Checklist export failed: {e}")
 
-# --- 3. Full Intangible Capital Report ---
+with col2:
+    if st.button("📄 Generate Licensing Report (PDF)"):
+        try:
+            licensing_bundle = {
+                "case": case_name,
+                "summary": f"Licensing options and FRAND readiness for {case_name}.",
+                "ic_map": assessment.get("ic_map", {}),
+                "readiness": assessment.get("readiness", []),
+                "licensing": [
+                    {"model": "Revenue Licence",  "notes": ["Royalty-based licence", "FRAND-aligned terms", "Annual audit clause"]},
+                    {"model": "Defensive Licence","notes": ["Protective IP pooling", "Non-assertion across cluster partners"]},
+                    {"model": "Co-Creation Licence","notes": ["Shared ownership of Foreground IP", "Revenue-sharing"]},
+                ],
+                "narrative": "Licensing-first advisory report aligning IC assets with commercial models."
+            }
+            st.download_button(
+                "⬇️ Download Licensing Report",
+                data=export_pdf(licensing_bundle),
+                file_name=f"{case_name}_Licensing_Report.pdf",
+                mime="application/pdf",
+                key="dl_licensing_pdf"
+            )
+        except Exception as e:
+            st.error(f"Licensing report failed: {e}")
+
+# Full IC report
 if st.button("📘 Generate Full Intangible Capital Report (PDF)"):
     try:
         ic_bundle = {
@@ -243,22 +261,19 @@ if st.button("📘 Generate Full Intangible Capital Report (PDF)"):
             "ic_map": assessment.get("ic_map", {}),
             "readiness": assessment.get("readiness", []),
             "licensing": assessment.get("licensing", []),
-            "narrative": (
-                f"This report provides a structured valuation and readiness overview of {case_name}'s "
-                "intangible assets."
-            ),
+            "narrative": f"This report provides a structured valuation and readiness overview of {case_name}'s intangible assets."
         }
         st.download_button(
             "⬇️ Download Intangible Capital Report",
             data=export_pdf(ic_bundle),
             file_name=f"{case_name}_Intangible_Capital_Report.pdf",
             mime="application/pdf",
-            key="dl_ic_pdf",
+            key="dl_ic_pdf"
         )
     except Exception as e:
         st.error(f"IC report failed: {e}")
 
-# --- 4. IA Register (XLSX) ---
+# IA Register (XLSX)
 try:
     xlsx_b = export_xlsx(assessment.get("ic_map", {}))
     st.download_button(
@@ -266,14 +281,14 @@ try:
         data=xlsx_b,
         file_name=f"{case_name}_IA_Register.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        key="dl_xlsx",
+        key="dl_xlsx"
     )
 except Exception as e:
     st.error(f"IA Register export failed: {e}")
 
-# --- 5. Case JSON (structured data export) ---
+# JSON export
 try:
-    json_bytes = export_json({
+    json_b = export_json({
         "case": case_name,
         "sector": sector,
         "size": company_size,
@@ -282,10 +297,10 @@ try:
     })
     st.download_button(
         "⬇️ Download Case JSON",
-        data=json_bytes,
+        data=json_b,
         file_name=f"{case_name}_ICLicAI_Case.json",
         mime="application/json",
-        key="dl_json",
+        key="dl_json"
     )
 except Exception as e:
     st.error(f"JSON export failed: {e}")
