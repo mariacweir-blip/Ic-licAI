@@ -280,9 +280,10 @@ st.download_button(
     file_name=f"{case}_Advisory_Narrative.txt",
     mime="text/plain",
 )
-        
+analysis = ss.get("analysis") or {}
+case = ss.get("case_name", "Untitled Case")
+
 # --- Build export bundle (safe fallbacks) ---
-case = ss.get("case", "Untitled Case")
 assessment = ss.get("assessment", {})
 narrative = ss.get("narrative", "")
 
