@@ -73,6 +73,37 @@ with tabs[0]:
         ss["analysis"] = {"parsed": parsed, "assessment": assessment}
         st.success("Analysis complete. Continue to Expert Guide →")
 
+# ---------------- TAB 2: EXPERT GUIDE ----------------
+with tabs[1]:
+    st.subheader("Expert Guide — Licensing Readiness")
+
+    st.markdown("Use this guide to assess SME maturity and identify assets suitable for licensing.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        growth_intent = st.radio(
+            "Licensing Intent",
+            ["Defensive (protect IP)", "Revenue (licensing income)", "Collaborative (partner growth)"],
+            index=1
+        )
+    with col2:
+        readiness_stage = st.select_slider(
+            "Readiness Stage",
+            options=["Concept", "Validated", "Market Tested", "Commercialised"],
+            value="Validated"
+        )
+
+    st.markdown("### Evidence Checklist")
+    guide = {}
+    guide["assets_identified"] = st.checkbox("Key intangible assets identified (human, structural, customer, strategic)")
+    guide["contracts_reviewed"] = st.checkbox("Existing IP or collaboration contracts reviewed")
+    guide["governance_defined"] = st.checkbox("Evidence register and approval sign-off defined")
+    guide["valuation_understood"] = st.checkbox("Valuation and risk tolerance discussed")
+
+    if st.button("Save Expert Inputs"):
+        ss["guide"] = guide
+        st.success("Expert guide data saved successfully. Continue to Advisory →")
+
 # ---- EU theme helper ----
 def inject_eu_theme(): 
     pass
