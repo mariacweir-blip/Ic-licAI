@@ -122,9 +122,10 @@ if not assessment:
     st.info("⚙️ Run IC analysis first on the Upload tab (then return here).")
     st.stop()
 
-        # Simple heuristic narrative (placeholder – connects to your IC logic later)
-        intent = guide.get("assets_identified", False)
-        readiness = guide.get("valuation_understood", False)
+# Simple heuristic narrative (placeholder – connects to your IC logic later)
+guide = ss.get("guide", {})
+intent = guide.get("assets_identified", False)
+readiness = guide.get("valuation_understood", False)
 
         summary_text = "Based on current assessment, "
         if intent and readiness:
