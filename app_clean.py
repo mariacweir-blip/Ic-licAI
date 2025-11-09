@@ -26,9 +26,12 @@ ss.setdefault("sector", "")
 ss.setdefault("notes", "")
 ss.setdefault("assessment", {})  # placeholder if analyzer not yet wired
 
-
-
+SECTORS = [
+    "Food & Beverage", "MedTech", "GreenTech", "AgriTech", "Biotech",
+    "Software/SaaS", "FinTech", "EdTech", "Manufacturing", "Creative/Digital",
+    "Professional Services", "Mobility/Transport", "Energy", "Other",
 ]
+
 COMPANY_SIZES = ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"]
 
 
