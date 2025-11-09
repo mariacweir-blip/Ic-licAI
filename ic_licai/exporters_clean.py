@@ -36,43 +36,39 @@ class PDF(FPDF):
             self.set_font("Arial", "B", 12)
             self.cell(0, 8, _latin1(self.header_title), ln=1)
 
-def _wrap_text(pdf, text):
-    """Safely print text with wrapping, even if a token is very long."""
+def _wrap_text(pdf: PDF, text: str, width: int | None = None) -> None:
+    """
+    Safely print text with wrapping, even if a token is very long.
+    """
     if not text:
         return
 
-    # Replace problem characters
-    safe_text = (
-        str(text)
-            .replace("•", "- ")
-            .replace("–", "- ")
-            .replace("—", "- ")
-            .replace("\t", "  ")
-            .replace("\u00A0", " ")
-    )
+    txt = _latin1(text).replace("\t", " ")
+    if width is None:
+        width = int(pdf.w - pdf.l_margin - pdf.r_margin)
 
-    max_width = float(pdf.w) - float(pdf.l_margin) - float(pdf.r_margin)
+    # Split into lines, then hard-wrap tokens that exceed ~60 chars
+    normalized: list[str] = []
+    for raw_line in txt.split("\n"):
+        raw_line = raw_line.rstrip()
+        if not raw_line:
+            normalized.append("")  # preserve blank lines
+            continue
+        tokens: list[str] = []
+        for tok in raw_line.split(" "):
+            if len(tok) > 60:
+                parts = [tok[i:i+60] for i in range(0, len(tok), 60)]
+                tokens.extend(parts)
+            else:
+                tokens.append(tok)
+        normalized.append(" ".join(tokens))
+
     pdf.set_auto_page_break(auto=True, margin=18)
-
-    for line in safe_text.split("\n"):
+    for line in normalized:
         if not line.strip():
             pdf.ln(2)
             continue
-
-        # Hard-wrap long “words” that FPDF can’t break
-        words, wrapped, current = line.split(), [], ""
-        for w in words:
-            if len(w) > 60:
-                parts = [w[i:i+60] for i in range(0, len(w), 60)]
-                for p in parts:
-                    pdf.multi_cell(max_width, 6, p)
-            else:
-                current += w + " "
-                if len(current) > 100:
-                    pdf.multi_cell(max_width, 6, current.strip())
-                    current = ""
-        if current:
-            pdf.multi_cell(max_width, 6, current.strip())
+        pdf.multi_cell(width, 6, line)
 
 def _bullet(pdf, text):
     """Print a bullet (ASCII dash) and wrap long lines safely."""
