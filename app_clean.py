@@ -127,12 +127,13 @@ guide = ss.get("guide", {})
 intent = guide.get("assets_identified", False)
 readiness = guide.get("valuation_understood", False)
 
-        summary_text = "Based on current assessment, "
-        if intent and readiness:
-            summary_text += (
-                "the company demonstrates readiness for initial licensing steps. "
-                "Evidence and governance appear adequate for partner or FRAND models."
-            )
+summary_text = "Based on current assessment, "
+if intent and readiness:
+    
+    summary_text += (
+        "the company demonstrates readiness for initial licensing steps. "
+        "Evidence and governance appear adequate for partner or FRAND models."
+    )
         elif intent:
             summary_text += (
                 "assets are identified but valuation and governance require further alignment."
