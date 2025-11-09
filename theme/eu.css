@@ -50,3 +50,30 @@ hr {
   margin-top: 20px;
   margin-bottom: 20px;
 }
+
+/* theme/eu.css — simple, readable, high-contrast */
+:root {
+  --eu-blue: #114ea8;
+  --eu-accent: #ffcc00;
+  --text: #111;
+}
+
+html, body, [class*="css"]  {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
+  color: var(--text);
+}
+
+h1, h2, h3 {
+  color: var(--eu-blue);
+  font-weight: 700;
+}
+
+.stButton>button {
+  border: 1px solid var(--eu-blue);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+}
+
+.stAlert {
+  border-left: 6px solid var(--eu-blue);
+}
