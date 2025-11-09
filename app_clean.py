@@ -124,46 +124,50 @@ with tabs[1]:
 with tabs[2]:
     st.subheader("Advisory Narrative")
 
-    # --- DEBUG (temporary) ---
-    ss = st.session_state
-    st.caption(f"DEBUG: session keys → {list(ss.keys())}")
-    # --- END DEBUG ---
+    try:
+        # --- lightweight debug so we see something even if parsing fails
+        ss = st.session_state
+        st.caption(f"DEBUG: session keys → {list(ss.keys())}")
 
-    # Load analysis from session (it is set on the Upload tab)
-    analysis = ss.get("analysis", {})
-    assessment = analysis.get("assessment", {})
+        # Load analysis that was saved on the Upload tab
+        analysis = ss.get("analysis") or {}
+        assessment = analysis.get("assessment") or {}
 
-    if not isinstance(assessment, dict) or not assessment:
-        st.warning("⚙️ No analysis data found. Please run IC Analysis first.")
-    else:
-        st.success("✅ Assessment loaded successfully — generating advisory narrative...")
+        if not isinstance(assessment, dict) or not assessment:
+            st.info("⚙️ Run IC analysis first on the Upload tab (then return here).")
+        else:
+            st.success("✅ Assessment loaded — generating advisory narrative…")
 
-    # Simple heuristic narrative (placeholder)
-    guide = ss.get("guide", {})
-    intent = guide.get("assets_identified", False)
-    readiness = guide.get("valuation_understood", False)
+        # Simple heuristic narrative (placeholder)
+        guide = ss.get("guide", {})
+        intent = guide.get("assets_identified", False)
+        readiness = guide.get("valuation_understood", False)
 
-    summary_text = "Based on current assessment, "
-    if intent and readiness:
-        summary_text += (
-            "the company demonstrates readiness for initial licensing steps. "
-            "Evidence and governance appear adequate for partner or FRAND models."
+        summary_text = "Based on current assessment, "
+        if intent and readiness:
+            summary_text += (
+                "the company demonstrates readiness for initial licensing steps. "
+                "Evidence and governance appear adequate for partner or FRAND models."
+            )
+        elif intent:
+            summary_text += (
+                "assets are identified but valuation and governance require further alignment."
+            )
+        else:
+            summary_text += (
+                "further evidence gathering and IC-mapping are recommended before licensing."
+            )
+
+        st.text_area(
+            "Generated Advisory Summary",
+            summary_text,
+            height=200,
+            key="advisory_summary",
         )
-    elif intent:
-        summary_text += (
-            "assets are identified but valuation and governance require further alignment."
-        )
-    else:
-        summary_text += (
-            "further evidence gathering and IC-mapping are recommended before licensing."
-        )
 
-    st.text_area(
-        "Generated Advisory Summary",
-        summary_text,
-        height=200,
-        key="advisory_summary",
-    )
+    except Exception as e:
+        st.error("Advisory tab crashed.")
+        st.exception(e)
 
 if st.button("Save Advisory Narrative"):
             ss["advisory_summary"] = summary_text
