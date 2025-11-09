@@ -42,31 +42,48 @@ class PDF(FPDF):
             self.cell(0, 8, _latin1(self.header_title), ln=1)
 
 
-def _wrap_text(pdf: PDF, text: str, width: int | None = None) -> None:
-    """
-    Safe paragraph printing:
-    - latin-1 sanitize
-    - replace tabs
-    - let FPDF auto-calc line width via multi_cell
-    """
+def _wrap_text(pdf, text):
+    """Safely print text with wrapping, even if a token is very long."""
     if not text:
         return
-    txt = _latin1(text).replace("\t", "  ")
+
+    # Replace problem characters
+    safe_text = (
+        str(text)
+            .replace("•", "- ")
+            .replace("–", "- ")
+            .replace("—", "- ")
+            .replace("\t", "  ")
+            .replace("\u00A0", " ")
+    )
+
+    max_width = float(pdf.w) - float(pdf.l_margin) - float(pdf.r_margin)
     pdf.set_auto_page_break(auto=True, margin=18)
-    for raw_line in txt.split("\n"):
-        line = raw_line.rstrip()
-        if not line:
-            pdf.ln(2)  # small spacer for blank lines
+
+    for line in safe_text.split("\n"):
+        if not line.strip():
+            pdf.ln(2)
             continue
-        pdf.multi_cell(0, 6, line)
 
+        # Hard-wrap long “words” that FPDF can’t break
+        words, wrapped, current = line.split(), [], ""
+        for w in words:
+            if len(w) > 60:
+                parts = [w[i:i+60] for i in range(0, len(w), 60)]
+                for p in parts:
+                    pdf.multi_cell(max_width, 6, p)
+            else:
+                current += w + " "
+                if len(current) > 100:
+                    pdf.multi_cell(max_width, 6, current.strip())
+                    current = ""
+        if current:
+            pdf.multi_cell(max_width, 6, current.strip())
 
-def _bullet(pdf: PDF, text: str) -> None:
-    """ASCII bullet + safe wrap."""
-    line = "- " + _latin1(text)
-    pdf.set_font("Arial", "", 10)
-    pdf.multi_cell(0, 6, line)
-
+def _bullet(pdf, text):
+    """Print a bullet (ASCII dash) and wrap long lines safely."""
+    _wrap_text(pdf, f"- {text}")
+    
 # ---------- Exporters ----------
 
 def export_pdf(data: Dict[str, Any]) -> bytes:
