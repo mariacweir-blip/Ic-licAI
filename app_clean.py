@@ -104,6 +104,46 @@ with tabs[1]:
         ss["guide"] = guide
         st.success("Expert guide data saved successfully. Continue to Advisory →")
 
+ # ---------------- TAB 3: ADVISORY ----------------
+with tabs[2]:
+    st.subheader("Advisory Narrative")
+
+    if "analysis" not in ss:
+        st.info("⚙️ Run IC analysis first on the Upload tab.")
+    else:
+        assessment = ss["analysis"]["assessment"]
+        guide = ss.get("guide", {})
+
+        # Simple heuristic narrative (placeholder – connects to your IC logic later)
+        intent = guide.get("assets_identified", False)
+        readiness = guide.get("valuation_understood", False)
+
+        summary_text = "Based on current assessment, "
+        if intent and readiness:
+            summary_text += (
+                "the company demonstrates readiness for initial licensing steps. "
+                "Evidence and governance appear adequate for partner or FRAND models."
+            )
+        elif intent:
+            summary_text += (
+                "assets are identified but valuation and governance require further alignment."
+            )
+        else:
+            summary_text += (
+                "further evidence gathering and IC-mapping are recommended before licensing."
+            )
+
+        st.text_area(
+            "Generated Advisory Summary",
+            summary_text,
+            height=200,
+            key="advisory_summary",
+        )
+
+        if st.button("Save Advisory Narrative"):
+            ss["advisory_summary"] = summary_text
+            st.success("Advisory narrative saved. Continue to Exports →")
+
 # ---- EU theme helper ----
 def inject_eu_theme(): 
     pass
