@@ -150,3 +150,21 @@ if st.button("🧾 Download Case JSON"):
                            mime="application/json")
     except Exception as e:
         st.error(f"JSON export failed: {e}")
+        
+# Save advisory or checklist text locally
+st.divider()
+st.subheader("Draft Text Export")
+
+if "narrative" in ss and ss["narrative"]:
+    try:
+        txt_bytes = save_to_local(ss["narrative"])
+        st.download_button(
+            "💾 Save Advisory as .txt",
+            data=txt_bytes,
+            file_name=f"{ss['case_name'].replace(' ', '_')}_advisory.txt",
+            mime="text/plain",
+        )
+    except Exception as e:
+        st.error(f"Text save failed: {e}")
+else:
+    st.info("Run an analysis first to generate the advisory narrative.")
