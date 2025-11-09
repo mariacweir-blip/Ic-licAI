@@ -7,6 +7,15 @@ import streamlit as st
 # Import your exporter functions
 from ic_licai.exporters import export_pdf, export_xlsx, export_json
 
+# Add local text saver (new)
+try:
+    from ic_licai.exporters_clean import save_to_local
+except Exception:
+    from ic_licai.exporters import save_to_local  # fallback
+
+st.set_page_config(page_title="IC-LicAI Expert Console", layout="centered")
+ss = st.session_state
+
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="centered")
 ss = st.session_state
 
