@@ -30,8 +30,9 @@ export_pdf = exporters.export_pdf
 export_xlsx = exporters.export_xlsx
 export_json = exporters.export_json
 
-    # ---- EU theme helper ----
-    def inject_eu_theme(): pass
+# ---- EU theme helper ----
+def inject_eu_theme(): 
+    pass
 
 st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
 inject_eu_theme()
