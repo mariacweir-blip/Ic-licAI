@@ -120,60 +120,49 @@ with tabs[1]:
         ss["guide"] = guide
         st.success("Expert guide data saved successfully. Continue to Advisory →")
 
- # ---------------- TAB 3: ADVISORY ----------------
+# ---------------- TAB 3: ADVISORY ----------------
 with tabs[2]:
     st.subheader("Advisory Narrative")
 
-# --- DEBUG (temporary) ---
-ss = st.session_state
-st.caption(f"DEBUG: session keys → {list(ss.keys())}")
-analysis = ss.get("analysis") or {}
-st.caption(f"DEBUG: analysis keys → {list(analysis.keys()) if isinstance(analysis, dict) else type(analysis)}")
-assessment = analysis.get("assessment") or ss.get("assessment") or {}
-st.caption(f"DEBUG: assessment keys → {list(assessment.keys()) if isinstance(assessment, dict) else type(assessment)}")
-st.caption(f"DEBUG: case_name → {ss.get('case_name')!r}")
-# --- END 
+    # --- DEBUG (temporary) ---
+    ss = st.session_state
+    st.caption(f"DEBUG: session keys → {list(ss.keys())}")
+    # --- END DEBUG ---
 
-    if "analysis" not in ss:
-    st.warning("⚙️ No analysis found — please run IC Analysis on the Upload tab first.")
-    analysis = {}
-else:
+    # Load analysis from session (it is set on the Upload tab)
     analysis = ss.get("analysis", {})
+    assessment = analysis.get("assessment", {})
 
-assessment = analysis.get("assessment") or ss.get("assessment", {})
+    if not isinstance(assessment, dict) or not assessment:
+        st.info("⚙️ Run IC Analysis on the Upload tab, then return here.")
+        st.stop()
 
-if not isinstance(assessment, dict) or not assessment:
-    st.info("ℹ️ Run IC Analysis on the Upload tab, then return here.")
-else:
-    st.success("✅ Assessment loaded successfully — generating advisory narrative...")
+    # Simple heuristic narrative (placeholder)
+    guide = ss.get("guide", {})
+    intent = guide.get("assets_identified", False)
+    readiness = guide.get("valuation_understood", False)
 
-# Simple heuristic narrative (placeholder – connects to your IC logic later)
-guide = ss.get("guide", {})
-intent = guide.get("assets_identified", False)
-readiness = guide.get("valuation_understood", False)
-
-summary_text = "Based on current assessment, "
-if intent and readiness:
-    
-    summary_text += (
-        "the company demonstrates readiness for initial licensing steps. "
-        "Evidence and governance appear adequate for partner or FRAND models."
-    )
-elif intent:
-    summary_text += (
-        "assets are identified but valuation and governance require further alignment."
-            )
-else:
-    summary_text += (
-        "further evidence gathering and IC-mapping are recommended before licensing."
-            )
+    summary_text = "Based on current assessment, "
+    if intent and readiness:
+        summary_text += (
+            "the company demonstrates readiness for initial licensing steps. "
+            "Evidence and governance appear adequate for partner or FRAND models."
+        )
+    elif intent:
+        summary_text += (
+            "assets are identified but valuation and governance require further alignment."
+        )
+    else:
+        summary_text += (
+            "further evidence gathering and IC-mapping are recommended before licensing."
+        )
 
     st.text_area(
         "Generated Advisory Summary",
         summary_text,
         height=200,
         key="advisory_summary",
-        )
+    )
 
 if st.button("Save Advisory Narrative"):
             ss["advisory_summary"] = summary_text
