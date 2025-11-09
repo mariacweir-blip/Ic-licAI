@@ -171,17 +171,15 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
     _wrap_text(
         pdf,
         "This report is generated using an advisory-first workflow with human approval. "
-        "Evidence sources and decisions should be recorded in an IA register."
-    )
-
-    # Return PDF bytes (handle both str and bytearray from FPDF)
-    out = pdf.output(dest="S")
+        "Evidence sources and decisions should be recorded in an IA  
+        
+   # Return PDF bytes (handle both str and bytearray from FPDF)
+   out = pdf.output(dest="S")
 if isinstance(out, (bytes, bytearray)):
     return bytes(out)
 else:
-    # Older FPDF may return a str -> encode safely
+    # Older FPDF may return a latin-1 string — encode safely
     return out.encode("latin-1", "replace")
-
 
 def export_xlsx(ic_map: Dict[str, List[str]]) -> bytes:
     """Simple IA Register sheet from ic_map."""
