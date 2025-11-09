@@ -283,14 +283,17 @@ st.download_button(
     file_name=f"{case}_Advisory_Narrative.txt",
     mime="text/plain",
 )
-analysis = ss.get("analysis") or {}
-case = ss.get("case_name", "Untitled Case")
 
-# --- Build export bundle (safe fallbacks) ---
-assessment = ss.get("assessment", {})
-narrative = ss.get("narrative", "")
+# ---- Build export bundle (safe fallbacks) ----
 ss = st.session_state
+analysis = ss.get("analysis", {}) or {}
 case = ss.get("case_name", "Untitled Case")
+assessment = ss.get("assessment", {}) or {}
+narrative = ss.get("narrative", "") or ""
+summary_text = ss.get("summary", "") or (
+    "Advisory summary (auto): initial IC map + readiness + FRAND options."
+)
+
 bundle = {
     "case": case,
     "summary": summary_text,
