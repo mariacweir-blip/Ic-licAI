@@ -14,10 +14,8 @@ except Exception:
     from ic_licai.exporters import save_to_local  # fallback
 
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="centered")
-ss = st.session_state
+ss = st.session_stat
 
-st.set_page_config(page_title="IC-LicAI Expert Console", layout="centered")
-ss = st.session_state
 
 # ---------- UI CONSTANTS ----------
 SECTORS = [
