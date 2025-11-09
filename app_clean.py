@@ -124,14 +124,28 @@ with tabs[1]:
 with tabs[2]:
     st.subheader("Advisory Narrative")
 
+# --- DEBUG (temporary) ---
+ss = st.session_state
+st.caption(f"DEBUG: session keys → {list(ss.keys())}")
+analysis = ss.get("analysis") or {}
+st.caption(f"DEBUG: analysis keys → {list(analysis.keys()) if isinstance(analysis, dict) else type(analysis)}")
+assessment = analysis.get("assessment") or ss.get("assessment") or {}
+st.caption(f"DEBUG: assessment keys → {list(assessment.keys()) if isinstance(assessment, dict) else type(assessment)}")
+st.caption(f"DEBUG: case_name → {ss.get('case_name')!r}")
+# --- END 
+
     if "analysis" not in ss:
-        st.info("⚙️ Run IC analysis first on the Upload tab.")
-    else:
-        analysis = ss.get("analysis") or {}
-assessment = analysis.get("assessment")
-if not assessment:
-    st.info("⚙️ Run IC analysis first on the Upload tab (then return here).")
-    st.stop()
+    st.warning("⚙️ No analysis found — please run IC Analysis on the Upload tab first.")
+    analysis = {}
+else:
+    analysis = ss.get("analysis", {})
+
+assessment = analysis.get("assessment") or ss.get("assessment", {})
+
+if not isinstance(assessment, dict) or not assessment:
+    st.info("ℹ️ Run IC Analysis on the Upload tab, then return here.")
+else:
+    st.success("✅ Assessment loaded successfully — generating advisory narrative...")
 
 # Simple heuristic narrative (placeholder – connects to your IC logic later)
 guide = ss.get("guide", {})
