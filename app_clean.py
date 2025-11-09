@@ -2,9 +2,8 @@ import streamlit as st
 import json
 from pathlib import Path
 import importlib
-from ic_licai.exporters import export_pdf, export_xlsx, export_json
 
-# Robust imports: try normal package import, else load modules by file path
+# Try normal package import first; if that fails, load by file path
 try:
     from ic_licai.processing import parse_uploaded_files, draft_ic_assessment
     from ic_licai.exporters import export_pdf, export_xlsx, export_json
@@ -17,20 +16,20 @@ except Exception:
     def _load_module(name: str, file_path: Path):
         spec = importlib.util.spec_from_file_location(name, str(file_path))
         mod = importlib.util.module_from_spec(spec)
-        assert spec and spec.loader, f"Cannot load {file_path}"
+        assert spec and spec.loader, "Cannot load file path"
         spec.loader.exec_module(mod)
         return mod
 
     processing = _load_module("ic_processing", pkg / "processing.py")
-    exporters = _load_module("ic_exporters", pkg / "exporters_clean.py")
+    exporters  = _load_module("ic_exporters",  pkg / "exporters_clean.py")
 
-# expose the functions we need
-parse_uploaded_files = processing.parse_uploaded_files
-draft_ic_assessment = processing.draft_ic_assessment
-export_pdf = exporters.export_pdf
-export_xlsx = exporters.export_xlsx
-export_json = exporters.export_json
-
+    # expose functions
+    parse_uploaded_files = processing.parse_uploaded_files
+    draft_ic_assessment  = processing.draft_ic_assessment
+    export_pdf  = exporters.export_pdf
+    export_xlsx = exporters.export_xlsx
+    export_json = exporters.export_json
+    
 # ---------- PAGE ----------
 st.set_page_config(page_title="IC-LicAI – Advisory Console", layout="centered")
 
