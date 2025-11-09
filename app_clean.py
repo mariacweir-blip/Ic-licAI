@@ -25,6 +25,24 @@ SECTORS = [
 ]
 COMPANY_SIZES = ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"]
 
+
+# --- Company Info Form ---
+st.header("Case Information")
+
+with st.form("case_info_form"):
+    ss["case_name"] = st.text_input("Case / Company name", value=ss.get("case_name", "Untitled Case"))
+    ss["company_size"] = st.selectbox(
+        "Company size",
+        ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"],
+        index=["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"].index(ss.get("company_size", "Micro (1–10)"))
+    )
+    ss["sector"] = st.text_input("Sector / Industry", value=ss.get("sector", ""))
+    ss["notes"] = st.text_area("Notes or description", value=ss.get("notes", ""), height=120)
+    
+    submitted = st.form_submit_button("Save details")
+    if submitted:
+        st.success(f"Case details saved for: {ss['case_name']} ({ss['company_size']})")
+
 # --- Page setup ---
 st.set_page_config(page_title="IC-LicAI Demo", layout="centered")
 st.title("IC-LicAI Expert Console")
