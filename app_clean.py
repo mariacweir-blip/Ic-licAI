@@ -45,6 +45,33 @@ st.title("IC-LicAI — Advisory Console")
 
 # Temporary tabs placeholder (we'll fill these next)
 tabs = st.tabs(["Upload", "Expert Guide", "Advisory", "Exports"])
+# ---------------- TAB 1: UPLOAD ----------------
+with tabs[0]:
+    st.subheader("Upload source materials")
+
+    case_name = st.text_input("Client / Case name", ss["case_name"])
+
+    files = st.file_uploader(
+        "Upload evidence (PDF, DOCX, TXT, CSV, MD)",
+        type=["pdf", "docx", "txt", "csv", "md"],
+        accept_multiple_files=True
+    )
+
+    notes = st.text_area("Short context notes (optional)", ss["notes"], height=120)
+
+    if st.button("Run IC Analysis"):
+        ss["case_name"] = case_name
+        ss["notes"] = notes
+
+        # Parse uploaded files (safe fallback if nothing uploaded)
+        parsed = parse_uploaded_files(files) if files else {"texts": [], "tables": []}
+
+        # Draft IC assessment (heuristics demo)
+        concatenated_text = (notes or "") + "\n".join(parsed.get("texts", []))
+        assessment = draft_ic_assessment(concatenated_text)
+
+        ss["analysis"] = {"parsed": parsed, "assessment": assessment}
+        st.success("Analysis complete. Continue to Expert Guide →")
 
 # ---- EU theme helper ----
 def inject_eu_theme(): 
