@@ -69,15 +69,16 @@ if case_name and case_name.strip():
         # Parse uploaded files (safe fallback if nothing uploaded)
         parsed = parse_uploaded_files(files) if files else {"texts": [], "tables": []}
 
-        # Draft IC assessment (heuristics demo)
-        concatenated_text = (notes or "") + "\n".join(parsed.get("texts", []))
-        assessment = draft_ic_assessment(concatenated_text)
-        # Save analysis results in session state for later tabs
-        ss["analysis"] = {
-            "assessment": assessment,
-            "case": case,
-            "notes": text_input,
-        } 
+      # Draft IC assessment (heuristics demo)
+concatenated_text = (notes or "") + "\n".join(parsed.get("texts", []))
+assessment = draft_ic_assessment(concatenated_text)
+
+# Save analysis results in session state for later tabs
+ss["analysis"] = {
+    "assessment": assessment,
+    "case": ss.get("case_name", "Untitled Case"),
+    "notes": text_input,
+}
         ss["analysis"] = {"parsed": parsed, "assessment": assessment}
         st.success("Analysis complete. Continue to Expert Guide →")
 
