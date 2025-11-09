@@ -35,43 +35,32 @@ SECTORS = [
 COMPANY_SIZES = ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"]
 
 
-# --- Company Info Form ---
-st.header("Case Information")
+# --- Case Information Form ---
+with st.form("case_form"):
+    st.subheader("Case Information")
 
-with st.form("case_info_form"):
-    ss["case_name"] = st.text_input("Case / Company name", value=ss.get("case_name", "Untitled Case"))
-    ss["company_size"] = st.selectbox(
+    case_name = st.text_input("Case / Company name", value=ss.get("case_name", "Untitled Case"))
+    size_sel = st.selectbox(
         "Company size",
         ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"],
         index=["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"].index(ss.get("company_size", "Micro (1–10)"))
     )
-    st.header("Case Details")
-with st.form("case_form"):
-    case_name = st.text_input("Case / Company name", ss.get("case_name", ""))
-    size_sel  = st.selectbox("Company size", ["Micro", "Small", "Medium", "Large"])
-
-    # --- Sector select (wired to SECTORS) ---
-    try:
-        default_idx = SECTORS.index(ss["sector"])
-    except ValueError:
-        default_idx = 0
-
     sector_sel = st.selectbox(
         "Sector *",
         SECTORS,
-        index=default_idx,
-        key="sector_select",
+        index=SECTORS.index(ss.get("sector", "Other")),
+        key="sector_select"
     )
+    notes = st.text_area("Notes / elevator pitch", value=ss.get("notes", ""))
 
-    notes     = st.text_area("Notes", ss.get("notes", ""))
-    saved     = st.form_submit_button("Save")
+    saved = st.form_submit_button("Save Case Details")
+
     if saved:
         ss["case_name"] = case_name
         ss["company_size"] = size_sel
         ss["sector"] = sector_sel
         ss["notes"] = notes
         st.success("✅ Case details saved successfully")
-    
     ss["sector"] = st.text_input("Sector / Industry", value=ss.get("sector", ""))
     ss["notes"] = st.text_area("Notes or description", value=ss.get("notes", ""), height=120)
     
