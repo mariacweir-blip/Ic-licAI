@@ -70,9 +70,11 @@ def _wrap_text(pdf: PDF, text: str, width: int | None = None) -> None:
             continue
         pdf.multi_cell(width, 6, line)
 
-def _bullet(pdf, text):
+def _bullet(pdf: PDF, text: str) -> None:
     """Print a bullet (ASCII dash) and wrap long lines safely."""
-    _wrap_text(pdf, f"- {text}")
+    line = f"- {_latin1(text)}"
+    pdf.set_font("Arial", "", 10)
+    pdf.multi_cell(0, 6, line)   
     
 # ---------- Exporters ----------
 
