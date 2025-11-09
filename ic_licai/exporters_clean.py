@@ -36,6 +36,18 @@ def _latin1(text: str) -> str:
         s = s.replace(bad, good)
     return s.encode("latin-1", "replace").decode("latin-1")
 
+from pathlib import Path
+import datetime
+
+def save_to_local(text: str, name: str = "ICLicAI_Report", folder: str = "drafts") -> Path:
+    """Save on-screen text to a local .txt file for expert review."""
+    folder_path = Path.home() / folder
+    folder_path.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_path = folder_path / f"{name}_{timestamp}.txt"
+    file_path.write_text(text, encoding="utf-8")
+    return file_path
+
 
 # ----------------- PDF Class -----------------
 class PDF(FPDF):
