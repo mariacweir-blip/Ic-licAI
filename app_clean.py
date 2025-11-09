@@ -1,6 +1,8 @@
 import streamlit as st
-import importlib, os, sys
+import json
 from pathlib import Path
+import importlib
+from ic_licai.exporters import export_pdf, export_xlsx, export_json
 
 # Robust imports: try normal package import, else load modules by file path
 try:
@@ -8,7 +10,6 @@ try:
     from ic_licai.exporters import export_pdf, export_xlsx, export_json
 except Exception:
     import importlib.util
-    from pathlib import Path
 
     here = Path(__file__).resolve().parent
     pkg = here / "ic_licai"
