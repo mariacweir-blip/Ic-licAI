@@ -89,13 +89,25 @@ def _bullet(pdf: PDF, text: str) -> None:
 # ---------- exporters ----------
 
 def export_pdf(data: Dict[str, Any]) -> bytes:
+    # Be defensive: accept str/bytes and wrap into a dict
+    if isinstance(data, (bytes, bytearray)):
+        try:
+            data = json.loads(data.decode("utf-8"))
+        except Exception:
+            data = {"summary": data.decode("utf-8", "replace")}
+    elif isinstance(data, str):
+        # try JSON, else treat as plain narrative
+        try:
+            data = json.loads(data)
+        except Exception:
+            data = {"summary": data}
     pdf = PDF(orientation="P", unit="mm", format="A4")
     pdf.add_page()
 
     # Title block
-    title = _latin1(data.get("case", {}).get("name", "Client"))
+    title = data.get("case", "") or data.get("name", "Client")
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 8, f"Client: {title}", ln=1)
+    pdf.cell(0, 8, _latin1(f"Client: {title}"), ln=1)
     pdf.ln(2)
 
     # Summary
