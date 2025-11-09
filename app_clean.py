@@ -62,6 +62,12 @@ with st.form("case_form"):
 
     notes     = st.text_area("Notes", ss.get("notes", ""))
     saved     = st.form_submit_button("Save")
+    if saved:
+    ss["case_name"] = case_name
+    ss["company_size"] = size_sel
+    ss["sector"] = sector_sel
+    ss["notes"] = notes
+    st.success("✅ Case details saved successfully").  
     
     ss["sector"] = st.text_input("Sector / Industry", value=ss.get("sector", ""))
     ss["notes"] = st.text_area("Notes or description", value=ss.get("notes", ""), height=120)
