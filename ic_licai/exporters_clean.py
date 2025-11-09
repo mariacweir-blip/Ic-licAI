@@ -45,32 +45,59 @@ class PDF(FPDF):
         self.cell(0, 8, f"Page {self.page_no()}", align="C")
 
 
-def _wrap_text(pdf: PDF, text: str, width: int | None = None) -> None:
-    """
-    Safely print text with wrapping, even if a token is very long.
-    """
+def _latin1(text: str) -> str:
+    """Make text safe for core PDF fonts (latin-1 only)."""
+    if text is None:
+        return ""
+    s = str(text)
+    # Replace common unicode bullets/dashes/tabs/NBSP etc.
+    s = (
+        s.replace("•", "-")
+         .replace("–", "-")
+         .replace("—", "-")
+         .replace("\t", " ")
+         .replace("\u00A0", " ")
+    )
+    # Any remaining non-latin1 becomes '?'
+    return s.encode("latin-1", "replace").decode("latin-1")
+
+
+def _content_width(pdf) -> float:
+    """Usable page width (mm), with a minimum to avoid FPDF width=0 issues."""
+    page_width = float(pdf.w) - float(pdf.l_margin) - float(pdf.r_margin)
+    # Keep a safety floor so a single glyph always fits
+    return max(page_width, 40.0)
+
+def _wrap_text(pdf, text: str, width: int | None = None) -> None:
+    """Safely print text with wrapping, even if a token is very long."""
     if not text:
         return
 
-    txt = _latin1(text).replace("\t", " ")
-    if width is None:
-        width = int(pdf.w - pdf.l_margin - pdf.r_margin)
+    txt = _latin1(text).replace("\t", " ").strip()
 
-    # Split into lines, then hard-wrap tokens that exceed ~60 chars
-    normalized: List[str] = []
+    if width is None:
+        width = int(_content_width(pdf))
+    else:
+        width = max(int(width), 40)
+
+    pdf.set_auto_page_break(auto=True, margin=18)
+
+    # Split into lines, then hard-wrap any token longer than ~60 chars
+    normalized: list[str] = []
     for raw_line in txt.split("\n"):
         raw_line = raw_line.rstrip()
         if not raw_line:
             normalized.append("")  # preserve blank lines
             continue
-        tokens: List[str] = []
+
+        pieces: list[str] = []
         for tok in raw_line.split(" "):
             if len(tok) > 60:
                 parts = [tok[i:i+60] for i in range(0, len(tok), 60)]
-                tokens.extend(parts)
+                pieces.extend(parts)
             else:
-                tokens.append(tok)
-        normalized.append(" ".join(tokens))
+                pieces.append(tok)
+        normalized.append(" ".join(pieces))
 
     for line in normalized:
         if not line.strip():
@@ -79,12 +106,11 @@ def _wrap_text(pdf: PDF, text: str, width: int | None = None) -> None:
         pdf.multi_cell(width, 6, line)
 
 
-def _bullet(pdf: PDF, text: str) -> None:
-    """Print a bullet (ASCII dash) and wrap long lines safely."""
-    line = f"- {_latin1(text)}"
+def _bullet(pdf, text: str) -> None:
+    """ASCII bullet + safe wrap (uses same protected width)."""
+    line = f"- {_latin1(text or '')}"
     pdf.set_font("Arial", "", 10)
-    pdf.multi_cell(0, 6, line)
-
+    pdf.multi_cell(int(_content_width(pdf)), 6, line)
 
 # ---------- exporters ----------
 
