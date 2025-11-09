@@ -5,6 +5,17 @@ from datetime import date
 from pathlib import Path
 import streamlit as st
 
+# --- UI constants ---
+SECTORS = [
+    "Food & Beverage", "MedTech", "GreenTech", "AgriTech", "Biotech",
+    "Software/SaaS", "FinTech", "EdTech", "Manufacturing", "Creative/Digital",
+    "Professional Services", "Mobility/Transport", "Energy", "Other"
+]
+
+COMPANY_SIZES = [
+    "Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"
+]
+
 # ---- Optional: themed CSS (safe-noop if file missing)
 def inject_eu_theme():
     css_path = Path("theme") / "eu.css"
@@ -45,40 +56,38 @@ tabs = st.tabs(["1) Case Setup", "2) Evidence & Checklist", "3) Expert Report"])
 with tabs[0]:
     st.subheader("Case Setup")
 
-    ss["case_name"] = st.text_input("Case / Company name", value=ss.get("case_name", "Untitled Case"))
+    # --- Case capture (safe form with defaults) ---
+ss = st.session_state
 
-    size = st.selectbox("Company size", ["Micro (1-10)", "SME (11-250)", "Large (250+)"], index=0)
-    ss["sector"] = st.text_input("Sector (optional)", value=ss.get("sector", ""))
+# sensible defaults so selectbox doesn't crash
+default_sector_idx = ss.get("sector_idx", 0)
+default_size_idx   = ss.get("size_idx", 0)
 
-    uploads = st.file_uploader(
-        "Upload evidence files (PDF, DOCX, TXT, CSV)",
-        type=["pdf", "docx", "txt", "csv"],
-        accept_multiple_files=True
-    )
-    notes = st.text_area("Paste interview notes or context (optional)", height=140)
+with st.form("case_form"):
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        case_name = st.text_input("Company name *", ss.get("case_name", "Sandy Beach Foods Ltd."))
+    with col2:
+        case_size = st.selectbox("Company size *", COMPANY_SIZES, index=default_size_idx, key="size_select")
 
-    if st.button("Run IC + ESG Scan"):
-        try:
-            parsed = parse_uploaded_files(uploads or [])
-        except Exception:
-            parsed = {"texts": []}
+    sector = st.selectbox("Sector *", SECTORS, index=default_sector_idx, key="sector_select")
+    notes  = st.text_area("Notes / elevator pitch", ss.get("notes", ""), height=120)
 
-        text_input = (notes.strip() + "\n" if notes else "")
-        text_input += "\n".join(parsed.get("texts", []))
+    saved = st.form_submit_button("Save Case Details")
 
-        assessment = {}
-        try:
-            assessment = draft_ic_assessment(text_input)
-        except Exception:
-            assessment = {}
-
-        ss["analysis"] = {
-            "assessment": assessment,
-            "case": ss.get("case_name", "Untitled Case"),
-            "notes": text_input
-        }
-        st.success("IC / ESG artefacts mapped. Continue to Evidence & Checklist.")
-
+if saved:
+    # persist safe state; use indices to avoid ValueErrors next run
+    ss["case_name"]  = (case_name or "").strip() or "Client"
+    ss["sector_idx"] = SECTORS.index(sector) if sector in SECTORS else 0
+    ss["size_idx"]   = COMPANY_SIZES.index(ss["size_select"]) if "size_select" in ss else 0
+    ss["notes"]      = notes or ""
+    ss["case_state"] = {
+        "name": ss["case_name"],
+        "sector": SECTORS[ss["sector_idx"]],
+        "company_size": COMPANY_SIZES[ss["size_idx"]],
+        "notes": ss["notes"],
+    }
+    st.success("✅ Case details saved. You can proceed to Analysis/Guide/Advisory.")
 # =========================
 # TAB 2 — Evidence & Checklist
 # =========================
@@ -201,17 +210,34 @@ with tabs[2]:
         ss["narrative"] = narrative
 
         st.text_area("Generated report (editable)", value=narrative, height=360, key="lic_report_text")
+# ---- Safe state for downstream use ----
+ss = st.session_state
 
+# Case dict saved by the form (Step 3), with safe fallbacks
+case_dict = ss.get("case_state", {
+    "name": "Client",
+    "sector": SECTORS[0],
+    "company_size": COMPANY_SIZES[0],
+    "notes": ss.get("notes", ""),
+})
+case = case_dict.get("name", "Client")
+
+# Analysis objects (safe defaults so nothing crashes)
+analysis = ss.get("analysis", {})                      # if you store results here
+assessment = analysis.get("assessment", {})            # may contain ic_map/readiness
+narrative = ss.get("narrative", "")                    # advisory text (string)
+licensing_options = ss.get("licensing", [])            # list of dicts, or []
+r
         bundle = {
-            "case": ss.get("case_name", "Untitled Case"),
-            "narrative": ss.get("lic_report_text", narrative),
-            "assessment": analysis,
-            "guide": guide,
-            "licence_choice": lic_choice,
-            "sector": ss.get("sector", ""),
-            "company_size": size if "size" in locals() else ""
-        }
-
+    "case": case,                                # simple string for report titles
+    "sector": case_dict["sector"],
+    "company_size": case_dict["company_size"],
+    "summary": case_dict["notes"],               # appears on the PDF cover
+    "ic_map": assessment.get("ic_map", {}),      # 4-Leaf items
+    "readiness": assessment.get("readiness", []),
+    "licensing": licensing_options,              # advisory list (can be empty)
+    "narrative": narrative,                      # string (can be empty)
+}
         c1, c2, c3 = st.columns(3)
         with c1:
             try:
