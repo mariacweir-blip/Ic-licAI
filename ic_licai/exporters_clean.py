@@ -1,46 +1,40 @@
 # -*- coding: utf-8 -*-
 from typing import Dict, Any, List
 from fpdf import FPDF
-import io
 import json
+import io
 import pandas as pd
 
 # ---------- helpers ----------
 
-def _latin1(text: Any) -> str:
-    """Make text safe for FPDF (latin-1 only) + normalize bullets."""
+def _latin1(text: str) -> str:
+    """Make text safe for FPDF core fonts (latin-1 only)."""
     if text is None:
         return ""
     s = str(text)
-    # normalize common Unicode chars to ASCII-safe equivalents
+    # Replace Unicode bullets/emdashes/tabs with ASCII equivalents.
     s = (
         s.replace("•", "-")
          .replace("–", "-")
          .replace("—", "-")
-         .replace("’", "'")
-         .replace("“", '"')
-         .replace("”", '"')
+         .replace("\t", " ")
+         .replace("\u00A0", " ")  # NBSP to space
     )
-    # last resort: replace non-latin1 with '?'
+    # Finally, encode/decode so any remaining non-latin1 becomes '?'
     return s.encode("latin-1", "replace").decode("latin-1")
-
 
 class PDF(FPDF):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # modest margins; auto page break
         self.l_margin = 18
         self.r_margin = 18
         self.t_margin = 18
         self.set_auto_page_break(auto=True, margin=18)
-        self.header_title = ""
-
     def header(self):
         # keep header minimal; draw section titles in body instead
         if self.header_title:
             self.set_font("Arial", "B", 12)
             self.cell(0, 8, _latin1(self.header_title), ln=1)
-
 
 def _wrap_text(pdf, text):
     """Safely print text with wrapping, even if a token is very long."""
