@@ -12,6 +12,12 @@ from ic_licai.exporters_clean import export_pdf, export_xlsx, export_json
 # --- Page setup ---
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="centered")
 ss = st.session_state
+ss.setdefault("case_name", "Untitled Case")
+ss.setdefault("company_size", "Micro (1–10)")
+ss.setdefault("sector", "Food & Beverage")
+ss.setdefault("notes", "")
+ss.setdefault("assessment", {})
+ss.setdefault("uploaded_files", [])
 
 # --- Safe defaults (prevent page crashes before analysis) ---
 ss.setdefault("case_name", "Untitled Case")
@@ -21,11 +27,7 @@ ss.setdefault("notes", "")
 ss.setdefault("assessment", {})  # placeholder if analyzer not yet wired
 
 
-# --- UI constants ---
-SECTORS = [
-    "Food & Beverage", "MedTech", "GreenTech", "AgriTech", "Biotech",
-    "Software/SaaS", "FinTech", "EdTech", "Manufacturing", "Creative/Digital",
-    "Professional Services", "Mobility/Transport", "Energy", "Other",
+
 ]
 COMPANY_SIZES = ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"]
 
