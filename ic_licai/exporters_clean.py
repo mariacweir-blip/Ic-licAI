@@ -182,8 +182,13 @@ def export_pdf(data: Dict[str, Any]) -> bytes:
         "Evidence sources and decisions should be recorded in an IA register."
     )
 
-    # Return PDF bytes (latin-1)
-    return pdf.output(dest="S").encode("latin-1")
+    # Return PDF bytes (handle both str and bytearray from FPDF)
+    out = pdf.output(dest="S")
+if isinstance(out, (bytes, bytearray)):
+    return bytes(out)
+else:
+    # Older FPDF may return a str -> encode safely
+    return out.encode("latin-1", "replace")
 
 
 def export_xlsx(ic_map: Dict[str, List[str]]) -> bytes:
@@ -198,7 +203,6 @@ def export_xlsx(ic_map: Dict[str, List[str]]) -> bytes:
     with pd.ExcelWriter(bio, engine="xlsxwriter") as xw:
         df.to_excel(xw, index=False, sheet_name="IA Register")
     return bio.getvalue()
-
 
 def export_json(bundle: Dict[str, Any]) -> bytes:
     return json.dumps(bundle, ensure_ascii=False, indent=2).encode("utf-8")
