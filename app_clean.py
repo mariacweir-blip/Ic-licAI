@@ -1,21 +1,25 @@
-# app_clean.py — IC-LicAI Expert Console
+# app_clean.py — IC-LicAI Expert Console (clean version)
 import io
 import json
+from datetime import date
 from pathlib import Path
+
 import streamlit as st
 
-# exporters (uses your ic_licai/exporters_clean.py through the package import)
-from ic_licai.exporters import export_pdf, export_xlsx, export_json
+# exporters (using ic_licai/exporters_clean.py for latest stable exports)
+from ic_licai.exporters_clean import export_pdf, export_xlsx, export_json
 
+# --- Page setup ---
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="centered")
 ss = st.session_state
 
-# Safe defaults so the page never breaks if analysis isn’t run yet
+# --- Safe defaults (prevent page crashes before analysis) ---
 ss.setdefault("case_name", "Untitled Case")
 ss.setdefault("company_size", "Micro (1–10)")
 ss.setdefault("sector", "")
 ss.setdefault("notes", "")
-ss.setdefault("assessment", {})   # placeholder if the analyzer isn’t wired yet
+ss.setdefault("assessment", {})  # placeholder if analyzer not yet wired
+
 
 # --- UI constants ---
 SECTORS = [
