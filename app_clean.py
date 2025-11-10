@@ -173,29 +173,42 @@ if submitted:
     st.success("✅ Case saved. You can now run Auto-Analysis.")
 
 st.divider()
+
+# ===================================================
+# 1. Analysis (auto, simple demo)
+# ===================================================
 st.subheader("Analysis")
 
-# Pull combined text from session
-text = (ss.get("combined_text") or "").lower()
+# Expect a combined text buffer (built on the Case page)
+combined_text = ss.get("combined_text", "")
+st.text_area(
+    "Preview extracted evidence (first 5000 chars)",
+    combined_text[:5000],
+    height=220,
+    key="preview_only"
+)
 
 if st.button("Run Auto-Analysis"):
+    # --- Simple heuristic classifier for demonstration ---
+    text = (combined_text or "").lower()
+
     def has_any(words):
         return any(w in text for w in words)
 
     leaf_map = {
         "Human": (
             "Mentions of team, skills, training or tacit know-how detected."
-            if has_any(["team", "training", "skills", "employee", "mentor", "expert"])
+            if has_any(["team", "training", "skills", "employee", "expert"])
             else "No strong human-capital terms detected yet."
         ),
         "Structural": (
             "Internal systems, data, methods or processes referenced."
-            if has_any(["process", "system", "software", "method", "standard", "procedure"])
+            if has_any(["process", "system", "software", "method", "sop"])
             else "No clear structural artefacts found."
         ),
         "Customer": (
-            "Evidence of relationships, partners or customer feedback present."
-            if has_any(["client", "customer", "partner", "contract", "user", "pilot"])
+            "Evidence of relationships, partners or user feedback present."
+            if has_any(["client", "customer", "partner", "contract", "pilot"])
             else "No customer-capital evidence detected."
         ),
         "Strategic Alliance": (
@@ -208,14 +221,16 @@ if st.button("Run Auto-Analysis"):
     ss["analysis"] = {"4_leaf": leaf_map}
     st.success("✅ Auto-analysis complete. Open the Checklist tab to review & refine.")
 
-# Make sure this is OUTSIDE the button block (no indent)
-st.info("📘 Go to **Checklist** next.")
+# Leave these blank lines to close the block completely
 
-# ============================================================
+
+# ===================================================
 # 2. Checklist Page
-# ============================================================
+# ===================================================
 elif page == "Checklist":
     st.header("Expert Checklist (guide only)")
+
+    # Pull any auto-analysis data as prefill
     leaf = ss.get("analysis", {}).get("4_leaf", {})
     pre_h = ss.get("leaf_human") or leaf.get("Human", "")
     pre_s = ss.get("leaf_structural") or leaf.get("Structural", "")
@@ -229,11 +244,18 @@ elif page == "Checklist":
         ss["leaf_strategic"] = st.text_area("Strategic Alliance Capital", pre_a, height=110)
 
     with st.expander("Licensing Intent and FRAND"):
-        ss["intent_text"] = st.text_area("Licensing intent (target markets, partners, scope)", ss["intent_text"], height=120)
-        ss["frand_notes"] = st.text_area("FRAND notes (fee corridor, audit, essentiality, non-discrimination)", ss["frand_notes"], height=120)
+        ss["intent_text"] = st.text_area(
+            "Licensing intent (target markets, partners, scope)",
+            ss.get("intent_text", ""),
+            height=120,
+        )
+        ss["frand_notes"] = st.text_area(
+            "FRAND notes (fee corridor, audit, essentiality, non-discrimination)",
+            ss.get("frand_notes", ""),
+            height=120,
+        )
 
-st.info("➡️ Next: go to **Analysis** to build the narrative preview.")
-
+    st.info("✅ Next: go to **Analysis** to build the narrative preview.")
 # ============================================================
 # 3. Analysis Page
 # ============================================================
