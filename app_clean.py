@@ -114,57 +114,80 @@ if page == "Case":
             ss["uploaded_names"] = [f.name for f in uploads] if uploads else []
             st.success("Saved case details.")
 
-    if uploads:
-        combined = combine_uploads(uploads)
-        ss["combined_text"] = combined
-        with st.expander("Preview extracted text (first 5000 chars)"):
-             st.text_area("Extracted evidence", combined[:5000], height=220)
-        if st.button("Run Auto-Analysis"):
-             # --- simple heuristic classifier for demonstration ---
-             text = (ss.get("combined_text") or "").lower()
+    # --- CASE FORM ---
+st.subheader("Case")
 
-    def has_any(*words): 
+# Keep uploaded file references and a combined text buffer
+uploaded_files = st.file_uploader(
+    "Upload evidence (optional)",
+    type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg"],
+    accept_multiple_files=True,
+    key="uploader",
+)
+
+# Show quick list of selected files
+if uploaded_files:
+    st.caption("Files selected:")
+    st.write([f.name for f in uploaded_files])
+
+with st.form("case_form"):
+    case_name = st.text_input("Case / Company name", value=ss.get("case_name", "Untitled Case"))
+    company_size = st.selectbox(
+        "Company size",
+        ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"],
+        index=["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"].index(ss.get("company_size", "Micro (1–10)"))
+    )
+    sector = st.selectbox(
+        "Sector",
+        ["Food & Beverage", "MedTech", "GreenTech", "AgriTech", "Biotech",
+         "Software/SaaS", "FinTech", "EdTech", "Manufacturing", "Creative/Digital",
+         "Professional Services", "Mobility/Transport", "Energy", "Other"],
+        index=0 if ss.get("sector") is None else
+        max(0, ["Food & Beverage", "MedTech", "GreenTech", "AgriTech", "Biotech",
+                "Software/SaaS", "FinTech", "EdTech", "Manufacturing", "Creative/Digital",
+                "Professional Services", "Mobility/Transport", "Energy", "Other"].index(ss.get("sector", "Food & Beverage")))
+    )
+    notes = st.text_area("Advisor notes (optional)", value=ss.get("notes", ""), height=140)
+
+    submitted = st.form_submit_button("Save case")
+
+# Handle form save
+if submitted:
+    ss["case_name"] = case_name
+    ss["company_size"] = company_size
+    ss["sector"] = sector
+    ss["notes"] = notes
+
+    # Build a “combined text” buffer from any text-like uploads + notes
+    combined_chunks = [notes]
+    # (If you already have a parsing function, you can swap it in later)
+    for f in (uploaded_files or []):
+        name = f.name.lower()
+        if name.endswith(".txt"):
+            combined_chunks.append(f.read().decode("utf-8", errors="ignore"))
+        # For now we don’t auto-parse PDFs/DOCX/PPTX here; the demo just uses names
+        else:
+            combined_chunks.append(name)
+    ss["combined_text"] = "\n".join([c for c in combined_chunks if c])
+
+    st.success("✅ Case saved. You can now run Auto-Analysis.")
+
+st.divider()
+
+# --- AUTO ANALYSIS (simple heuristics demo) ---
+st.subheader("Analysis")
+if st.button("Run Auto-Analysis"):
+    text = (ss.get("combined_text") or "").lower()
+
+    def has_any(*words):
         return any(w in text for w in words)
 
-    leaf_map = {}
-    leaf_map["Human"] = (
-        "Mentions of team, skills, training or tacit know-how detected."
-        if has_any("team", "training", "skills", "employee")
-        else "No strong human-capital terms detected yet."
-    )
-    leaf_map["Structural"] = (
-        "Internal systems, data, methods or processes referenced."
-        if has_any("process", "system", "software", "method")
-        else "No clear structural artefacts found."
-    )
-    leaf_map["Customer"] = (
-        "Evidence of relationships, partners or user feedback present."
-        if has_any("client", "customer", "partner", "contract")
-        else "No customer-capital evidence detected."
-    )
-    leaf_map["Strategic Alliance"] = (
-        "External collaborations, MOUs or supply-chain items found."
-        if has_any("alliance", "mou", "joint", "collaboration")
-        else "No alliance terms detected."
-    )
-
-    steps_summary = []
-    for i, step in enumerate([
-        "Identify", "Separate", "Protect", "Safeguard", "Manage",
-        "Control", "Measure", "Report", "Value", "Monetise"
-    ], start=1):
-        tag = "✅" if has_any(step.lower()) else "⬜"
-        steps_summary.append(f"{tag} Step {i}: {step}")
-
-    ss["analysis"] = {
-        "4_leaf": leaf_map,
-        "10_steps": "\n".join(steps_summary),
-    }
-
-    st.success("Auto-analysis complete ✅ → open Checklist to review results.")
-    else:
-        st.info("Tip: upload .txt exports (e.g., WhatsApp chats or notes).")
-
+    leaf_map = {
+        "Human": "Mentions of team, skills, training or tacit know-how detected."
+                 if has_any("team", "training", "skills", "employee") else
+                 "No strong human-capital terms detected yet.",
+        "Structural": "Internal systems
+        
     st.info("➡️ Go to **Checklist** next.")
 
 # ============================================================
