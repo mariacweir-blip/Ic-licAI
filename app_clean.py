@@ -377,3 +377,36 @@ elif PAGE == "Reports":
             st.download_button("⬇ Licensing Report (.docx/.txt)", data=data, file_name=fname, mime=mime, key="dl_lic")
 
         st.caption("Note: If `python-docx` isn’t available on Cloud, download defaults to .txt. We can enable .docx by adding it to requirements.txt later.")
+
+
+# --- Licensing Templates (DOCX) ---
+st.divider()
+st.subheader("Licensing Templates (editable DOCX)")
+
+_case = st.text_input("Case / Company name", value=st.session_state.get("case_name", "Untitled Case"), key="tmpl_case")
+_sector = st.text_input("Sector / Field (for the header)", value=st.session_state.get("sector", ""), key="tmpl_sector")
+template = st.selectbox(
+    "Choose a template",
+    ["FRAND Standard", "Co-creation (Joint Development)", "Knowledge (Non-traditional)"],
+    index=0,
+    key="tmpl_choice"
+)
+
+if st.button("Generate template", key="btn_make_template"):
+    # Normalise the display name to our builder choices
+    name_map = {
+        "FRAND Standard": "FRAND Standard",
+        "Co-creation (Joint Development)": "Co-creation (Joint Development)",
+        "Knowledge (Non-traditional)": "Knowledge (Non-traditional)",
+    }
+    tname = name_map.get(template, "FRAND Standard")
+    doc = make_template_doc(tname, _case, _sector)
+    filename = f"{_case}_{tname.replace(' ', '_').replace('(', '').replace(')', '').replace('-','-')}.docx"
+    st.download_button(
+        "⬇ Download DOCX",
+        data=_docx_bytes(doc),
+        file_name=filename,
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        key="dl_tpl_docx"
+    )
+    st.success("Template generated. You can edit clauses in Word before sending to the client.")
