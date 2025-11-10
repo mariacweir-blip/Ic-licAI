@@ -87,9 +87,7 @@ if st.button("🧰 Generate Expert Checklist (PDF)"):
                            file_name=f"{case_name}_Expert_Checklist.pdf",
                            mime="application/pdf")
     except Exception as e:
-        st.error(f"Checklist export failed: {e}")
-
-# 2. Licensing Report
+        st.error(f"Checklist export failed: {# 2. Licensing Report
 if st.button("📄 Generate Licensing Report (PDF)"):
     try:
         licensing = {
@@ -98,19 +96,18 @@ if st.button("📄 Generate Licensing Report (PDF)"):
             "licensing": [
                 {"model": "Revenue Licence", "notes": ["Royalty-based licence", "FRAND-aligned terms", "Annual audit clause"]},
                 {"model": "Defensive Licence", "notes": ["Protective IP pooling", "Non-assertion across cluster partners"]},
-                {"model": "Co-Creation Licence", "notes": ["Shared ownership of Foreground IP", "Revenue-sharing"]}
+                {"model": "Co-Creation Licence", "notes": ["Shared ownership of Foreground IP", "Revenue-sharing"]},
             ],
-            "narrative": "Licensing-first advisory report aligning IC assets with commercial models."
+            "narrative": "Licensing-first advisory report aligning IC assets with commercial models.",
         }
-        Startup error while loading app_clean.py
 
-SyntaxError: File "app_clean.py", line 190 bundle = { ^ SyntaxError: '{' was never closed
-Traceback:
-File "/mount/src/ic-licai-demo/streamlit_app.py", line 10, in <module>
-    code = compile(src, str(p), "exec").download_button("⬇️ Download Licensing Report",
-                           data=export_pdf(licensing),
-                           file_name=f"{case_name}_Licensing_Report.pdf",
-                           mime="application/pdf")
+        st.download_button(
+            "⬇️ Download Licensing Report",
+            data=export_pdf(licensing),
+            file_name=f"{case_name}_Licensing_Report.pdf",
+            mime="application/pdf"
+        )
+
     except Exception as e:
         st.error(f"Licensing report failed: {e}")
 
