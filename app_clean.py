@@ -358,51 +358,8 @@ def _export_bytes_as_docx_or_txt(title: str, body: str) -> tuple[bytes, str, str
         data = (title + "\n\n" + (body or "")).encode("utf-8")
         return data, "ICLicAI_Report.txt", "text/plain"
 
-def _compose_ic_report_text(bundle: dict) -> tuple[str, str]:
-    title = f"Intangible Capital Report — {bundle.get('case')}"
-    ic = bundle.get("ic_map", {})
-    ts = bundle.get("ten_steps", {})
-    sec = bundle.get("sector", "") or "General"
-
-    body = []
-    body.append(f"Company: {bundle.get('case')}")
-    body.append(f"Size: {bundle.get('size')}")
-    body.append(f"Sector: {sec}")
-    body.append("")
-    body.append("Four-Leaf Model:")
-    for k, v in (ic.get("leaf") or {}).items():
-        body.append(f" - {k}: {v}")
-    body.append("")
-    body.append("10-Steps:")
-    body.append(f" - {ts.get('summary', '').strip() or 'Readiness view available in Expert View.'}")
-    body.append(f" - Readiness: {ts.get('readiness', '')}")
-    body.append("")
-    body.append("Notes:")
-    body.append(bundle.get("notes") or "(none)")
-    return title, "\n".join(body)
 
 def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
-    """Return (title, body) for a full IC Report with templated sections."""
-    case = (bundle.get("case") or "Untitled Case")
-    sector = bundle.get("sector") or ""
-    size = bundle.get("company_size") or ""
-    notes = bundle.get("notes") or ""
-    four_leaf = bundle.get("ic_map") or bundle.get("4_leaf") or {}
-    ten_steps = bundle.get("ten_steps") or []
-    narrative = bundle.get("narrative") or ""
-    licensing = bundle.get("licensing") or []
-    def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
-    """Return (title, body) for a full IC Report with templated sections."""
-    case = (bundle.get("case") or "Untitled Case")
-    sector = bundle.get("sector") or ""
-    size = bundle.get("company_size") or ""
-    notes = bundle.get("notes") or ""
-    four_leaf = bundle.get("ic_map") or bundle.get("4_leaf") or {}
-    ten_steps = bundle.get("ten_steps") or []
-    narrative = bundle.get("narrative") or ""
-    licensing = bundle.get("licensing") or []
-
-   def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
     """Return (title, body) for a full IC Report with templated sections."""
     case = (bundle.get("case") or "Untitled Case")
     sector = bundle.get("sector") or ""
@@ -429,8 +386,10 @@ def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
     # Cover Page
     add("# Cover page")
     add(f"Client: {case}")
-    if sector: add(f"Sector: {sector}")
-    if size: add(f"Company size: {size}")
+    if sector:
+        add(f"Sector: {sector}")
+    if size:
+        add(f"Company size: {size}")
     add("Date: [[Insert date]]")
     add("")
     add("Prepared by: Areopa / ARICC")
@@ -467,11 +426,13 @@ def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
 
     # Intellectual asset inventory (4-Leaf)
     add("# 2. Intellectual asset inventory (4-Leaf Model)")
+
     def leaf_block(name, key):
         val = four_leaf.get(key) or four_leaf.get(name) or ""
         add(f"## {name} Capital")
         add(val if val else f"[[Describe {name} capital assets, evidence, and gaps]]")
         add("")
+
     leaf_block("Human", "Human")
     leaf_block("Structural", "Structural")
     leaf_block("Customer", "Customer")
@@ -534,194 +495,3 @@ def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
 
     body = "\n".join(lines)
     return title, body
-   
-def _compose_lic_report_text(bundle: dict) -> tuple[str, str]:
-    title = f"Licensing Report — {bundle.get('case')}"
-    lic = bundle.get("licensing") or []
-    body = []
-    body.append(f"Company: {bundle.get('case')}")
-    body.append(f"Size: {bundle.get('size')}")
-    body.append(f"Sector: {bundle.get('sector') or 'General'}")
-    body.append("")
-    body.append("Recommended FRAND-aligned options:")
-    for opt in lic:
-        body.append(f" - {opt['title']}: {opt['model']} (suits: {opt['suits']})")
-    body.append("")
-    body.append("Action pointers (90-day focus):")
-    body.append(" - Productise one know-how package; publish clear rate card;")
-    body.append(" - Pilot with 1–2 partners; capture outcomes;")
-    body.append(" - Prepare co-creation addendum where collaboration is strategic.")
-    return title, "\n".join(body)
-
-# ---------------------------
-# PAGES
-# ---------------------------
-
-if PAGE == "Case":
-    st.title("Case")
-    with st.form("case_form"):
-        case_name = st.text_input("Case / Company name", value=ss.get("case_name", "Untitled Case"))
-        company_size = st.selectbox("Company size", SIZES, index=SIZES.index(ss.get("company_size", SIZES[0])))
-        sector = st.selectbox("Sector", SECTORS, index=SECTORS.index(ss.get("sector", SECTORS[-1])) if ss.get("sector") in SECTORS else len(SECTORS) - 1)
-        notes = st.text_area("Advisor notes (paste interview snippets, bullets, etc.)", value=ss.get("notes", ""), height=180)
-        uploaded_files = st.file_uploader(
-            "Upload evidence (optional)",
-            type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg"],
-            accept_multiple_files=True,
-            key="uploader_case",
-        )
-        submitted = st.form_submit_button("Save case")
-    if submitted:
-        ss["case_name"] = case_name
-        ss["company_size"] = company_size
-        ss["sector"] = sector
-        ss["notes"] = notes
-        ss["uploads_meta"] = [f.name for f in uploaded_files] if uploaded_files else []
-        st.success("✅ Case details saved.")
-
-    st.caption("Tip: Save, then switch to **Analyze Evidence**.")
-
-elif PAGE == "Analyze Evidence":
-    st.title("Analyze Evidence")
-    st.write("This demo uses heuristics so you always see results on Cloud (no extra libs).")
-
-    if st.button("▶ Run analysis"):
-        ic_map = _heuristic_ic_map(ss.get("case_name"), ss.get("company_size"), ss.get("sector"), ss.get("uploads_meta"))
-        ten_steps = _heuristic_10_steps(ss.get("company_size"))
-        licensing = _heuristic_licensing(ss.get("company_size"), ss.get("sector"))
-        narrative = _build_advisory_narrative(
-            ss.get("case_name"),
-            ss.get("company_size"),
-            ss.get("sector"),
-            ss.get("notes"),
-            ic_map,
-            ten_steps,
-            licensing
-        )
-        ss["analysis"] = {
-            "ic_map": ic_map,
-            "ten_steps": ten_steps,
-            "licensing": licensing,
-            "narrative": narrative,
-        }
-        st.success("✅ Analysis complete. See **Expert View** and **Reports**.")
-    else:
-        st.info("Click **Run analysis** to generate the Expert View / Reports content.")
-
-elif PAGE == "Expert View":
-    st.title("Expert View")
-    if not ss.get("analysis"):
-        st.warning("Run **Analyze Evidence** first.")
-    else:
-        a = ss["analysis"]
-        st.subheader("Advisory narrative (copyable)")
-        st.text_area("Preview", a.get("narrative", ""), height=220, key="narrative_preview", label_visibility="collapsed")
-
-        st.divider()
-        st.subheader("Four-Leaf Model")
-        leaf = a.get("ic_map", {}).get("leaf", {})
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown(f"**Human**: {leaf.get('Human','')}")
-            st.markdown(f"**Customer**: {leaf.get('Customer','')}")
-        with c2:
-            st.markdown(f"**Structural**: {leaf.get('Structural','')}")
-            st.markdown(f"**Strategic alliance**: {leaf.get('Strategic alliance','')}")
-
-        st.divider()
-        st.subheader("10-Steps (readiness)")
-        st.write(a.get("ten_steps", {}).get("summary", ""))
-        st.info(a.get("ten_steps", {}).get("readiness", ""))
-
-elif PAGE == "Reports":
-    st.title("Reports")
-    if not ss.get("analysis"):
-        st.warning("Run **Analyze Evidence** first.")
-    else:
-        a = ss["analysis"]
-        bundle = {
-            "case": ss.get("case_name"),
-            "size": ss.get("company_size"),
-            "sector": ss.get("sector"),
-            "notes": ss.get("notes"),
-            "ic_map": a.get("ic_map", {}),
-            "ten_steps": a.get("ten_steps", {}),
-            "licensing": a.get("licensing", []),
-            "narrative": a.get("narrative", ""),
-        }
-
-        st.subheader("Download editable reports")
-        c1, c2 = st.columns(2)
-
-        with c1:
-            title, body = _compose_ic_report_text(bundle)
-            data, fname, mime = _export_bytes_as_docx_or_txt(title, body)
-            st.download_button("⬇ IC Report (.docx/.txt)", data=data, file_name=fname, mime=mime, key="dl_ic")
-
-        with c2:
-            title, body = _compose_lic_report_text(bundle)
-            data, fname, mime = _export_bytes_as_docx_or_txt(title, body)
-            st.download_button("⬇ Licensing Report (.docx/.txt)", data=data, file_name=fname, mime=mime, key="dl_lic")
-
-        st.caption("Note: If `python-docx` isn’t available on Cloud, download defaults to .txt. We can enable .docx by adding it to requirements.txt later.")
-
-# --- Full IC Report (DOCX template) ---
-st.divider()
-st.subheader("Full IC Report (editable DOCX)")
-
-# Build a data bundle from session (re-using your keys)
-a = st.session_state.get
-bundle = {
-    "case": a("case_name", "Untitled Case"),
-    "sector": a("sector", ""),
-    "company_size": a("company_size", ""),
-    "notes": a("notes", ""),
-    "ic_map": a("ic_map", a("4_leaf", {})),
-    "ten_steps": a("ten_steps", []),
-    "licensing": a("licensing", []),
-    "narrative": a("narrative", ""),
-}
-
-title, body = _compose_full_ic_report_sections(bundle)
-data, fname, mime = export_bytes_as_docx_or_txt(title, body)
-st.download_button(
-    "⬇ Generate IC Report (DOCX)",
-    data=data,
-    file_name=fname,
-    mime=mime,
-    key="dl_full_ic_docx",
-    help="Creates a fully templated IC Report you can edit in Word, then PDF if needed."
-)
-
-
-# --- Licensing Templates (DOCX) ---
-st.divider()
-st.subheader("Licensing Templates (editable DOCX)")
-
-_case = st.text_input("Case / Company name", value=st.session_state.get("case_name", "Untitled Case"), key="tmpl_case")
-_sector = st.text_input("Sector / Field (for the header)", value=st.session_state.get("sector", ""), key="tmpl_sector")
-template = st.selectbox(
-    "Choose a template",
-    ["FRAND Standard", "Co-creation (Joint Development)", "Knowledge (Non-traditional)"],
-    index=0,
-    key="tmpl_choice"
-)
-
-if st.button("Generate template", key="btn_make_template"):
-    # Normalise the display name to our builder choices
-    name_map = {
-        "FRAND Standard": "FRAND Standard",
-        "Co-creation (Joint Development)": "Co-creation (Joint Development)",
-        "Knowledge (Non-traditional)": "Knowledge (Non-traditional)",
-    }
-    tname = name_map.get(template, "FRAND Standard")
-    doc = make_template_doc(tname, _case, _sector)
-    filename = f"{_case}_{tname.replace(' ', '_').replace('(', '').replace(')', '').replace('-','-')}.docx"
-    st.download_button(
-        "⬇ Download DOCX",
-        data=_docx_bytes(doc),
-        file_name=filename,
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        key="dl_tpl_docx"
-    )
-    st.success("Template generated. You can edit clauses in Word before sending to the client.")
