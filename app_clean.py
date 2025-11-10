@@ -84,6 +84,139 @@ def make_template_doc(template_name: str, case_name: str, sector: str) -> Docume
     d.add_paragraph("\nSchedules: \nA) Licensed Assets    B) Field & Territory    C) Pricing    D) KPIs/Reports")
     return d
 
+def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
+    """Return (title, body) for a full IC Report with templated sections."""
+    case = (bundle.get("case") or "Untitled Case")
+    sector = bundle.get("sector") or ""
+    size = bundle.get("company_size") or ""
+    notes = bundle.get("notes") or ""
+    four_leaf = bundle.get("ic_map") or bundle.get("4_leaf") or {}
+    ten_steps = bundle.get("ten_steps") or []
+    narrative = bundle.get("narrative") or ""
+    licensing = bundle.get("licensing") or []
+
+    title = f"IC Report — {case}"
+
+    # Build a clean, editable body (plain text -> will become DOCX via exporter)
+    lines = []
+    add = lines.append
+
+    add(f"{case}")
+    add(f"{sector} | {size}")
+    add("")
+    add("IC-LicAI — Intangible Capital Report")
+    add("=" * 60)
+    add("")
+
+    # Cover Page
+    add("# Cover page")
+    add(f"Client: {case}")
+    if sector: add(f"Sector: {sector}")
+    if size: add(f"Company size: {size}")
+    add("Date: [[Insert date]]")
+    add("")
+    add("Prepared by: Areopa / ARICC")
+    add("")
+
+    # Disclaimer
+    add("# Disclaimer")
+    add("This report is prepared for advisory purposes. It is not a legal, tax, or audit opinion. "
+        "All figures and assumptions are subject to expert verification and client confirmation.")
+    add("")
+
+    # Index
+    add("# Index")
+    add("1. Executive summary")
+    add("2. Intellectual asset inventory")
+    add("3. Innovation analysis")
+    add("4. Market scenario")
+    add("5. Business model")
+    add("6. Assumptions")
+    add("7. Valuation (placeholder)")
+    add("8. Conclusions")
+    add("9. Action plan")
+    add("")
+
+    # Executive summary
+    add("# 1. Executive summary")
+    add("• Purpose: Provide a structured view of intangible assets and readiness for licensing/growth.")
+    if notes:
+        add(f"• Key notes: {notes}")
+    if narrative:
+        add(f"• Narrative highlights: {narrative}")
+    add("• Headline recommendations: [[3–5 bullets]]")
+    add("")
+
+    # Intellectual asset inventory (4-Leaf)
+    add("# 2. Intellectual asset inventory (4-Leaf Model)")
+    def leaf_block(name, key):
+        val = four_leaf.get(key) or four_leaf.get(name) or ""
+        add(f"## {name} Capital")
+        add(val if val else f"[[Describe {name} capital assets, evidence, and gaps]]")
+        add("")
+    leaf_block("Human", "Human")
+    leaf_block("Structural", "Structural")
+    leaf_block("Customer", "Customer")
+    leaf_block("Strategic Alliance", "Strategic Alliance")
+
+    # Innovation analysis
+    add("# 3. Innovation analysis")
+    add("[[Summarise product/service innovation, IP status, trade secrets, software, data, indices, "
+        "and alignment with roadmap. Note NDAs, filings, confidentiality controls.]]")
+    add("")
+
+    # Market scenario
+    add("# 4. Market scenario")
+    add("[[TAM/SAM/SOM, target segments, EU/INT compliance considerations, competitor signals, "
+        "partnership routes, channels.]]")
+    add("")
+
+    # Business model
+    add("# 5. Business model")
+    add("[[Current revenue model, target FRAND models, co-creation opportunities, non-traditional "
+        "knowledge licensing.]]")
+    if licensing:
+        add("• Draft licensing options detected:")
+        for opt in licensing:
+            model = str(opt.get("model") or "").strip()
+            notes_l = opt.get("notes") or []
+            add(f"  – {model}" if model else "  – [[Model]]")
+            for n in notes_l:
+                add(f"     • {n}")
+    add("")
+
+    # Assumptions
+    add("# 6. Assumptions")
+    if ten_steps:
+        add("• Derived from 10-Steps readiness review:")
+        for i, step in enumerate(ten_steps, start=1):
+            add(f"  Step {i}: {step}")
+    add("• Additional assumptions: [[Insert market/ops/legal/tech assumptions]]")
+    add("")
+
+    # Valuation (placeholder)
+    add("# 7. Valuation (placeholder)")
+    add("This section is reserved for Areopa’s valuation team (trade-secret model).")
+    add("[[Insert valuation summary once approved]]")
+    add("")
+
+    # Conclusions
+    add("# 8. Conclusions")
+    add("[[Key findings, priority risks, go/no-go checkpoints.]]")
+    add("")
+
+    # Action Plan
+    add("# 9. Action plan (next 90 days)")
+    add("• IC hygiene & governance: [[items]]")
+    add("• Evidence register & NDAs: [[items]]")
+    add("• Licensing track (FRAND/co-creation/knowledge): [[items]]")
+    add("• Investor readiness: [[items]]")
+    add("• KPIs & owners: [[items + owners + dates]]")
+    add("")
+
+    body = "\n".join(lines)
+    return title, body
+
 # ---------------------------
 # Page & Session bootstrap
 # ---------------------------
@@ -258,6 +391,27 @@ def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
     ten_steps = bundle.get("ten_steps") or []
     narrative = bundle.get("narrative") or ""
     licensing = bundle.get("licensing") or []
+    def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
+    """Return (title, body) for a full IC Report with templated sections."""
+    case = (bundle.get("case") or "Untitled Case")
+    sector = bundle.get("sector") or ""
+    size = bundle.get("company_size") or ""
+    notes = bundle.get("notes") or ""
+    four_leaf = bundle.get("ic_map") or bundle.get("4_leaf") or {}
+    ten_steps = bundle.get("ten_steps") or []
+    narrative = bundle.get("narrative") or ""
+    licensing = bundle.get("licensing") or []
+
+   def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
+    """Return (title, body) for a full IC Report with templated sections."""
+    case = (bundle.get("case") or "Untitled Case")
+    sector = bundle.get("sector") or ""
+    size = bundle.get("company_size") or ""
+    notes = bundle.get("notes") or ""
+    four_leaf = bundle.get("ic_map") or bundle.get("4_leaf") or {}
+    ten_steps = bundle.get("ten_steps") or []
+    narrative = bundle.get("narrative") or ""
+    licensing = bundle.get("licensing") or []
 
     title = f"IC Report — {case}"
 
@@ -380,7 +534,7 @@ def _compose_full_ic_report_sections(bundle: dict) -> tuple[str, str]:
 
     body = "\n".join(lines)
     return title, body
-
+   
 def _compose_lic_report_text(bundle: dict) -> tuple[str, str]:
     title = f"Licensing Report — {bundle.get('case')}"
     lic = bundle.get("licensing") or []
