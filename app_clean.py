@@ -189,4 +189,74 @@ summary      = ss.get("summary", narrative or "Advisory summary not set yet.")
 
 bundle = {
     "case": case_name
-    
+# --- Reports and Exports ---
+st.divider()
+st.subheader("Expert Reports and Exports")
+c1, c2, c3 = st.columns(3)
+
+# 1) ✅ Expert Checklist (TXT)
+with c1:
+    try:
+        lines = [
+            f"Case: {bundle.get('case','Untitled')}",
+            f"Sector: {bundle.get('sector','')} | Size: {bundle.get('size','')}",
+            "",
+            "Expert Readiness Checklist (Quick Guide)",
+            "-" * 36,
+            "1) Identify: list core intangibles; tag Human / Structural / Customer / Strategic Alliance.",
+            "2) Protect: NDAs, trade secrets, filings, third-party rights cleared.",
+            "3) Value: apply 10-Steps; capture tacit→explicit evidence; set assumptions.",
+            "4) Readiness: governance, register, rate card, audit & termination terms.",
+            "5) FRAND Options: fixed-fee, capped royalty, eval→commercial path.",
+            "",
+            "Summary:",
+            (bundle.get("summary") or "Advisory summary not yet set."),
+            "",
+            "Licensing Options (draft):",
+        ]
+        for i, opt in enumerate(bundle.get("licensing", []), 1):
+            model = opt.get("model", "Option")
+            detail = opt.get("details", "")
+            lines.append(f"  {i}. {model} — {detail}")
+
+        txt_bytes = "\n".join(lines).encode("utf-8")
+        st.download_button(
+            "📋 Expert Checklist (.txt)",
+            data=txt_bytes,
+            file_name=f"{bundle.get('case','Case')}_Expert_Checklist.txt",
+            mime="text/plain",
+            key="dl_txt",
+        )
+    except Exception as e:
+        st.error(f"Checklist export failed: {e}")
+
+# 2) 📄 Licensing Report (PDF)
+with c2:
+    try:
+        pdf_b = export_pdf(bundle)
+        # normalize bytearray → bytes if needed
+        if isinstance(pdf_b, bytearray):
+            pdf_b = bytes(pdf_b)
+        st.download_button(
+            "📄 Licensing Report (PDF)",
+            data=pdf_b,
+            file_name=f"{bundle.get('case','Case')}_Licensing_Report.pdf",
+            mime="application/pdf",
+            key="dl_pdf",
+        )
+    except Exception as e:
+        st.error(f"PDF export failed: {e}")
+
+# 3) 📊 Full IC Report (XLSX)
+with c3:
+    try:
+        xlsx_b = export_xlsx(bundle)
+        st.download_button(
+            "📊 Full IC Report (XLSX)",
+            data=xlsx_b,
+            file_name=f"{bundle.get('case','Case')}_IC_Report.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="dl_xlsx",
+        )
+    except Exception as e:
+        st.error(f"XLSX export failed: {e}")
