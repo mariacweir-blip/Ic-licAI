@@ -176,19 +176,51 @@ st.divider()
 
 # --- AUTO ANALYSIS (simple heuristics demo) ---
 st.subheader("Analysis")
+
+# Pull the combined text once, lowercased
+text = (ss.get("combined_text") or "").lower()
+
 if st.button("Run Auto-Analysis"):
-    text = (ss.get("combined_text") or "").lower()
-
-    def has_any(*words):
+    # tiny helper
+    def has_any(words):
         return any(w in text for w in words)
-leaf_map["Structural"] = (
-    "Internal systems, data, methods or processes referenced."
-    if has_any("process", "system", "software", "method")
-    else "No clear structural artefacts found."
-)
-    
-st.info("➡️ Go to **Checklist** next.")
 
+    # Build a 4-Leaf heuristic map
+    leaf_map = {}
+
+    leaf_map["Human"] = (
+        "Mentions of team, skills, training or tacit know-how detected."
+        if has_any(["team", "training", "skills", "employee", "mentor", "expert"])
+        else "No strong human-capital terms detected yet."
+    )
+
+    leaf_map["Structural"] = (
+        "Internal systems, data, methods or processes referenced."
+        if has_any(["process", "system", "software", "method", "standard", "procedure"])
+        else "No clear structural artefacts found."
+    )
+
+    leaf_map["Customer"] = (
+        "Evidence of relationships, partners or customer feedback present."
+        if has_any(["client", "customer", "partner", "contract", "user", "pilot"])
+        else "No customer-capital evidence detected."
+    )
+
+    leaf_map["Strategic Alliance"] = (
+        "External collaborations, MOUs or supply-chain items found."
+        if has_any(["alliance", "mou", "joint", "collaboration", "consortium"])
+        else "No alliance terms detected."
+    )
+
+    # Save into session for the Checklist page
+    ss["analysis"] = ss.get("analysis", {})
+    ss["analysis"]["4_leaf"] = leaf_map
+
+    st.success("✅ Auto-analysis complete. Open the Checklist tab to review & refine.")
+
+
+# (this info line MUST be outside the button block)
+st.info("📘 Go to **Checklist** next.")
 
 # ============================================================
 # 2. Checklist Page
