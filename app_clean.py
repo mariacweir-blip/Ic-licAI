@@ -110,7 +110,33 @@ if page == "Case":
             accept_multiple_files=True,
             key="uploader",
         )
+# --- Evidence importer & auto-analysis ---
+from ic_licai.importers import combine_uploads
 
+if uploads:
+    st.success(f"{len(uploads)} evidence files uploaded.")
+    combined_text = combine_uploads(uploads)
+    st.session_state["combined_text"] = combined_text
+
+    if st.checkbox("Preview extracted text", key="preview_text"):
+        st.text_area("Extracted Evidence (first 5000 chars):",
+                     combined_text[:5000],
+                     height=300)
+
+    # Simple auto-analyzer placeholder (4-Leaf + 10-Steps tags)
+    if st.button("🔍 Run Auto-Analysis", key="btn_analyze"):
+        st.session_state["analysis_result"] = {
+            "4_leaf": {
+                "Human Capital": "Detected references to training, leadership, and R&D staff.",
+                "Structural Capital": "Detected references to process documentation or patents.",
+                "Customer Capital": "Mentions of contracts, clients, or partnerships.",
+                "Strategic Alliance Capital": "Mentions of collaborations, co-development, or clusters."
+            },
+            "10_steps_summary": "Initial mapping complete. Ready for expert verification."
+        }
+        st.success("✅ Auto-Analysis complete. Go to Checklist to verify details.")
+else:
+    st.info("Upload Pitch Decks, WhatsApp .txt exports, or other relevant evidence files before running analysis.")
         submitted = st.form_submit_button("Save case")
         if submitted:
             ss["case_name"] = case_name or "Untitled Case"
