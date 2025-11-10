@@ -187,7 +187,7 @@ if st.button("Run Auto-Analysis"):
                  if has_any("team", "training", "skills", "employee") else
                  "No strong human-capital terms detected yet.",
         "Structural": "Internal systems
-        
+    } 
     st.info("➡️ Go to **Checklist** next.")
 
 # ============================================================
