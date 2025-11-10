@@ -102,7 +102,12 @@ if st.button("📄 Generate Licensing Report (PDF)"):
             ],
             "narrative": "Licensing-first advisory report aligning IC assets with commercial models."
         }
-        st.download_button("⬇️ Download Licensing Report",
+        Startup error while loading app_clean.py
+
+SyntaxError: File "app_clean.py", line 190 bundle = { ^ SyntaxError: '{' was never closed
+Traceback:
+File "/mount/src/ic-licai-demo/streamlit_app.py", line 10, in <module>
+    code = compile(src, str(p), "exec").download_button("⬇️ Download Licensing Report",
                            data=export_pdf(licensing),
                            file_name=f"{case_name}_Licensing_Report.pdf",
                            mime="application/pdf")
@@ -189,6 +194,7 @@ summary      = ss.get("summary", narrative or "Advisory summary not set yet.")
 
 bundle = {
     "case": case_name
+}
 # --- Reports and Exports ---
 st.divider()
 st.subheader("Expert Reports and Exports")
