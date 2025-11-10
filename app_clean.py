@@ -243,7 +243,7 @@ elif page == "Checklist":
         ss["intent_text"] = st.text_area("Licensing intent (target markets, partners, scope)", ss["intent_text"], height=120)
         ss["frand_notes"] = st.text_area("FRAND notes (fee corridor, audit, essentiality, non-discrimination)", ss["frand_notes"], height=120)
 
-    st.info("➡️ Next: go to **Analysis** to build the narrative preview.")
+st.info("➡️ Next: go to **Analysis** to build the narrative preview.")
 
 # ============================================================
 # 3. Analysis Page
