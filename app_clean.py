@@ -211,7 +211,6 @@ if st.button("Run Auto-Analysis"):
 # Make sure this is OUTSIDE the button block (no indent)
 st.info("📘 Go to **Checklist** next.")
 
-
 # ============================================================
 # 2. Checklist Page
 # ============================================================
