@@ -120,6 +120,8 @@ if page == "Case":
         with st.expander("Preview extracted text (first 5000 chars)"):
             st.text_area("Extracted evidence", combined[:5000], height=220)
         if st.button("Run Auto-Analysis"):
+
+            
     # --- simple heuristic classifier for demonstration ---
     text = (ss.get("combined_text") or "").lower()
 
