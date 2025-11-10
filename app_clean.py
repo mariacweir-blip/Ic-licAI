@@ -234,22 +234,29 @@ with c1:
     except Exception as e:
         st.error(f"Checklist export failed: {e}")
 
-# 2) 📄 Licensing Report (PDF)
-with c2:
+# 2. Licensing Report
+if st.button("📄 Generate Licensing Report (PDF)"):
     try:
-        pdf_b = export_pdf(bundle)
-        # normalize bytearray → bytes if needed
-        if isinstance(pdf_b, bytearray):
-            pdf_b = bytes(pdf_b)
+        licensing = {
+            "case": case_name,
+            "summary": "Licensing options and FRAND readiness for " + str(case_name),
+            "licensing": [
+                {"model": "Revenue Licence", "notes": ["Royalty-based licence", "FRAND-aligned terms", "Annual audit clause"]},
+                {"model": "Defensive Licence", "notes": ["Protective IP pooling", "Non-assertion across cluster partners"]},
+                {"model": "Co-Creation Licence", "notes": ["Shared ownership of Foreground IP", "Revenue-sharing"]}
+            ],
+            "narrative": "Licensing-first advisory report aligning IC assets with commercial models."
+        }
+
         st.download_button(
-            "📄 Licensing Report (PDF)",
-            data=pdf_b,
-            file_name=f"{bundle.get('case','Case')}_Licensing_Report.pdf",
-            mime="application/pdf",
-            key="dl_pdf",
+            "⬇️ Download Licensing Report",
+            data=export_pdf(licensing),
+            file_name=f"{case_name}_Licensing_Report.pdf",
+            mime="application/pdf"
         )
+
     except Exception as e:
-        st.error(f"PDF export failed: {e}")
+        st.error(f"Licensing report failed: {e}")
 
 # 3) 📊 Full IC Report (XLSX)
 with c3:
