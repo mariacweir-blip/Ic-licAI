@@ -187,8 +187,8 @@ leaf_map["Structural"] = (
     else "No clear structural artefacts found."
 )
     
+st.info("➡️ Go to **Checklist** next.")
 
-    st.info("➡️ Go to **Checklist** next.")
 
 # ============================================================
 # 2. Checklist Page
