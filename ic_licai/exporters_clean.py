@@ -1,209 +1,171 @@
-# coding: utf-8
-# ic_licai/exporters_clean.py — robust ASCII-safe PDF/XLSX/JSON exporters
-# Prefers Arial (standard FPDF font)
-# Replaces problematic unicode characters (“—” “•” “…” etc.) to avoid FPDF width/encoding errors
-# Adds pages lazily (only when a section has content)
+# ic_licai/exporters_clean.py — exports with safe local folder (~/Documents/ICLicAI/reports)
 
-from __future__ import annotations
-import io
-import json
-from fpdf import FPDF
-from typing import Dict, Any, List
+import io, os, json
+from pathlib import Path
+from datetime import datetime
 
 try:
-    import pandas as pd
+    from docx import Document
+    HAVE_DOCX = True
 except Exception:
-    pd = None  # XLSX optional
+    HAVE_DOCX = False
+
+try:
+    from openpyxl import Workbook
+    HAVE_XLSX = True
+except Exception:
+    HAVE_XLSX = False
 
 
-# ----------------- Text Helpers -----------------
-def _latin1(text: str) -> str:
-    """Convert to Latin-1 safe text and replace common troublemakers."""
-    if text is None:
-        return ""
-    s = str(text)
-    for bad, good in {
-        "•": "-",
-        "–": "-",
-        "—": "-",
-        "’": "'",
-        "“": '"',
-        "”": '"',
-        "…": "...",
-        "\t": " ",
-        "\u00A0": " ",
-    }.items():
-        s = s.replace(bad, good)
-    return s.encode("latin-1", "replace").decode("latin-1")
-
-from pathlib import Path
-import datetime
-
-def save_to_local(text: str, name: str = "ICLicAI_Report", folder: str = "drafts") -> Path:
-    """Save on-screen text to a local .txt file for expert review."""
-    folder_path = Path.home() / folder
-    folder_path.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    file_path = folder_path / f"{name}_{timestamp}.txt"
-    file_path.write_text(text, encoding="utf-8")
-    return file_path
+def ensure_reports_dir(base: Path = None) -> Path:
+    """Ensure ~/Documents/ICLicAI/reports exists."""
+    base = Path(base or Path.home() / "Documents" / "ICLicAI" / "reports")
+    base.mkdir(parents=True, exist_ok=True)
+    return base
 
 
-# ---- New soft-wrap helper ----
-def _soften_long_tokens(s: str, every: int = 24) -> str:
-    """
-    Inserts spaces into long runs so FPDF can wrap lines.
-    Also makes '/' and '-' breakable.
-    """
-    import re
-    if not s:
-        return ""
-    s = s.replace("/", "/ ").replace("-", "- ")
-    s = re.sub(r"([A-Za-z0-9]{%d,})" % every, r"\1 ", s)
-    return s
+def _timestamp() -> str:
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
-# ---- Updated wrap text helper ----
-def _wrap_text(pdf, text: str):
-    """Safely wrap long text blocks with explicit width."""
-    if not text:
-        return
-    txt = _soften_long_tokens(text)
-    pdf.set_font("Arial", "", 10)
-    width = pdf.w - pdf.l_margin - pdf.r_margin  # available line width
-    for line in txt.split("\n"):
-        if not line.strip():
-            pdf.ln(2)
-            continue
-        pdf.multi_cell(width, 6, line, align="L")
+# --------------------------- DOCX Advisory / Templates ---------------------------
+def export_advisory_docx(case: dict, mode: str, reports_dir: Path = None):
+    """Create a Word advisory or template docx."""
+    reports_dir = ensure_reports_dir(reports_dir)
+    fname = {
+        "ADVISORY": f"Advisory_Report_{case['case_name']}_{_timestamp()}.docx",
+        "TEMPLATE_FRAND": f"Template_FRAND_{case['case_name']}_{_timestamp()}.docx",
+        "TEMPLATE_CO_CREATION": f"Template_CoCreation_{case['case_name']}_{_timestamp()}.docx",
+        "TEMPLATE_NON_TRADITIONAL": f"Template_NonTraditional_{case['case_name']}_{_timestamp()}.docx",
+    }[mode]
+    path = reports_dir / fname
+
+    if HAVE_DOCX:
+        doc = Document()
+        doc.add_heading("Intangible Capital — Advisory / Licensing", level=1)
+        doc.add_paragraph(f"Case: {case['case_name']}  |  Size: {case['company_size']}  |  Sector: {case['sector']}")
+
+        if mode == "ADVISORY":
+            _docx_advisory_body(doc, case)
+        elif mode == "TEMPLATE_FRAND":
+            _docx_template_frand(doc)
+        elif mode == "TEMPLATE_CO_CREATION":
+            _docx_template_cocreation(doc)
+        else:
+            _docx_template_non_traditional(doc)
+
+        bio = io.BytesIO()
+        doc.save(bio)
+        bio.seek(0)
+        path.write_bytes(bio.getvalue())
+        return bio.getvalue(), str(path)
+
+    # Fallback text file
+    txt = _plain_advisory_text(case, mode)
+    path_txt = str(path).replace(".docx", ".txt")
+    Path(path_txt).write_text(txt, encoding="utf-8")
+    return txt.encode("utf-8"), path_txt
 
 
-# ----------------- PDF Class -----------------
-class PDF(FPDF):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_auto_page_break(auto=True, margin=18)
+def _docx_advisory_body(doc, case: dict):
+    doc.add_heading("4-Leaf Summary", level=2)
+    for k, v in case["four_leaf"].items():
+        if v.strip():
+            doc.add_paragraph(f"{k.capitalize()}: {v.strip()}")
 
-    def header(self):
-        # Leave header empty for clean report
-        pass
+    doc.add_heading("10-Steps (advisory notes)", level=2)
+    for step in case["ten_steps"]:
+        if step["notes"].strip():
+            doc.add_paragraph(f"{step['label']}: {step['notes'].strip()}")
 
+    doc.add_heading("Licensing Intent & FRAND", level=2)
+    lic = case.get("licensing", {})
+    if lic.get("intent"):
+        doc.add_paragraph(f"Intent: {lic['intent']}")
+    if lic.get("frand_notes", "").strip():
+        doc.add_paragraph(f"FRAND: {lic['frand_notes'].strip()}")
 
-def _section(pdf: PDF, heading: str):
-    pdf.add_page()
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 8, _latin1(heading), ln=1)
-    pdf.ln(2)
+    if case.get("esg_rows"):
+        doc.add_paragraph("ESG CSV present — mapped to IA register (4-Leaf cues).")
 
-
-def _wrap_text(pdf: PDF, text: str):
-    """Safely wrap long text blocks."""
-    if not text:
-        return
-    txt = _latin1(text)
-    pdf.set_font("Arial", "", 10)
-    for line in txt.split("\n"):
-        if not line.strip():
-            pdf.ln(3)
-            continue
-        pdf.multi_cell(0, 6, line)
+    doc.add_heading("IAS 38 Alignment", level=2)
+    doc.add_paragraph("Identify, control, and future economic benefit evidenced. Valuation steps held by Areopa (trade-secreted).")
 
 
-# ----------------- Exporters -----------------
-def export_pdf(data: Dict[str, Any]) -> bytes:
-    """Generate advisory/licensing PDF report."""
-    pdf = PDF(format="A4")
-    pdf.add_page()
-
-    # ---- Cover / Executive Summary ----
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, _latin1("Intangible Capital & Licensing Readiness Report"), ln=1)
-    pdf.ln(5)
-
-    case = _latin1(data.get("case") or "Client")
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 8, f"Client: {case}", ln=1)
-    pdf.ln(2)
-
-    _wrap_text(pdf, data.get("summary", ""))
-
-    # ---- Body Sections (lazy pages) ----
-    ic_map = data.get("ic_map", {}) or {}
-    if isinstance(ic_map, dict) and any(v for v in ic_map.values()):
-        _section(pdf, "Intangible Capital Map (4-Leaf)")
-        for leaf, items in ic_map.items():
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(0, 6, _latin1(f"• {leaf}"), ln=1)
-            pdf.set_font("Arial", "", 10)
-            for it in (items or [])[:6]:
-                pdf.multi_cell(0, 6, _latin1(f"  - {it}"))
-            pdf.ln(1)
-
-    readiness = data.get("readiness", []) or []
-    if isinstance(readiness, list) and readiness:
-        _section(pdf, "10-Steps Readiness Summary")
-        for row in readiness:
-            step = row.get("step", "")
-            name = row.get("name", "")
-            score = row.get("score")
-            left = f"{step}: {name}"
-            right = f"(Score {score}/3)" if score is not None else ""
-            pdf.cell(0, 6, _latin1(f"{left}  {right}"), ln=1)
-            for t in row.get("tasks", []) or []:
-                pdf.multi_cell(0, 6, _latin1(f"  - {t}"))
-            pdf.ln(1)
-
-    lic = data.get("licensing", []) or []
-    if isinstance(lic, list) and lic:
-        _section(pdf, "Licensing Options (Advisory)")
-        for opt in lic:
-            model = _latin1(str(opt.get("model", "")).strip())
-            notes = opt.get("notes", [])
-            if isinstance(notes, str):
-                notes = [notes]
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(0, 6, model or "Option", ln=1)
-            pdf.set_font("Arial", "", 10)
-            for n in notes:
-                pdf.multi_cell(0, 6, _latin1(f"  - {n}"))
-            pdf.ln(1)
-
-    narr = data.get("narrative", "")
-    if isinstance(narr, (dict, list)):
-        narr = json.dumps(narr, ensure_ascii=False, indent=2)
-    if isinstance(narr, str) and narr.strip():
-        _section(pdf, "Advisory Narrative")
-        _wrap_text(pdf, narr)
-
-    # ---- Governance & Audit Note ----
-    _section(pdf, "Governance & Audit Note")
-    _wrap_text(
-        pdf,
-        "This report is generated using an advisory-first workflow with human approval. "
-        "Evidence sources and decisions should be recorded in an IA Register."
-    )
-
-    out = pdf.output(dest="S")
-    return out.encode("latin-1", "replace") if isinstance(out, str) else out
+def _docx_template_frand(doc):
+    doc.add_heading("Standard FRAND Licence Template (Draft)", level=2)
+    doc.add_paragraph("• Grant: Non-exclusive licence for defined field-of-use/territory.")
+    doc.add_paragraph("• Fees: Reasonable royalty or fixed fee; MFN across equivalent licensees.")
+    doc.add_paragraph("• Audit: Periodic statements; audit rights with notice.")
+    doc.add_paragraph("• Termination: Clear triggers; survival of confidentiality.")
 
 
-def export_xlsx(ic_map: Dict[str, List[str]]) -> bytes:
-    """Export simple IA Register sheet from IC Map."""
-    if not pd:
-        return b"No pandas available"
-
-    rows: List[Dict[str, str]] = []
-    for leaf, items in (ic_map or {}).items():
-        for i in items:
-            rows.append({"Capital": _latin1(leaf), "Item": _latin1(i)})
-
-    df = pd.DataFrame(rows, columns=["Capital", "Item"])
-    bio = io.BytesIO()
-    with pd.ExcelWriter(bio, engine="xlsxwriter") as writer:
-        df.to_excel(writer, index=False, sheet_name="IA Register")
-    return bio.getvalue()
+def _docx_template_cocreation(doc):
+    doc.add_heading("Co-Creation Agreement Template (Draft)", level=2)
+    doc.add_paragraph("• Scope: Joint development of artefacts; roles & contributions.")
+    doc.add_paragraph("• IP: Background vs Foreground; FRAND access if reused.")
+    doc.add_paragraph("• Governance: Steering cadence; change control; acceptance criteria.")
+    doc.add_paragraph("• Commercialisation: Licence-back rights; royalty corridors; spin-out options.")
 
 
-def export_json(bundle: Dict[str, Any]) -> bytes:
-    """Export bundle as UTF-8 JSON."""
-    return json.dumps(bundle, ensure_ascii=False, indent=2).encode("utf-8")
+def _docx_template_non_traditional(doc):
+    doc.add_heading("Non-Traditional Asset Licence — Codified Knowledge (Draft)", level=2)
+    doc.add_paragraph("• Object: Know-how pack (procedures, training, data).")
+    doc.add_paragraph("• Terms: Social benefit or commercial use; attribution; open clauses.")
+    doc.add_paragraph("• Safeguards: Confidential annex; revocation for misuse; redistribution rules.")
+    doc.add_paragraph("• Compatibility: FRAND-style parity; reasonable fees in line with impact.")
+
+
+def _plain_advisory_text(case: dict, mode: str) -> str:
+    head = f"Case: {case['case_name']} | Size: {case['company_size']} | Sector: {case['sector']}\n"
+    return head + f"Mode: {mode}"
+
+
+# ------------------------------- XLSX IA Register -------------------------------
+def export_ia_register_xlsx(case: dict, reports_dir: Path = None):
+    reports_dir = ensure_reports_dir(reports_dir)
+    fname = f"IA_Register_{case['case_name']}_{_timestamp()}.xlsx"
+    path = reports_dir / fname
+
+    if HAVE_XLSX:
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "IA Register"
+        ws.append(["Case", case["case_name"]])
+        ws.append(["Size", case["company_size"]])
+        ws.append(["Sector", case["sector"]])
+        ws.append([])
+        ws.append(["4-Leaf Category", "Notes"])
+        for k, v in case["four_leaf"].items():
+            if v.strip():
+                ws.append([k.capitalize(), v.strip()])
+        ws.append([])
+        ws.append(["10-Steps", "Notes"])
+        for step in case["ten_steps"]:
+            if step["notes"].strip():
+                ws.append([step["label"], step["notes"].strip()])
+        ws.append([])
+        ws.append(["Licensing Intent", case.get("licensing", {}).get("intent", "")])
+        ws.append(["FRAND Notes", case.get("licensing", {}).get("frand_notes", "")])
+        ws.append([])
+        ws.append(["ESG CSV present", "Yes" if case.get("esg_rows") else "No"])
+        bio = io.BytesIO()
+        wb.save(bio)
+        bio.seek(0)
+        path.write_bytes(bio.getvalue())
+        return bio.getvalue(), str(path)
+
+    csv_path = str(path).replace(".xlsx", ".csv")
+    lines = [f"Case,{case['case_name']}"]
+    Path(csv_path).write_text("\n".join(lines), encoding="utf-8")
+    return b"\n".join(lines), csv_path
+
+
+# -------------------------------- JSON Export --------------------------------
+def export_case_json(case: dict, reports_dir: Path = None):
+    reports_dir = ensure_reports_dir(reports_dir)
+    fname = f"CaseData_{case['case_name']}_{_timestamp()}.json"
+    path = reports_dir / fname
+    data = json.dumps(case, indent=2, ensure_ascii=False)
+    Path(path).write_text(data, encoding="utf-8")
+    return data.encode("utf-8"), str(path)
