@@ -71,7 +71,7 @@ notes = ss.get("notes", "")
 assessment = ss.get("assessment", {})
 
 # 1. Expert Checklist
-if st.button("🧰 Generate Expert Checklist (PDF)"):
+if st.button("🧾 Generate Expert Checklist (PDF)"):
     try:
         checklist = {
             "case": case_name,
@@ -79,18 +79,20 @@ if st.button("🧰 Generate Expert Checklist (PDF)"):
             "readiness": [
                 {"step": "1", "name": "Identify", "tasks": ["List core intangibles", "Tag as human/structural/customer/strategic"]},
                 {"step": "2", "name": "Protect", "tasks": ["Confirm NDAs, IP filings, trade-secret coverage"]},
-                {"step": "3", "name": "Value", "tasks": ["Apply 10-Step Areopa method", "Capture tacit/explicit proportions"]}
+                {"step": "3", "name": "Value", "tasks": ["Apply 10-Step Areopa method", "Capture tacit/explicit proportions"]},
             ],
-            "narrative": "Checklist for experts guiding SMEs through IC identification and readiness."
+            "narrative": "Checklist for experts guiding SMEs through IC identification and readiness.",
         }
-        st.download_button("⬇️ Download Expert Checklist",
-                           data=export_pdf(checklist),
-                           file_name=f"{case_name}_Expert_Checklist.pdf",
-                           mime="application/pdf")
+        st.download_button(
+            "⬇️ Download Expert Checklist",
+            data=export_pdf(checklist),
+            file_name=f"{case_name}_Expert_Checklist.pdf",
+            mime="application/pdf",
+        )
     except Exception as e:
-        st.error(f"Licensing report failed: {e}")
-            
- # 2. Licensing Report
+        st.error(f"Checklist export failed: {e}")
+
+# 2. Licensing Report
 if st.button("📄 Generate Licensing Report (PDF)"):
     try:
         licensing = {
@@ -103,17 +105,15 @@ if st.button("📄 Generate Licensing Report (PDF)"):
             ],
             "narrative": "Licensing-first advisory report aligning IC assets with commercial models.",
         }
-
         st.download_button(
             "⬇️ Download Licensing Report",
             data=export_pdf(licensing),
             file_name=f"{case_name}_Licensing_Report.pdf",
-            mime="application/pdf"
+            mime="application/pdf",
         )
-
     except Exception as e:
         st.error(f"Licensing report failed: {e}")
-
+         
 # 3. Intangible Capital Report
 if st.button("📘 Generate Intangible Capital Report (PDF)"):
     try:
