@@ -181,13 +181,13 @@ if st.button("Run Auto-Analysis"):
 
     def has_any(*words):
         return any(w in text for w in words)
+leaf_map["Structural"] = (
+    "Internal systems, data, methods or processes referenced."
+    if has_any("process", "system", "software", "method")
+    else "No clear structural artefacts found."
+)
+    
 
-    leaf_map = {
-        "Human": "Mentions of team, skills, training or tacit know-how detected."
-                 if has_any("team", "training", "skills", "employee") else
-                 "No strong human-capital terms detected yet.",
-        "Structural": "Internal systems"
-    } 
     st.info("➡️ Go to **Checklist** next.")
 
 # ============================================================
