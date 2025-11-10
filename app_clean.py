@@ -8,6 +8,82 @@ from datetime import date
 
 import streamlit as st
 
+# --- DOCX helpers for licensing templates ---
+from docx import Document
+from docx.shared import Pt
+
+def _docx_bytes(doc: Document) -> bytes:
+    """Return a Document as bytes for Streamlit download_button."""
+    bio = io.BytesIO()
+    doc.save(bio)
+    return bio.getvalue()
+
+def _add_clause(doc: Document, title: str, body: str):
+    doc.add_paragraph(f"{title}").runs[0].font.bold = True
+    p = doc.add_paragraph(body)
+    for r in p.runs:
+        r.font.size = Pt(11)
+
+def make_template_doc(template_name: str, case_name: str, sector: str) -> Document:
+    """Build a short editable DOCX template for licensing."""
+    name = case_name or "Client"
+    sec = sector or "All Sectors"
+    d = Document()
+    d.add_heading(f"{template_name} Licence Agreement", level=1)
+    d.add_paragraph(f"Parties: {name} (Licensor) and __________________ (Licensee)")
+    d.add_paragraph(f"Sector / Field: {sec}")
+    d.add_paragraph("Date: __________________")
+
+    if template_name == "FRAND Standard":
+        _add_clause(d, "1. Grant",
+                    "Non-exclusive, non-transferable licence to use the Licensed Assets within the Field and Territory.")
+        _add_clause(d, "2. FRAND Commercial Terms",
+                    "Fees and/or royalties are Fair, Reasonable and Non-Discriminatory (FRAND); Most-Favoured-"
+                    "Nation (MFN) protection across materially equivalent licensees.")
+        _add_clause(d, "3. Scope & Restrictions",
+                    "No sub-licensing without consent; no reverse engineering of trade secrets; no use outside Field.")
+        _add_clause(d, "4. Reporting & Audit",
+                    "Quarterly usage/royalty report; Licensor may audit with notice; rectification period applies.")
+        _add_clause(d, "5. IP & Confidentiality",
+                    "All IP remains with Licensor; Licensee keeps all non-public information confidential.")
+        _add_clause(d, "6. Term & Termination",
+                    "Initial term 12 months; renewals by mutual agreement; termination for breach after cure period.")
+        _add_clause(d, "7. Compliance",
+                    "Licensee complies with applicable law, ESG commitments (where agreed), and attribution rules.")
+    elif template_name == "Co-creation (Joint Development)":
+        _add_clause(d, "1. Purpose",
+                    "Collaborative development of Improvements / New Works using Licensor know-how and Licensee input.")
+        _add_clause(d, "2. Background vs Foreground IP",
+                    "Background IP stays with each party; Foreground IP ownership either joint or allocated by module; "
+                    "each party receives a licence to the other’s Foreground as needed to exploit results.")
+        _add_clause(d, "3. FRAND Access",
+                    "Commercial access to jointly created Foreground is FRAND-compliant for both parties.")
+        _add_clause(d, "4. Revenue Share",
+                    "Downstream revenue from Foreground allocated per an agreed split (e.g., 60/40).")
+        _add_clause(d, "5. Governance",
+                    "Joint steering group; sprint reviews; change control; publication/press policy.")
+        _add_clause(d, "6. Confidentiality & Data",
+                    "Mutual NDA; data governance; trade-secret handling and secure repositories.")
+        _add_clause(d, "7. Exit",
+                    "Orderly wind-down; buy-out and/or tail licence; survival of IP and confidentiality.")
+    else:  # "Knowledge (Non-traditional)"
+        _add_clause(d, "1. Licensed Asset",
+                    "Codified knowledge artefacts (methods, playbooks, checklists, prompts, training packs).")
+        _add_clause(d, "2. Rights",
+                    "Use, adapt internally, and embed in Licensee processes; no public redistribution.")
+        _add_clause(d, "3. Pricing Models",
+                    "Option A: fixed annual fee per site; Option B: usage-based fee; Option C: social-benefit licence "
+                    "with reduced fee and impact reporting.")
+        _add_clause(d, "4. Evidence & Provenance",
+                    "Licensee must retain evidence of use and attribution; Licensor can request exemplars.")
+        _add_clause(d, "5. Termination",
+                    "For breach/nonpayment or misuse; certified deletion of materials on termination.")
+        _add_clause(d, "6. Ghana / JV / Grants (optional)",
+                    "If applicable: trade-secreting process steps, Ghana contracts/JV for Waste & Water deployments, "
+                    "and alignment with active SDG grant applications.")
+    d.add_paragraph("\nSchedules: \nA) Licensed Assets    B) Field & Territory    C) Pricing    D) KPIs/Reports")
+    return d
+
 # ---------------------------
 # Page & Session bootstrap
 # ---------------------------
