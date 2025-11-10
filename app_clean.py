@@ -1,535 +1,406 @@
- # app_clean.py — IC-LicAI Expert Console (UK English • navy buttons • yellow bg)
+# app_clean.py — IC-LicAI Expert Console (clean full rewrite)
+# UK English; licensing-first outputs as editable DOCX/TXT (no PDFs).
+# Safe + simple: only tries to read .txt files for auto-analysis.
+# Other file types are recorded by name so experts can review manually.
+
 from __future__ import annotations
 
 import io
-import json
-from pathlib import Path
-from datetime import datetime
-
+from io import BytesIO
 import streamlit as st
 
-# Optional deps (DOCX + XLSX). We handle graceful fallbacks.
+# ---------- Optional DOCX support ----------
 try:
-    import pandas as pd  # type: ignore
+    from docx import Document  # python-docx (optional)
+    DOCX_OK = True
 except Exception:
-    pd = None  # XLSX fallback to CSV (rare)
-try:
-    from docx import Document  # type: ignore
-except Exception:
-    Document = None  # DOCX fallback to TXT
+    DOCX_OK = False
 
-# -------------------------------------------------
-# Page config + Theme tweaks
-# -------------------------------------------------
-st.set_page_config(page_title="IC-LicAI Expert Console", layout="centered")
+# ---------- Page & theme ----------
+st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
 
-NAVY = "#0b1b3a"      # dark navy
-YELLOW = "#FFF6CC"    # soft, readable yellow (not harsh)
-ACCENT = "#D4AF37"    # gold accent
-
+# Simple EU-ish theme: pale yellow page, navy headings, big buttons
 st.markdown(
-    f"""
+    """
     <style>
-      /* page background */
-      .stApp {{ background: {YELLOW}; }}
-
-      /* headings */
-      h1, h2, h3, h4 {{ color: {NAVY}; }}
-
-      /* big navy buttons (all st.button + st.download_button) */
-      .stButton > button, .stDownloadButton > button {{
-        background: {NAVY} !important;
-        color: white !important;
-        border: 0 !important;
-        border-radius: 10px !important;
-        padding: 0.9rem 1.2rem !important;
-        width: 100% !important;
-        font-weight: 700 !important;
-      }}
-      /* radio + labels */
-      section[data-testid="stSidebar"] .stRadio label {{
-        color: {NAVY};
-        font-weight: 600;
-      }}
-      /* subtle cards */
-      .stTextArea textarea, .stSelectbox div[data-baseweb="select"] {{
-        background: #ffffff;
-      }}
-      /* breadcrumb */
-      .crumb {{ color:{NAVY}; opacity:.9; font-size:.9rem; }}
+      .stApp { background: #FFF3BF; } /* pale yellow */
+      h1, h2, h3 { color: #0B3D6E; }  /* navy */
+      .btn-navy button {
+          background-color:#0B3D6E !important;
+          color:#ffffff !important;
+          border:0 !important;
+          border-radius:8px !important;
+          padding:0.6rem 1rem !important;
+          font-weight:600 !important;
+          width:100%;
+      }
+      .block { background:#FFF7D6; padding:1rem 1rem 0.2rem 1rem; border-radius:10px; border:1px solid #E6DFAF; }
+      .small { color:#555; font-size:0.9rem; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# -------------------------------------------------
-# Session defaults (safe)
-# -------------------------------------------------
 ss = st.session_state
-ss.setdefault("case_name", "Untitled Customer")
-ss.setdefault("company_size", "Micro (1–10)")
-ss.setdefault("sector", "")
-ss.setdefault("notes", "")
-ss.setdefault("uploaded_names", [])
-ss.setdefault("combined_text", "")
-ss.setdefault("analysis", {})      # {'4_leaf': {...}, 'ic_map': {...}, 'ten_steps': {...}}
-ss.setdefault("narrative", "")     # human-written + auto scaffold
-ss.setdefault("licensing", [])     # list of dicts: {'model':..., 'notes':[...]}
-ss.setdefault("guide", {})         # flags/toggles if you need later
 
-# -------------------------------------------------
-# Reference lists
-# -------------------------------------------------
-SIZES = ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"]
+# ---------- Constants ----------
 SECTORS = [
     "Food & Beverage", "MedTech", "GreenTech", "AgriTech", "Biotech",
     "Software/SaaS", "FinTech", "EdTech", "Manufacturing", "Creative/Digital",
     "Professional Services", "Mobility/Transport", "Energy", "Other",
 ]
 
-# -------------------------------------------------
-# Helpers (exports)
-# -------------------------------------------------
-def _bytes_docx_or_txt(title: str, body: str) -> tuple[bytes, str, str]:
-    """
-    Try to build DOCX (preferred). If python-docx is missing on the host,
-    fall back to a clean TXT export.
-    Returns: (bytes, filename, mimetype)
-    """
-    safe_name = title.strip().replace(" ", "_")
-    if Document:
+SIZES = ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"]
+
+# ---------- Safe defaults ----------
+ss.setdefault("case_name", "Untitled Customer")
+ss.setdefault("sector", "Food & Beverage")
+ss.setdefault("company_size", "Micro (1–10)")
+ss.setdefault("notes", "")
+ss.setdefault("uploaded_names", [])
+ss.setdefault("combined_text", "")
+ss.setdefault("analysis", {})   # will store ic_map, ten_steps, licensing, narrative
+
+# ---------- Helpers ----------
+def _export_bytes_as_docx_or_txt(title: str, body: str):
+    """Return (data_bytes, filename, mime). Prefers DOCX if python-docx is available."""
+    safe = (title or "Report").replace("/", "-").replace("\\", "-").strip()
+    if DOCX_OK:
+        doc = Document()
+        if title:
+            doc.add_heading(title, level=1)
+        for para in (body or "").split("\n"):
+            doc.add_paragraph(para)
+        bio = BytesIO()
+        doc.save(bio)
+        return bio.getvalue(), f"{safe}.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    else:
+        txt = ((title + "\n\n") if title else "") + (body or "")
+        return txt.encode("utf-8"), f"{safe}.txt", "text/plain"
+
+def _compose_ic_report_text(bundle: dict[str, object]):
+    """Return (title, body) for an IC report shell."""
+    case = bundle.get("case") or "Untitled Customer"
+    sector = bundle.get("sector", "")
+    size = bundle.get("company_size", "")
+    ic_map = bundle.get("ic_map", {}) or {}
+    ten = bundle.get("ten_steps", {}) or {}
+
+    lines = [
+        "Executive Summary",
+        f"- Customer: {case}",
+        f"- Sector: {sector} | Size: {size}",
+        "",
+        "Intellectual Asset Inventory (Four-Leaf Model)",
+        f"- Human: {ic_map.get('Human', '—')}",
+        f"- Structural: {ic_map.get('Structural', '—')}",
+        f"- Customer: {ic_map.get('Customer', '—')}",
+        f"- Strategic Alliance: {ic_map.get('Strategic Alliance', '—')}",
+        "",
+        "10 Steps (Areopa) — highlights",
+        f"{ten if ten else '—'}",
+        "",
+        "Innovation Analysis",
+        "—",
+        "",
+        "Market Scenario",
+        "—",
+        "",
+        "Business Model",
+        "—",
+        "",
+        "Assumptions",
+        "—",
+        "",
+        "Valuation (internal process — trade secret; to be added)",
+        "—",
+        "",
+        "Conclusions",
+        "—",
+        "",
+        "Action Plan",
+        "—",
+    ]
+    return (f"{case} — Intangible Capital Report", "\n".join(lines))
+
+def _compose_lic_report_text(bundle: dict[str, object]):
+    """Return (title, body) for a Licensing-focused report."""
+    case = bundle.get("case") or "Untitled Customer"
+    sector = bundle.get("sector", "")
+    size = bundle.get("company_size", "")
+    ic_map = bundle.get("ic_map", {}) or {}
+    lic = bundle.get("licensing", []) or []
+
+    lines = [
+        "Licensing Readiness Summary",
+        f"- Customer: {case}",
+        f"- Sector: {sector} | Size: {size}",
+        "",
+        "Core IC assets (Four-Leaf):",
+        f"- Human: {ic_map.get('Human', '—')}",
+        f"- Structural: {ic_map.get('Structural', '—')}",
+        f"- Customer: {ic_map.get('Customer', '—')}",
+        f"- Strategic Alliance: {ic_map.get('Strategic Alliance', '—')}",
+        "",
+        "FRAND/Compliance Notes",
+        "- Fee corridor, audit, essentiality, non-discrimination (to be completed).",
+        "",
+        "Candidate Models",
+    ]
+    if lic:
+        for i, opt in enumerate(lic, 1):
+            model = str(opt.get("model", f"Option {i}")).strip()
+            notes = opt.get("notes", [])
+            note_text = ", ".join(notes) if notes else "—"
+            lines.append(f"- {model}: {note_text}")
+    else:
+        lines += [
+            "- Revenue Licence (royalty-based, FRAND-aligned).",
+            "- Defensive Licence (IP pooling; non-assertion across cluster partners).",
+            "- Co-Creation Licence (shared Foreground IP; revenue sharing).",
+        ]
+    lines += [
+        "",
+        "Next Steps",
+        "- Confirm evidence register and NDAs.",
+        "- Confirm IC mapping; tag tacit vs explicit.",
+        "- Draft term sheet and select model(s) for negotiation.",
+    ]
+    return (f"{case} — Licensing Report", "\n".join(lines))
+
+def _make_template_doc(template_name: str, case: str, sector: str):
+    """Generate a licensing agreement template (DOCX if possible, else TXT)."""
+    title = f"{case} — {template_name} Template"
+    clauses = [
+        f"Customer: {case}",
+        f"Sector: {sector}",
+        "",
+        "1. Definitions",
+        "2. Grant of Rights",
+        "3. FRAND Terms (fee corridor, audit, essentiality, non-discrimination)",
+        "4. Confidentiality / Trade Secrets",
+        "5. Background vs Foreground IP",
+        "6. Warranties & Indemnities",
+        "7. Term & Termination",
+        "8. Governing Law & Dispute Resolution (EU)",
+    ]
+    if "Co-creation" in template_name or "Co-creation" in template_name:
+        clauses.insert(6, "5.1 Co-development Governance & Contribution Accounting")
+    if "Knowledge" in template_name:
+        clauses.insert(3, "3.1 Knowledge Artefact Description & Scope of Use (commercial/social)")
+
+    if DOCX_OK:
         doc = Document()
         doc.add_heading(title, level=1)
-        for line in body.split("\n"):
-            doc.add_paragraph(line)
-        bio = io.BytesIO()
+        for c in clauses:
+            doc.add_paragraph(c)
+        bio = BytesIO()
         doc.save(bio)
-        return bio.getvalue(), f"{safe_name}.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        return bio.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     else:
-        data = body.encode("utf-8")
-        return data, f"{safe_name}.txt", "text/plain"
+        txt = title + "\n\n" + "\n".join(clauses)
+        return txt.encode("utf-8"), "text/plain"
 
-def _export_xlsx_from_ic_map(ic_map: dict[str, list[str]]) -> tuple[bytes, str, str]:
-    """
-    Build a simple IA Register sheet from ic_map (4-leaf buckets).
-    Falls back to CSV if pandas/xlsxwriter unavailable.
-    """
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    fname_xlsx = f"IA_Register_{ts}.xlsx"
-    fname_csv = f"IA_Register_{ts}.csv"
+def _combine_text_from_uploads(files) -> str:
+    """Read .txt uploads (utf-8) and stitch with notes; for other types, just list names."""
+    chunks = []
+    names = []
+    for f in files or []:
+        names.append(f.name)
+        if f.name.lower().endswith(".txt"):
+            try:
+                chunks.append(f.read().decode("utf-8", errors="ignore"))
+            except Exception:
+                pass
+    ss["uploaded_names"] = names
+    return "\n\n".join([c for c in chunks if c])
 
-    rows = []
-    for leaf, items in (ic_map or {}).items():
-        for it in (items or []):
-            rows.append({"Capital": leaf, "Item": it})
+def _auto_analyse(text: str) -> dict:
+    """Tiny keyword-based demo to populate a Four-Leaf map + placeholders for 10 steps."""
+    t = (text or "").lower()
 
-    if pd:
-        df = pd.DataFrame(rows or [{"Capital": "", "Item": ""}])
-        bio = io.BytesIO()
-        with pd.ExcelWriter(bio, engine="xlsxwriter") as writer:
-            df.to_excel(writer, index=False, sheet_name="IA Register")
-        return bio.getvalue(), fname_xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    def has_any(words):  # simple keyword check
+        return any(w in t for w in words)
 
-    # CSV fallback
-    body = "Capital,Item\n" + "\n".join([f"{r['Capital']},{r['Item']}" for r in rows])
-    return body.encode("utf-8"), fname_csv, "text/csv"
+    ic_map = {}
+    ic_map["Human"] = (
+        "Mentions of team, training or tacit know-how detected."
+        if has_any(["team", "training", "skill", "mentor", "employee"])
+        else "No strong human-capital terms detected yet."
+    )
+    ic_map["Structural"] = (
+        "Internal systems, data, methods or processes referenced."
+        if has_any(["process", "system", "software", "method", "ip"])
+        else "No clear structural artefacts found."
+    )
+    ic_map["Customer"] = (
+        "Evidence of customers, partners or user feedback present."
+        if has_any(["client", "customer", "partner", "contract", "channel"])
+        else "No customer-relationship evidence detected."
+    )
+    ic_map["Strategic Alliance"] = (
+        "Collaborations, MOUs or supply-chain items found."
+        if has_any(["alliance", "mou", "joint", "collaboration"])
+        else "No alliance terms detected."
+    )
 
-def _make_ic_report_text(bundle: dict) -> tuple[str, str]:
-    """
-    Build a templated IC report body (Cover→Disclaimer→Index→Exec Summary→…).
-    Returns (title, body).
-    """
-    name = bundle.get("case") or "Client"
-    sector = bundle.get("sector") or "—"
-    size = bundle.get("company_size") or "—"
-    four = bundle.get("4_leaf", {})
-    ten = bundle.get("ten_steps", {})
-    narrative = bundle.get("narrative", "") or "This narrative will be refined by the expert."
+    ten_steps = {
+        "1 Identify": "List core intangibles; tag tacit/explicit.",
+        "2 Protect": "NDAs, filings, trade secret coverage.",
+        "3 Manage": "Registers, owners, controls.",
+        "4 Value": "Areopa method (internal; add later).",
+        "5–10": "Governance, exploitation, audit trail, monitoring.",
+    }
 
-    title = f"Intangible Capital Report — {name}"
-    body = []
-    body.append(f"= {title}")
-    body.append("")
-    body.append("© Areopa / ARICC. For review only. Not a valuation opinion.")
-    body.append("")
-    body.append("Index")
-    body.append("1. Executive Summary")
-    body.append("2. Intellectual Asset Inventory")
-    body.append("3. Innovation Analysis")
-    body.append("4. Market Scenario")
-    body.append("5. Business Model")
-    body.append("6. Assumptions")
-    body.append("7. Valuation (to be provided by Areopa Valuation Team)")
-    body.append("8. Conclusions")
-    body.append("9. Action Plan")
-    body.append("")
-    body.append("Executive Summary")
-    body.append(f"- Customer: {name}   |   Sector: {sector}   |   Size: {size}")
-    body.append("- This document summarises findings from expert-driven analysis using the Areopa 4-Leaf Model and 10-Step method.")
-    body.append("")
-    body.append("Intellectual Asset Inventory (4-Leaf)")
-    for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
-        items = (four or {}).get(leaf, [])
-        if not items:
-            continue
-        body.append(f"- {leaf} Capital:")
-        for it in items:
-            body.append(f"  • {it}")
-    body.append("")
-    body.append("Innovation Analysis (10-Steps – condensed)")
-    for k, v in (ten or {}).items():
-        body.append(f"- {k}: {v}")
-    body.append("")
-    body.append("Market Scenario")
-    body.append(narrative)
-    body.append("")
-    body.append("Business Model")
-    body.append("- Brief outline of current and target business model options.")
-    body.append("")
-    body.append("Assumptions")
-    body.append("- Assumptions to be confirmed by expert and valuation team.")
-    body.append("")
-    body.append("Valuation")
-    body.append("- **Reserved:** Produced by Areopa valuation (trade-secret models).")
-    body.append("")
-    body.append("Conclusions")
-    body.append("- Summary of readiness, risks, and quick wins.")
-    body.append("")
-    body.append("Action Plan")
-    body.append("- Next steps for asset development, governance and licensing.")
-    return title, "\n".join(body)
+    licensing = [
+        {"model": "Revenue Licence", "notes": ["Royalty-based", "FRAND-aligned terms"]},
+        {"model": "Defensive Licence", "notes": ["IP pooling", "Non-assertion in cluster"]},
+        {"model": "Co-Creation Licence", "notes": ["Shared Foreground IP", "Revenue sharing"]},
+    ]
 
-def _make_lic_report_text(bundle: dict) -> tuple[str, str]:
-    """
-    Licensing-first advisory (coherent with FRAND language; no valuation).
-    Returns (title, body).
-    """
-    name = bundle.get("case") or "Client"
-    four = bundle.get("4_leaf", {})
-    lic_opts = bundle.get("licensing", []) or []
-    title = f"Licensing Readiness Report — {name}"
+    narrative = "Advisory preview generated from uploaded evidence (.txt) and expert notes."
 
-    body = []
-    body.append(f"= {title}")
-    body.append("")
-    body.append("Scope")
-    body.append("This report outlines licensing pathways aligned to the company’s intangible assets and FRAND principles.")
-    body.append("")
-    body.append("Core Intangibles (by 4-Leaf)")
-    for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
-        items = (four or {}).get(leaf, [])
-        if items:
-            body.append(f"- {leaf}:")
-            for it in items:
-                body.append(f"  • {it}")
+    return {"ic_map": ic_map, "ten_steps": ten_steps, "licensing": licensing, "narrative": narrative}
 
-    body.append("")
-    body.append("Licensing Options")
-    if not lic_opts:
-        lic_opts = [
-            {"model": "Revenue Licence", "notes": ["Royalty-based licence", "FRAND-aligned terms", "Annual audit clause"]},
-            {"model": "Defensive Licence", "notes": ["Protective IP pooling", "Non-assertion within cluster partnership"]},
-            {"model": "Co-Creation Licence", "notes": ["Shared ownership of Foreground IP", "Revenue-sharing clarity"]},
-        ]
-    for opt in lic_opts:
-        body.append(f"- {opt.get('model')}:")
-        for n in (opt.get("notes") or []):
-            body.append(f"  • {n}")
-
-    body.append("")
-    body.append("Governance & Audit")
-    body.append("Evidence sources should be tracked to an IA Register; decisions documented for audit and investor due-diligence.")
-    return title, "\n".join(body)
-
-# -------------------------------------------------
-# Sidebar navigation (UK English)
-# -------------------------------------------------
+# ---------- Sidebar navigation ----------
 st.sidebar.caption("Navigate")
-page = st.sidebar.radio(
-    label="",
-    options=["Customer", "Analyse Evidence", "Expert View", "Reports"],
-    index=0,
-)
+page = st.sidebar.radio("", ["Customer", "Analyse Evidence", "Expert View", "Reports"], index=0)
 st.sidebar.caption("EU theme • Areopa/ARICC demo")
-
-# Breadcrumb
-st.caption(
-    f'<span class="crumb">Customer → Analyse Evidence → Expert View → Reports</span>',
-    unsafe_allow_html=True,
-)
 
 st.title("IC-LicAI Expert Console")
 
-# -------------------------------------------------
-# 1) CUSTOMER
-# -------------------------------------------------
+# ================================
+# 1) Customer
+# ================================
 if page == "Customer":
     st.header("Customer details")
+
     with st.form("customer_form"):
         c1, c2 = st.columns(2)
         with c1:
             case_name = st.text_input("Customer / Company name", ss.get("case_name", ""))
+            sector = st.selectbox("Sector / Industry", SECTORS, index=SECTORS.index(ss.get("sector", SECTORS[0])))
         with c2:
-            size = st.selectbox("Company size", SIZES, index=SIZES.index(ss.get("company_size", "Micro (1–10)")))
-        with c1:
-            sector = st.selectbox("Sector / Industry", SECTORS, index=SECTORS.index(ss.get("sector", "Food & Beverage")) if ss.get("sector") in SECTORS else 0)
-        with c2:
-            notes = st.text_area("Quick notes (optional)", ss.get("notes", ""), height=110)
+            company_size = st.selectbox("Company size", SIZES, index=SIZES.index(ss.get("company_size", SIZES[0])))
+            notes = st.text_area("Quick notes (optional)", ss.get("notes", ""), height=100)
 
         uploads = st.file_uploader(
             "Upload evidence (optional)",
-            type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg"],
+            type=["txt", "pdf", "docx", "csv", "xlsx", "pptx", "png", "jpg", "jpeg"],
             accept_multiple_files=True,
             key="uploader_main",
         )
-        submitted = st.form_submit_button("Save details")
-    if submitted:
-        ss["case_name"] = case_name or "Untitled Customer"
-        ss["company_size"] = size
-        ss["sector"] = sector
-        ss["notes"] = notes or ""
-        ss["uploaded_names"] = [f.name for f in uploads] if uploads else []
-        # quick combined text scaffold (demo-safe)
-        chunks = [notes or ""]
-        if uploads:
-            for f in uploads:
-                # Only auto-read TXT to avoid cloud parser surprises
-                if f.name.lower().endswith(".txt"):
-                    try:
-                        chunks.append(f.read().decode("utf-8", errors="ignore"))
-                    except Exception:
-                        pass
-                else:
-                    chunks.append(f"[uploaded: {f.name}]")
-        ss["combined_text"] = "\n".join([c for c in chunks if c])
-        st.success("Saved. You can now go to **Analyse Evidence**.")
 
-# -------------------------------------------------
-# 2) ANALYSE EVIDENCE (simple, safe heuristics)
-# -------------------------------------------------
+        submitted = st.form_submit_button("Save details")
+        if submitted:
+            ss["case_name"] = case_name or "Untitled Customer"
+            ss["sector"] = sector
+            ss["company_size"] = company_size
+            ss["notes"] = notes
+
+            if uploads:
+                combined = _combine_text_from_uploads(uploads)
+                # Prepend notes to increase signal
+                if notes:
+                    combined = (notes.strip() + "\n\n" + combined).strip()
+                ss["combined_text"] = combined
+            st.success("Saved. You can now go to **Analyse Evidence**.")
+
+    if ss.get("uploaded_names"):
+        st.markdown("**Uploaded files (names only for non-TXT):** " + ", ".join(ss["uploaded_names"]))
+
+# ================================
+# 2) Analyse Evidence
+# ================================
 elif page == "Analyse Evidence":
     st.header("Analyse & build narrative (preview)")
 
     combined = ss.get("combined_text", "")
-    st.text_area("Preview extracted / combined evidence", combined[:5000], height=180)
+    st.text_area("Preview extracted / combined evidence (first 5000 chars)", combined[:5000], height=220)
 
-    if st.button("Run quick auto-analysis"):
-        text = (combined or "").lower()
+    colA, colB = st.columns([1, 2])
+    with colA:
+        if st.button("Run quick auto-analysis", key="btn_auto"):
+            ss["analysis"] = _auto_analyse(combined or ss.get("notes", ""))
+            st.success("Analysis updated. See **Expert View** or **Reports**.")
+    with colB:
+        if ss.get("analysis"):
+            st.markdown("**Advisory preview:**")
+            st.write(ss["analysis"].get("narrative", ""))
+        else:
+            st.info("No analysis yet. Click **Run quick auto-analysis** to populate a draft.")
 
-        def has_any(words):
-            return any(w in text for w in words)
-
-        human = ["team", "training", "skill", "mentor", "employee"]
-        structural = ["process", "system", "software", "method", "ip"]
-        customer = ["client", "customer", "partner", "contract", "channel"]
-        strategic = ["alliance", "mou", "joint", "cluster", "collaboration"]
-
-        four_leaf = {
-            "Human": [
-                "Mentions of skills, roles or tacit know-how." if has_any(human) else "No strong human-capital indicators detected."
-            ],
-            "Structural": [
-                "Internal systems, processes or methods referenced." if has_any(structural) else "No clear structural artefacts detected."
-            ],
-            "Customer": [
-                "Evidence of customers, partners or channels." if has_any(customer) else "No customer-capital evidence detected."
-            ],
-            "Strategic Alliance": [
-                "External collaborations or MOUs indicated." if has_any(strategic) else "No alliance-capital evidence detected."
-            ],
-        }
-
-        ten_steps = {
-            "1. Identify": "Draft list of core intangibles.",
-            "2. Protect": "Check NDAs, filings, trade secret scope.",
-            "3. Manage": "Assign ownership and governance.",
-            "4. Value": "Valuation reserved for Areopa team.",
-            "5. Separate": "Foreground vs Background assets.",
-            "6. Safeguard": "Access controls, audit trails.",
-            "7. Control": "Licensing boundaries & rights.",
-            "8. Commercialise": "Pathways for revenue and use.",
-            "9. Monitor": "KPIs and evidence updates.",
-            "10. Improve": "Action plan for asset growth.",
-        }
-
-        ss["analysis"] = {
-            "4_leaf": four_leaf,
-            "ic_map": {k: v for k, v in four_leaf.items()},
-            "ten_steps": ten_steps,
-        }
-        # simple narrative seed
-        ss["narrative"] = (
-            f"{ss.get('case_name','Client')} operates in {ss.get('sector','—')} with a {ss.get('company_size','—')} profile. "
-            "Initial evidence suggests opportunities to formalise human know-how, reinforce process documentation, "
-            "map customer agreements, and structure alliances under FRAND-aligned terms."
-        )
-        st.success("Auto-analysis completed. Continue in **Expert View**.")
-
-# -------------------------------------------------
-# 3) EXPERT VIEW (human-in-the-loop)
-# -------------------------------------------------
+# ================================
+# 3) Expert View (read-only JSON)
+# ================================
 elif page == "Expert View":
-    st.header("Expert View (edit the analysis)")
-
+    st.header("Expert View")
     a = ss.get("analysis", {})
-    four = a.get("4_leaf", {})
-    ten = a.get("ten_steps", {})
+    if a:
+        st.json(a)
+    else:
+        st.info("No analysis available yet. Go to ‘Analyse Evidence’ and run the analysis first.")
 
-    with st.expander("4-Leaf Model"):
-        c1, c2 = st.columns(2)
-        with c1:
-            h_txt = st.text_area("Human Capital", "\n".join(four.get("Human", [])), height=110, key="ed_h")
-            c_txt = st.text_area("Customer Capital", "\n".join(four.get("Customer", [])), height=110, key="ed_cus")
-        with c2:
-            s_txt = st.text_area("Structural Capital", "\n".join(four.get("Structural", [])), height=110, key="ed_s")
-            a_txt = st.text_area("Strategic Alliance Capital", "\n".join(four.get("Strategic Alliance", [])), height=110, key="ed_sa")
-
-    with st.expander("10-Step Method (summary)"):
-        t_txt = st.text_area(
-            "Steps (edit freely)",
-            "\n".join([f"{k}: {v}" for k, v in (ten or {}).items()]) or "",
-            height=150,
-        )
-
-    with st.expander("Licensing Intent & FRAND"):
-        intent = st.text_area("Licensing intent (target markets, partners, scope)", ss.get("intent_text", ""), height=110)
-        frand = st.text_area("FRAND notes (fee corridor, audit, essentiality, non-discrimination)", ss.get("frand_notes", ""), height=110)
-
-    if st.button("Save expert edits"):
-        # normalise back into structures
-        four_leaf = {
-            "Human": [ln.strip() for ln in h_txt.split("\n") if ln.strip()],
-            "Structural": [ln.strip() for ln in s_txt.split("\n") if ln.strip()],
-            "Customer": [ln.strip() for ln in c_txt.split("\n") if ln.strip()],
-            "Strategic Alliance": [ln.strip() for ln in a_txt.split("\n") if ln.strip()],
-        }
-        ten_dict = {}
-        for ln in (t_txt or "").split("\n"):
-            if ":" in ln:
-                k, v = ln.split(":", 1)
-                ten_dict[k.strip()] = v.strip()
-        ss["analysis"] = {
-            "4_leaf": four_leaf,
-            "ic_map": {k: v for k, v in four_leaf.items()},
-            "ten_steps": ten_dict or ten,
-        }
-        ss["intent_text"] = intent
-        ss["frand_notes"] = frand
-        st.success("Edits saved. Generate documents in **Reports**.")
-
-# --- Expert Reports ---
-st.divider()
-st.subheader("Expert Reports")
-
-# Licensing Report
-try:
-    lic_data, lic_name, lic_mime = export_bytes_as_docx_or_txt(
-        "Licensing Report",
-        "Comprehensive summary of licensing readiness, FRAND alignment, and revenue models."
-    )
-    st.download_button(
-        "📘 Licensing Report (DOCX)",
-        data=lic_data,
-        file_name=f"{lic_name}.docx",
-        mime=lic_mime,
-        key="dl_lic_report"
-    )
-except Exception as e:
-    st.error(f"Licensing report export failed: {e}")
-
-# Licensing Templates
-try:
-    tmpl_data, tmpl_name, tmpl_mime = export_bytes_as_docx_or_txt(
-        "Licensing Templates",
-        "Includes FRAND, Co-Creation, and Knowledge-based licensing templates for adaptation."
-    )
-    st.download_button(
-        "📄 Licensing Templates (DOCX)",
-        data=tmpl_data,
-        file_name=f"{tmpl_name}.docx",
-        mime=tmpl_mime,
-        key="dl_templates"
-    )
-except Exception as e:
-    st.error(f"Template export failed: {e}")
-
-# Intangible Capital Report
-try:
-    ic_data, ic_name, ic_mime = export_bytes_as_docx_or_txt(
-        "Intangible Capital Report",
-        """Sections:
-        1. Cover Page
-        2. Disclaimer
-        3. Index
-        4. Executive Summary
-        5. Intellectual Asset Inventory
-        6. Innovation & Market Analysis
-        7. Business Model
-        8. Assumptions
-        9. Valuation Overview
-        10. Conclusions & Action Plan"""
-    )
-    st.download_button(
-        "📊 IC Report (DOCX)",
-        data=ic_data,
-        file_name=f"{ic_name}.docx",
-        mime=ic_mime,
-        key="dl_ic_report"
-    )
-except Exception as e:
-    st.error(f"IC report export failed: {e}")
-
-# -------------------------------------------------
-# 4) REPORTS (downloads)
-# -------------------------------------------------
+# ================================
+# 4) Reports (IC report, Licensing report, Templates)
+# ================================
 elif page == "Reports":
-    st.header("Generate & download")
+    st.header("Reports")
 
-    name = ss.get("case_name", "Client")
-    bundle = {
-        "case": name,
-        "company_size": ss.get("company_size", ""),
-        "sector": ss.get("sector", ""),
-        "4_leaf": ss.get("analysis", {}).get("4_leaf", {}),
-        "ic_map": ss.get("analysis", {}).get("ic_map", {}),
-        "ten_steps": ss.get("analysis", {}).get("ten_steps", {}),
-        "narrative": ss.get("narrative", ""),
-        "licensing": ss.get("licensing", []),
-    }
+    case_name = ss.get("case_name", "Untitled Customer")
+    sector = ss.get("sector", "")
+    company_size = ss.get("company_size", "")
+    a = ss.get("analysis", {})
 
-    st.subheader("Editable reports (DOCX with TXT fallback)")
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
 
+    # Licensing Report
     with c1:
-        title, body = _make_ic_report_text(bundle)
-        data, fname, mime = _bytes_docx_or_txt(title, body)
-        st.download_button("📥 IC Report (editable)", data=data, file_name=fname, mime=mime, key="dl_ic")
+        st.subheader("Licensing Report")
+        lic_bundle = {
+            "case": case_name,
+            "sector": sector,
+            "company_size": company_size,
+            "ic_map": a.get("ic_map", {}),
+            "ten_steps": a.get("ten_steps", {}),
+            "licensing": a.get("licensing", []),
+            "narrative": a.get("narrative", ""),
+        }
+        title, body = _compose_lic_report_text(lic_bundle)
+        data, fname, mime = _export_bytes_as_docx_or_txt(title, body)
+        st.container().markdown('<div class="btn-navy">', unsafe_allow_html=True)
+        st.download_button("⬇ Download Licensing Report", data, fname, mime, key="dl_licrep")
+        st.markdown("</div>", unsafe_allow_html=True)
 
+    # IC Report
     with c2:
-        title, body = _make_lic_report_text(bundle)
-        data, fname, mime = _bytes_docx_or_txt(title, body)
-        st.download_button("📥 Licensing Report (editable)", data=data, file_name=fname, mime=mime, key="dl_lic")
+        st.subheader("IC Report")
+        ic_bundle = {
+            "case": case_name,
+            "sector": sector,
+            "company_size": company_size,
+            "ic_map": a.get("ic_map", {}),
+            "ten_steps": a.get("ten_steps", {}),
+            "narrative": a.get("narrative", ""),
+        }
+        title, body = _compose_ic_report_text(ic_bundle)
+        data, fname, mime = _export_bytes_as_docx_or_txt(title, body)
+        st.container().markdown('<div class="btn-navy">', unsafe_allow_html=True)
+        st.download_button("⬇ Download IC Report", data, fname, mime, key="dl_icrep")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.divider()
-    st.subheader("Registers & data")
-    c3, c4 = st.columns(2)
-
+    # Licensing Templates
     with c3:
-        xdata, xfname, xmime = _export_xlsx_from_ic_map(bundle.get("ic_map", {}))
-        st.download_button("📥 IA Register (XLSX/CSV)", data=xdata, file_name=xfname, mime=xmime, key="dl_xlsx")
-
-    with c4:
-        jbytes = json.dumps(
-            {
-                "case": bundle.get("case"),
-                "sector": bundle.get("sector"),
-                "company_size": bundle.get("company_size"),
-                "notes": ss.get("notes", ""),
-                "assessment": ss.get("analysis", {}),
-            },
-            ensure_ascii=False,
-            indent=2,
-        ).encode("utf-8")
-        st.download_button("📥 Case JSON", data=jbytes, file_name=f"{name.replace(' ','_')}_Case.json", mime="application/json", key="dl_json")
-
-    st.caption("Note: valuation is prepared separately by the Areopa valuation team using trade-secret models.")
+        st.subheader("Licensing Templates")
+        template = st.selectbox(
+            "Choose a template",
+            ["FRAND Standard", "Co-creation (Joint Development)", "Knowledge (Non-traditional)"],
+            key="tmpl_type",
+        )
+        if st.button("Generate Template", key="btn_tmpl"):
+            doc_bytes, mime = _make_template_doc(template, case_name, sector)
+            safe_t = template.replace(" ", "_").replace("(", "").replace(")", "").replace("-", "-")
+            fname = f"{case_name}_{safe_t}.docx" if mime.startswith("application/") else f"{case_name}_{safe_t}.txt"
+            st.container().markdown('<div class="btn-navy">', unsafe_allow_html=True)
+            st.download_button("⬇ Download Template", data=doc_bytes, file_name=fname, mime=mime, key="dl_tmpl")
+            st.markdown("</div>", unsafe_allow_html=True)
