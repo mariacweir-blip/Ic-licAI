@@ -49,6 +49,35 @@ def save_to_local(text: str, name: str = "ICLicAI_Report", folder: str = "drafts
     return file_path
 
 
+# ---- New soft-wrap helper ----
+def _soften_long_tokens(s: str, every: int = 24) -> str:
+    """
+    Inserts spaces into long runs so FPDF can wrap lines.
+    Also makes '/' and '-' breakable.
+    """
+    import re
+    if not s:
+        return ""
+    s = s.replace("/", "/ ").replace("-", "- ")
+    s = re.sub(r"([A-Za-z0-9]{%d,})" % every, r"\1 ", s)
+    return s
+
+
+# ---- Updated wrap text helper ----
+def _wrap_text(pdf, text: str):
+    """Safely wrap long text blocks with explicit width."""
+    if not text:
+        return
+    txt = _soften_long_tokens(text)
+    pdf.set_font("Arial", "", 10)
+    width = pdf.w - pdf.l_margin - pdf.r_margin  # available line width
+    for line in txt.split("\n"):
+        if not line.strip():
+            pdf.ln(2)
+            continue
+        pdf.multi_cell(width, 6, line, align="L")
+
+
 # ----------------- PDF Class -----------------
 class PDF(FPDF):
     def __init__(self, *args, **kwargs):
