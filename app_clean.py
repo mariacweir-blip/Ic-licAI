@@ -88,7 +88,9 @@ if st.button("🧰 Generate Expert Checklist (PDF)"):
                            file_name=f"{case_name}_Expert_Checklist.pdf",
                            mime="application/pdf")
     except Exception as e:
-        st.error(f"Checklist export failed: {# 2. Licensing Report
+        st.error(f"Licensing report failed: {e}")
+            
+ # 2. Licensing Report
 if st.button("📄 Generate Licensing Report (PDF)"):
     try:
         licensing = {
