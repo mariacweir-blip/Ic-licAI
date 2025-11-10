@@ -271,4 +271,4 @@ elif page == "Reports":
                 )
                 st.caption(f"Saved to: {path_str}")
             except Exception as e:
-                st.error(f"Non-traditional template failed: {e}")
+                st.error(f"Non-traditional template failed: {e}"). 
