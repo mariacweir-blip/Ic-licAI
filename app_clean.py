@@ -1,4 +1,4 @@
-# app_clean.py — IC-LicAI Expert Console (UK English • navy buttons • yellow bg)
+ # app_clean.py — IC-LicAI Expert Console (UK English • navy buttons • yellow bg)
 from __future__ import annotations
 
 import io
@@ -416,6 +416,68 @@ elif page == "Expert View":
         ss["intent_text"] = intent
         ss["frand_notes"] = frand
         st.success("Edits saved. Generate documents in **Reports**.")
+
+# --- Expert Reports ---
+st.divider()
+st.subheader("Expert Reports")
+
+# Licensing Report
+try:
+    lic_data, lic_name, lic_mime = export_bytes_as_docx_or_txt(
+        "Licensing Report",
+        "Comprehensive summary of licensing readiness, FRAND alignment, and revenue models."
+    )
+    st.download_button(
+        "📘 Licensing Report (DOCX)",
+        data=lic_data,
+        file_name=f"{lic_name}.docx",
+        mime=lic_mime,
+        key="dl_lic_report"
+    )
+except Exception as e:
+    st.error(f"Licensing report export failed: {e}")
+
+# Licensing Templates
+try:
+    tmpl_data, tmpl_name, tmpl_mime = export_bytes_as_docx_or_txt(
+        "Licensing Templates",
+        "Includes FRAND, Co-Creation, and Knowledge-based licensing templates for adaptation."
+    )
+    st.download_button(
+        "📄 Licensing Templates (DOCX)",
+        data=tmpl_data,
+        file_name=f"{tmpl_name}.docx",
+        mime=tmpl_mime,
+        key="dl_templates"
+    )
+except Exception as e:
+    st.error(f"Template export failed: {e}")
+
+# Intangible Capital Report
+try:
+    ic_data, ic_name, ic_mime = export_bytes_as_docx_or_txt(
+        "Intangible Capital Report",
+        """Sections:
+        1. Cover Page
+        2. Disclaimer
+        3. Index
+        4. Executive Summary
+        5. Intellectual Asset Inventory
+        6. Innovation & Market Analysis
+        7. Business Model
+        8. Assumptions
+        9. Valuation Overview
+        10. Conclusions & Action Plan"""
+    )
+    st.download_button(
+        "📊 IC Report (DOCX)",
+        data=ic_data,
+        file_name=f"{ic_name}.docx",
+        mime=ic_mime,
+        key="dl_ic_report"
+    )
+except Exception as e:
+    st.error(f"IC report export failed: {e}")
 
 # -------------------------------------------------
 # 4) REPORTS (downloads)
