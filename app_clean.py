@@ -169,3 +169,24 @@ if "narrative" in ss and ss["narrative"]:
         st.error(f"Text save failed: {e}")
 else:
     st.info("Run an analysis first to generate the advisory narrative.")
+# --- Analysis (trigger & safe bundle) ---
+st.divider()
+st.subheader("Analysis")
+
+# Simple trigger (placeholder until the analyzer is wired)
+if st.button("🧭 Run analysis"):
+    st.session_state["analysis_triggered"] = True
+    st.success("Analysis started… (demo trigger).")
+
+# Build a safe bundle from session (so exports never crash)
+case_name    = ss.get("case_name", "Untitled Case")
+company_size = ss.get("company_size", "Micro (1–10)")
+sector       = ss.get("sector", "")
+notes        = ss.get("notes", "")
+assessment   = ss.get("assessment", {})
+narrative    = ss.get("narrative", "")
+summary      = ss.get("summary", narrative or "Advisory summary not set yet.")
+
+bundle = {
+    "case": case_name
+    
