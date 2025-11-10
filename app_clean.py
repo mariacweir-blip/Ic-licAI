@@ -118,12 +118,10 @@ if page == "Case":
         combined = combine_uploads(uploads)
         ss["combined_text"] = combined
         with st.expander("Preview extracted text (first 5000 chars)"):
-            st.text_area("Extracted evidence", combined[:5000], height=220)
+             st.text_area("Extracted evidence", combined[:5000], height=220)
         if st.button("Run Auto-Analysis"):
-
-            
-    # --- simple heuristic classifier for demonstration ---
-    text = (ss.get("combined_text") or "").lower()
+             # --- simple heuristic classifier for demonstration ---
+             text = (ss.get("combined_text") or "").lower()
 
     def has_any(*words): 
         return any(w in text for w in words)
