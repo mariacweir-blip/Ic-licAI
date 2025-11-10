@@ -93,7 +93,7 @@ if st.button("📄 Generate Licensing Report (PDF)"):
     try:
         licensing = {
             "case": case_name,
-            "summary": f"Licensing options and FRAND readiness for {case_name}",
+            "summary": "Licensing options and FRAND readiness for " + str(case_name) + ".",
             "licensing": [
                 {"model": "Revenue Licence", "notes": ["Royalty-based licence", "FRAND-aligned terms", "Annual audit clause"]},
                 {"model": "Defensive Licence", "notes": ["Protective IP pooling", "Non-assertion across cluster partners"]},
