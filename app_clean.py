@@ -1,300 +1,240 @@
-# app_clean.py — IC-LicAI Expert Console (licensing-first, DOCX/XLSX/JSON exports)
+# app_clean.py — IC-LicAI (stable, simplified sidebar build)
+from __future__ import annotations
 import io
 import json
-from datetime import date
 from pathlib import Path
+from datetime import datetime
 import streamlit as st
 
-from ic_licai.exporters_clean import (
-    export_advisory_docx,
-    export_ia_register_xlsx,
-    export_case_json,
-)
+try:
+    import pandas as pd  # optional for XLSX export
+except Exception:
+    pd = None
 
-# ---- Page + Session ----
-st.set_page_config(page_title="IC-LicAI Expert Console", layout="centered")
-ss = st.session_state
-
-# Safe defaults so the page never breaks if forms not submitted yet
-ss.setdefault("case_name", "Untitled Case")
-ss.setdefault("company_size", "Micro (1–10)")
-ss.setdefault("sector", "Other")
-ss.setdefault("notes", "")
-ss.setdefault("uploaded_names", [])
-ss.setdefault("four_leaf_human", "")
-ss.setdefault("four_leaf_structural", "")
-ss.setdefault("four_leaf_customer", "")
-ss.setdefault("four_leaf_strategic", "")
-ss.setdefault("intent_text", "")
-ss.setdefault("frand_notes", "")
-ss.setdefault("analysis_locked", False)
-ss.setdefault("case_bundle", {})  # the object we use for exports
-
-# ---- UI constants (ASCII only) ----
-SIZES = [
-    "Micro (1–10)",
-    "Small (11–50)",
-    "Medium (51–250)",
-    "Large (250+)",
-]
-
+# -------------------- UI constants --------------------
 SECTORS = [
     "Food & Beverage", "MedTech", "GreenTech", "AgriTech", "Biotech",
     "Software/SaaS", "FinTech", "EdTech", "Manufacturing", "Creative/Digital",
     "Professional Services", "Mobility/Transport", "Energy", "Other",
 ]
+SIZES = ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"]
 
-# ---- Sidebar Navigation ----
-st.sidebar.title("IC-LicAI")
+# -------------------- Streamlit setup --------------------
+st.set_page_config(page_title="IC-LicAI Expert Console", layout="centered")
+ss = st.session_state
+
+# Safe defaults
+for k, v in {
+    "case_name": "Untitled Case",
+    "company_size": SIZES[0],
+    "sector": SECTORS[0],
+    "notes": "",
+    "uploaded_names": [],
+    "combined_text": "",
+    "analysis": {},
+    "leaf_human": "",
+    "leaf_structural": "",
+    "leaf_customer": "",
+    "leaf_strategic": "",
+    "intent_text": "",
+    "frand_notes": "",
+    "narrative": "",
+}.items():
+    ss.setdefault(k, v)
+
+# -------------------- Helpers --------------------
+def _read_txt_safely(file) -> str:
+    try:
+        if file.name.lower().endswith(".txt"):
+            return file.getvalue().decode("utf-8", errors="ignore")
+    except Exception:
+        pass
+    return ""
+
+def combine_uploads(files) -> str:
+    if not files:
+        return ""
+    return "\n\n".join(_read_txt_safely(f) for f in files if _read_txt_safely(f))
+
+def make_txt_bytes(text: str) -> bytes:
+    return text.encode("utf-8")
+
+def make_json_bytes(data: dict) -> bytes:
+    return json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+
+def make_xlsx_bytes(ic_map: dict[str, list[str]]) -> bytes | None:
+    if not pd:
+        return None
+    rows = []
+    for leaf, items in (ic_map or {}).items():
+        for i in items:
+            rows.append({"Capital": leaf, "Item": i})
+    df = pd.DataFrame(rows, columns=["Capital", "Item"]) if rows else pd.DataFrame(columns=["Capital", "Item"])
+    bio = io.BytesIO()
+    with pd.ExcelWriter(bio, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="IA Register")
+    return bio.getvalue()
+
+# -------------------- Sidebar navigation --------------------
+st.title("IC-LicAI Expert Console")
+st.caption("Upload → Checklist → Analysis → Exports (licensing-first, human-in-the-loop)")
+
 page = st.sidebar.radio(
-    "Navigate",
-    ["Case", "Checklist", "Analysis", "Reports"],
+    "Navigation",
+    ["Case", "Checklist", "Analysis", "Exports"],
     index=0,
-    key="nav",
+    key="nav_choice",
 )
 
-def _build_case_bundle_from_session() -> dict:
-    """Create a simple case bundle structure consumed by exporters_clean."""
-    ten_steps = [
-        {"label": "1. Identify", "notes": ""},
-        {"label": "2. Separate", "notes": ""},
-        {"label": "3. Protect", "notes": ""},
-        {"label": "4. Safeguard", "notes": ""},
-        {"label": "5. Manage", "notes": ""},
-        {"label": "6. Control", "notes": ""},
-        {"label": "7. Evidence", "notes": ""},
-        {"label": "8. Governance", "notes": ""},
-        {"label": "9. Monetise", "notes": ""},
-        {"label": "10. Reassess", "notes": ""},
-    ]
-    bundle = {
-        "case_name": ss.get("case_name", "Untitled Case"),
-        "company_size": ss.get("company_size", "Micro (1–10)"),
-        "sector": ss.get("sector", "Other"),
-        "notes": ss.get("notes", ""),
-        "uploaded_names": ss.get("uploaded_names", []),
-        "four_leaf": {
-            "human": ss.get("four_leaf_human", ""),
-            "structural": ss.get("four_leaf_structural", ""),
-            "customer": ss.get("four_leaf_customer", ""),
-            "strategic": ss.get("four_leaf_strategic", ""),
-        },
-        "ten_steps": ten_steps,
-        "licensing": {
-            "intent": ss.get("intent_text", ""),
-            "frand_notes": ss.get("frand_notes", ""),
-        },
-        # You can wire ESG mapping later. Keep flag for exporters.
-        "esg_rows": 0,
-    }
-    return bundle
-
-
-# =========================
-# Page: Case
-# =========================
+# ============================================================
+# 1. Case Page
+# ============================================================
 if page == "Case":
-    st.header("Case details")
+    st.header("Case Details")
     with st.form("case_form"):
         c1, c2 = st.columns(2)
         with c1:
-            case_name = st.text_input("Case / Company name", value=ss["case_name"])
-            company_size = st.selectbox("Company size", SIZES, index=SIZES.index(ss["company_size"]))
+            case_name = st.text_input("Case / Company name", ss["case_name"])
+            size = st.selectbox("Company size", SIZES, index=SIZES.index(ss["company_size"]))
         with c2:
-            sector = st.selectbox("Sector", SECTORS, index=SECTORS.index(ss["sector"]))
-            notes = st.text_area("Quick notes (optional)", value=ss["notes"], height=100)
-
+            sector = st.selectbox("Sector / Industry", SECTORS, index=SECTORS.index(ss["sector"]))
+            notes = st.text_area("Quick notes (optional)", ss["notes"], height=100)
         uploads = st.file_uploader(
             "Upload evidence (optional)",
             type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg"],
             accept_multiple_files=True,
             key="uploader",
         )
-# --- Evidence importer & auto-analysis ---
-from ic_licai.importers import combine_uploads
-
-if uploads:
-    st.success(f"{len(uploads)} evidence files uploaded.")
-    combined_text = combine_uploads(uploads)
-    st.session_state["combined_text"] = combined_text
-
-    if st.checkbox("Preview extracted text", key="preview_text"):
-        st.text_area("Extracted Evidence (first 5000 chars):",
-                     combined_text[:5000],
-                     height=300)
-
-    # Simple auto-analyzer placeholder (4-Leaf + 10-Steps tags)
-    if st.button("🔍 Run Auto-Analysis", key="btn_analyze"):
-        st.session_state["analysis_result"] = {
-            "4_leaf": {
-                "Human Capital": "Detected references to training, leadership, and R&D staff.",
-                "Structural Capital": "Detected references to process documentation or patents.",
-                "Customer Capital": "Mentions of contracts, clients, or partnerships.",
-                "Strategic Alliance Capital": "Mentions of collaborations, co-development, or clusters."
-            },
-            "10_steps_summary": "Initial mapping complete. Ready for expert verification."
-        }
-        st.success("✅ Auto-Analysis complete. Go to Checklist to verify details.")
-else:
-    st.info("Upload Pitch Decks, WhatsApp .txt exports, or other relevant evidence files before running analysis.")
         submitted = st.form_submit_button("Save case")
         if submitted:
             ss["case_name"] = case_name or "Untitled Case"
-            ss["company_size"] = company_size
+            ss["company_size"] = size
             ss["sector"] = sector
-            ss["notes"] = notes or ""
+            ss["notes"] = notes
             ss["uploaded_names"] = [f.name for f in uploads] if uploads else []
             st.success("Saved case details.")
 
-    st.info("Proceed to Checklist to guide your expert discovery, then to Analysis to assemble the narrative and exports.")
+    if uploads:
+        combined = combine_uploads(uploads)
+        ss["combined_text"] = combined
+        with st.expander("Preview extracted text (first 5000 chars)"):
+            st.text_area("Extracted evidence", combined[:5000], height=220)
+        if st.button("Run Auto-Analysis"):
+            base = "Detected references in uploaded evidence."
+            ss["analysis"] = {
+                "4_leaf": {
+                    "Human": base,
+                    "Structural": base,
+                    "Customer": base,
+                    "Strategic Alliance": base,
+                },
+                "10_steps": "Initial discovery complete; ready for expert review.",
+            }
+            st.success("Auto-analysis complete. Continue to Checklist.")
+    else:
+        st.info("Tip: upload .txt exports (e.g., WhatsApp chats or notes).")
 
+    st.info("➡️ Go to **Checklist** next.")
 
-# =========================
-# Page: Checklist (on-screen only)
-# =========================
+# ============================================================
+# 2. Checklist Page
+# ============================================================
 elif page == "Checklist":
     st.header("Expert Checklist (guide only)")
+    leaf = ss.get("analysis", {}).get("4_leaf", {})
+    pre_h = ss.get("leaf_human") or leaf.get("Human", "")
+    pre_s = ss.get("leaf_structural") or leaf.get("Structural", "")
+    pre_c = ss.get("leaf_customer") or leaf.get("Customer", "")
+    pre_a = ss.get("leaf_strategic") or leaf.get("Strategic Alliance", "")
+
     with st.expander("Four-Leaf Model"):
-        ss["four_leaf_human"] = st.text_area("Human Capital: roles, skills, know-how, training materials", value=ss["four_leaf_human"])
-        ss["four_leaf_structural"] = st.text_area("Structural Capital: processes, software, data, methods", value=ss["four_leaf_structural"])
-        ss["four_leaf_customer"] = st.text_area("Customer Capital: contracts, testimonials, brand assets", value=ss["four_leaf_customer"])
-        ss["four_leaf_strategic"] = st.text_area("Strategic Alliance Capital: partnerships, JV, licences", value=ss["four_leaf_strategic"])
+        ss["leaf_human"] = st.text_area("Human Capital", pre_h, height=110)
+        ss["leaf_structural"] = st.text_area("Structural Capital", pre_s, height=110)
+        ss["leaf_customer"] = st.text_area("Customer Capital", pre_c, height=110)
+        ss["leaf_strategic"] = st.text_area("Strategic Alliance Capital", pre_a, height=110)
 
     with st.expander("Licensing Intent and FRAND"):
-        ss["intent_text"] = st.text_area("Licensing intent (target markets, geographies, model)", value=ss["intent_text"])
-        ss["frand_notes"] = st.text_area("FRAND notes (fee corridor, audit, MFN, termination)", value=ss["frand_notes"])
+        ss["intent_text"] = st.text_area("Licensing intent (target markets, partners, scope)", ss["intent_text"], height=120)
+        ss["frand_notes"] = st.text_area("FRAND notes (fee corridor, audit, essentiality, non-discrimination)", ss["frand_notes"], height=120)
 
-    st.info("When ready, go to Analysis and click Build Narrative Preview.")
+    st.info("➡️ Next: go to **Analysis** to build the narrative preview.")
 
-
-# =========================
-# Page: Analysis (preview + lock)
-# =========================
+# ============================================================
+# 3. Analysis Page
+# ============================================================
 elif page == "Analysis":
-    st.header("Analysis and Narrative Preview")
-    st.write("This builds a simple advisory narrative and bundles data for exports.")
+    st.header("Analysis & Narrative Preview")
+    if st.button("Build Narrative Preview"):
+        parts = [
+            f"Case: {ss['case_name']}  |  Sector: {ss['sector']}  |  Size: {ss['company_size']}",
+            "",
+            "Four-Leaf Summary:",
+            f"- Human: {ss['leaf_human']}",
+            f"- Structural: {ss['leaf_structural']}",
+            f"- Customer: {ss['leaf_customer']}",
+            f"- Strategic Alliance: {ss['leaf_strategic']}",
+            "",
+            "Licensing Readiness:",
+            f"- Intent: {ss['intent_text']}",
+            f"- FRAND: {ss['frand_notes']}",
+            "",
+            f"Notes: {ss['notes']}",
+        ]
+        ss["narrative"] = "\n".join(parts)
+        st.success("Narrative built.")
+    st.text_area("Narrative (editable)", ss["narrative"], height=280)
+    st.info("➡️ Proceed to **Exports** to download outputs.")
 
-    if st.button("Build Narrative Preview", key="btn_build"):
-        bundle = _build_case_bundle_from_session()
-        ss["case_bundle"] = bundle
-        ss["analysis_locked"] = True
+# ============================================================
+# 4. Exports Page
+# ============================================================
+elif page == "Exports":
+    st.header("Exports")
+    name = ss["case_name"].replace(" ", "_")
+    ic_map = {
+        "Human": [ss["leaf_human"]] if ss["leaf_human"] else [],
+        "Structural": [ss["leaf_structural"]] if ss["leaf_structural"] else [],
+        "Customer": [ss["leaf_customer"]] if ss["leaf_customer"] else [],
+        "Strategic Alliance": [ss["leaf_strategic"]] if ss["leaf_strategic"] else [],
+    }
 
-        # Very simple narrative for now
-        narrative = (
-            f"{bundle['case_name']} is a {bundle['company_size']} in {bundle['sector']}. "
-            f"Focus areas:\n"
-            f"- Human: {bundle['four_leaf']['human'] or 'TBD'}\n"
-            f"- Structural: {bundle['four_leaf']['structural'] or 'TBD'}\n"
-            f"- Customer: {bundle['four_leaf']['customer'] or 'TBD'}\n"
-            f"- Strategic Alliance: {bundle['four_leaf']['strategic'] or 'TBD'}\n\n"
-            f"Licensing intent: {bundle['licensing']['intent'] or 'TBD'}\n"
-            f"FRAND notes: {bundle['licensing']['frand_notes'] or 'TBD'}\n"
+    # TXT
+    txt_bytes = make_txt_bytes(ss["narrative"] or "No narrative built yet.")
+    st.download_button(
+        "⬇️ Download Narrative (TXT)",
+        data=txt_bytes,
+        file_name=f"{name}_Advisory.txt",
+        mime="text/plain",
+    )
+
+    # JSON
+    bundle = {
+        "case": ss["case_name"],
+        "sector": ss["sector"],
+        "size": ss["company_size"],
+        "notes": ss["notes"],
+        "ic_map": ic_map,
+        "licensing": {"intent": ss["intent_text"], "frand": ss["frand_notes"]},
+        "uploaded_files": ss["uploaded_names"],
+        "narrative": ss["narrative"],
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+    }
+    json_bytes = make_json_bytes(bundle)
+    st.download_button(
+        "⬇️ Download Case (JSON)",
+        data=json_bytes,
+        file_name=f"{name}_Case.json",
+        mime="application/json",
+    )
+
+    # XLSX (if pandas)
+    xlsx_bytes = make_xlsx_bytes(ic_map)
+    if xlsx_bytes:
+        st.download_button(
+            "⬇️ Download IA Register (XLSX)",
+            data=xlsx_bytes,
+            file_name=f"{name}_IA_Register.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        ss["narrative"] = narrative
-
-    if ss.get("analysis_locked"):
-        st.subheader("Preview")
-        st.text_area("Narrative (copyable)", value=ss.get("narrative", ""), height=220, key="narrative_preview")
-        st.success("Analysis locked. Go to Reports to generate files.")
-
     else:
-        st.warning("Build the narrative to lock analysis before exporting.")
-
-
-# =========================
-# Page: Reports (exports)
-# =========================
-elif page == "Reports":
-    st.header("Reports and Templates")
-
-    if not ss.get("analysis_locked") or not ss.get("case_bundle"):
-        st.warning("No locked analysis found. Go to Analysis and click Build Narrative Preview.")
-    else:
-        bundle = ss["case_bundle"]
-
-        st.subheader("Generate advisory and data files")
-        c1, c2, c3 = st.columns(3)
-
-        # Advisory DOCX
-        with c1:
-            try:
-                b, path_str = export_advisory_docx(bundle, mode="ADVISORY")
-                st.download_button(
-                    "Download Advisory (DOCX)",
-                    data=b, file_name=f"Advisory_{bundle['case_name']}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    key="dl_docx"
-                )
-                st.caption(f"Saved to: {path_str}")
-            except Exception as e:
-                st.error(f"Advisory export failed: {e}")
-
-        # IA Register XLSX
-        with c2:
-            try:
-                b, path_str = export_ia_register_xlsx(bundle)
-                st.download_button(
-                    "Download IA Register (XLSX)",
-                    data=b, file_name=f"IA_Register_{bundle['case_name']}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="dl_xlsx"
-                )
-                st.caption(f"Saved to: {path_str}")
-            except Exception as e:
-                st.error(f"IA Register export failed: {e}")
-
-        # Case JSON
-        with c3:
-            try:
-                b, path_str = export_case_json(bundle)
-                st.download_button(
-                    "Download Case (JSON)",
-                    data=b, file_name=f"Case_{bundle['case_name']}.json",
-                    mime="application/json",
-                    key="dl_json"
-                )
-                st.caption(f"Saved to: {path_str}")
-            except Exception as e:
-                st.error(f"JSON export failed: {e}")
-
-        st.subheader("Licensing templates")
-        t1, t2, t3 = st.columns(3)
-
-        with t1:
-            try:
-                b, path_str = export_advisory_docx(bundle, mode="TEMPLATE_FRAND")
-                st.download_button(
-                    "Template FRAND (DOCX)",
-                    data=b, file_name=f"Template_FRAND_{bundle['case_name']}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    key="dl_tpl_frand"
-                )
-                st.caption(f"Saved to: {path_str}")
-            except Exception as e:
-                st.error(f"FRAND template failed: {e}")
-
-        with t2:
-            try:
-                b, path_str = export_advisory_docx(bundle, mode="TEMPLATE_CO_CREATION")
-                st.download_button(
-                    "Template Co-creation (DOCX)",
-                    data=b, file_name=f"Template_CoCreation_{bundle['case_name']}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    key="dl_tpl_cocreate"
-                )
-                st.caption(f"Saved to: {path_str}")
-            except Exception as e:
-                st.error(f"Co-creation template failed: {e}")
-
-        with t3:
-            try:
-                b, path_str = export_advisory_docx(bundle, mode="TEMPLATE_NON_TRADITIONAL")
-                st.download_button(
-                    "Template Non-traditional (DOCX)",
-                    data=b, file_name=f"Template_NonTraditional_{bundle['case_name']}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    key="dl_tpl_nontrad"
-                )
-                st.caption(f"Saved to: {path_str}")
-            except Exception as e:
-                st.error(f"Non-traditional template failed: {e}"). 
+        st.info("Install pandas/xlsxwriter for XLSX export support.")
