@@ -120,17 +120,48 @@ if page == "Case":
         with st.expander("Preview extracted text (first 5000 chars)"):
             st.text_area("Extracted evidence", combined[:5000], height=220)
         if st.button("Run Auto-Analysis"):
-            base = "Detected references in uploaded evidence."
-            ss["analysis"] = {
-                "4_leaf": {
-                    "Human": base,
-                    "Structural": base,
-                    "Customer": base,
-                    "Strategic Alliance": base,
-                },
-                "10_steps": "Initial discovery complete; ready for expert review.",
-            }
-            st.success("Auto-analysis complete. Continue to Checklist.")
+    # --- simple heuristic classifier for demonstration ---
+    text = (ss.get("combined_text") or "").lower()
+
+    def has_any(*words): 
+        return any(w in text for w in words)
+
+    leaf_map = {}
+    leaf_map["Human"] = (
+        "Mentions of team, skills, training or tacit know-how detected."
+        if has_any("team", "training", "skills", "employee")
+        else "No strong human-capital terms detected yet."
+    )
+    leaf_map["Structural"] = (
+        "Internal systems, data, methods or processes referenced."
+        if has_any("process", "system", "software", "method")
+        else "No clear structural artefacts found."
+    )
+    leaf_map["Customer"] = (
+        "Evidence of relationships, partners or user feedback present."
+        if has_any("client", "customer", "partner", "contract")
+        else "No customer-capital evidence detected."
+    )
+    leaf_map["Strategic Alliance"] = (
+        "External collaborations, MOUs or supply-chain items found."
+        if has_any("alliance", "mou", "joint", "collaboration")
+        else "No alliance terms detected."
+    )
+
+    steps_summary = []
+    for i, step in enumerate([
+        "Identify", "Separate", "Protect", "Safeguard", "Manage",
+        "Control", "Measure", "Report", "Value", "Monetise"
+    ], start=1):
+        tag = "✅" if has_any(step.lower()) else "⬜"
+        steps_summary.append(f"{tag} Step {i}: {step}")
+
+    ss["analysis"] = {
+        "4_leaf": leaf_map,
+        "10_steps": "\n".join(steps_summary),
+    }
+
+    st.success("Auto-analysis complete ✅ → open Checklist to review results.")
     else:
         st.info("Tip: upload .txt exports (e.g., WhatsApp chats or notes).")
 
