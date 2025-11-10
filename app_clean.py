@@ -17,7 +17,6 @@ st.set_page_config(page_title="IC-LicAI Expert Console", layout="centered")
 ss = st.session_state
 
 
-
 # ---------- UI CONSTANTS ----------
 SECTORS = [
     "Food & Beverage", "MedTech", "GreenTech", "AgriTech", "Biotech",
@@ -26,12 +25,14 @@ SECTORS = [
 ]
 COMPANY_SIZES = ["Micro (1–10)", "Small (11–50)", "Medium (51–250)", "Large (250+)"]
 
+
 # ---------- SESSION DEFAULTS ----------
 ss.setdefault("case_name", "Untitled Case")
 ss.setdefault("company_size", COMPANY_SIZES[0])
 ss.setdefault("sector", SECTORS[0])
 ss.setdefault("notes", "")
 ss.setdefault("assessment", {})   # Placeholder for AI logic
+
 
 # ---------- CASE FORM ----------
 st.title("IC-LicAI Expert Console")
