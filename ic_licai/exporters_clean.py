@@ -169,3 +169,37 @@ def export_case_json(case: dict, reports_dir: Path = None):
     data = json.dumps(case, indent=2, ensure_ascii=False)
     Path(path).write_text(data, encoding="utf-8")
     return data.encode("utf-8"), str(path)
+
+# --- DOCX/TXT export helper for app_clean.py buttons ---
+import io
+
+def export_bytes_as_docx_or_txt(title: str, body: str):
+    """
+    Return (bytes_data, safe_filename, mime_type).
+    Tries to create a DOCX first; falls back to UTF-8 TXT if python-docx is unavailable.
+    """
+    safe_name = (title or "Report").strip().replace(" ", "_")
+
+    try:
+        from docx import Document
+        from docx.shared import Pt
+
+        buf = io.BytesIO()
+        doc = Document()
+
+        # Title
+        doc.add_heading(title or "Report", level=1)
+
+        # Body (split on lines so we keep simple structure)
+        for line in (body or "").split("\n"):
+            doc.add_paragraph(line)
+
+        doc.save(buf)
+        data = buf.getvalue()
+        mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        return data, safe_name, mime
+
+    except Exception:
+        # Fallback: plain text
+        txt = (f"{title or 'Report'}\n\n{body or ''}").encode("utf-8")
+        return txt, safe_name, "text/plain"
