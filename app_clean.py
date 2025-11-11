@@ -29,28 +29,6 @@ try:
 except Exception:
     HAVE_PANDAS = False
 
-# ---------- Optional libraries ----------
-HAVE_DOCX = False
-try:
-    from docx import Document  # python-docx
-    HAVE_DOCX = True
-except Exception:
-    HAVE_DOCX = False
-
-HAVE_PYPDF2 = False
-try:
-    from PyPDF2 import PdfReader
-    HAVE_PYPDF2 = True
-except Exception:
-    HAVE_PYPDF2 = False
-
-HAVE_PANDAS = False
-try:
-    import pandas as pd
-    HAVE_PANDAS = True
-except Exception:
-    HAVE_PANDAS = False
-
 
 # =========================================================
 #                 Evidence extraction helpers
