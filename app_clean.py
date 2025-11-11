@@ -15,6 +15,148 @@ try:
 except Exception:
     HAVE_DOCX = False
 
+# ===== Evidence Extraction (Step 1) =====
+import re
+from typing import Dict, List
+
+# Optional imports for file text extraction. These will fail gracefully if a lib is missing.
+try:
+    from docx import Document as _DocxDocument  # python-docx
+except Exception:
+    _DocxDocument = None
+
+try:
+    from PyPDF2 import PdfReader as _PdfReader
+except Exception:
+    _PdfReader = None
+
+try:
+    from pptx import Presentation as _PptxPresentation  # python-pptx (optional)
+except Exception:
+    _PptxPresentation = None
+
+
+FOUR_LEAF_KEYS = {
+    "Human": [
+        r"\bhuman capital\b", r"\btraining\b", r"\bcompetenc(e|y)\b",
+        r"\bskills?\b", r"\bteams?\b", r"\bstaff\b"
+    ],
+    "Structural": [
+        r"\bstructural capital\b", r"\bprocess(es)?\b", r"\bmethods?\b",
+        r"\bprocedures?\b", r"\bsystems?\b", r"\bdocumentation\b", r"\bIPR?\b"
+    ],
+    "Customer": [
+        r"\bcustomer capital\b", r"\bclients?\b", r"\busers?\b",
+        r"\bcustomer contracts?\b", r"\bNPS\b", r"\bretention\b"
+    ],
+    "StrategicAlliance": [
+        r"\bstrategic alliance(s)?\b", r"\bpartnership(s)?\b",
+        r"\bJV\b", r"\bjoint venture\b", r"\bconsortium\b", r"\bMoU\b"
+    ],
+}
+
+TEN_STEPS_KEYS = {
+    "1 Identify":     [r"\bidentify\b", r"\bdiscovery\b", r"\bmapping\b"],
+    "2 Separate":     [r"\bseparat(e|ion)\b", r"\bcarve-?out\b", r"\bclassif(y|ication)\b"],
+    "3 Protect":      [r"\bprotect(ion)?\b", r"\bconfidential\b", r"\btrade secret\b", r"\bIP\b"],
+    "4 Safeguard":    [r"\bsafeguard\b", r"\baccess control\b", r"\bauthorization\b"],
+    "5 Manage":       [r"\bmanage(ment)?\b", r"\bgovernance\b", r"\bowner\b", r"\baccountability\b"],
+    "6 Control":      [r"\bcontrol\b", r"\bversioning\b", r"\baudit trail\b"],
+    "7 Develop":      [r"\bdevelop(ment)?\b", r"\broadmap\b", r"\bbacklog\b", r"\bR&D\b"],
+    "8 Exploit":      [r"\bexploit(ation)?\b", r"\bmonetis(e|z)e\b", r"\blicens(?:e|ing)\b"],
+    "9 Value":        [r"\bvalu(e|ation)\b", r"\bIAS ?38\b", r"\bfair value\b"],
+    "10 Report":      [r"\breport(ing)?\b", r"\bdisclosure\b", r"\bregister\b"],
+}
+
+# Basic normalizer: lower-case and collapse whitespace
+def _norm_text(s: str) -> str:
+    return re.sub(r"\s+", " ", (s or "")).strip().lower()
+
+def _extract_matches(text: str, patterns: List[str], window: int = 300) -> List[str]:
+    """
+    Return short snippets around each match so experts can review in context.
+    window = number of characters captured around the match.
+    """
+    snippets = []
+    if not text:
+        return snippets
+    for pat in patterns:
+        try:
+            for m in re.finditer(pat, text, flags=re.IGNORECASE):
+                start = max(0, m.start() - window // 2)
+                end = min(len(text), m.end() + window // 2)
+                snippet = text[start:end].strip()
+                if snippet and snippet not in snippets:
+                    snippets.append(snippet)
+        except re.error:
+            # If a regex is malformed, skip it
+            continue
+    return snippets
+
+def extract_evidence_from_text(raw_text: str) -> Dict:
+    """
+    Classify free text into Four-Leaf and 10 Steps evidence buckets.
+    Returns a dict:
+    {
+      "FourLeaf": {"Human": [...], "Structural": [...], "Customer": [...], "StrategicAlliance": [...]},
+      "TenSteps": {"1 Identify":[...], ..., "10 Report":[...]},
+    }
+    """
+    text = raw_text or ""
+    four_leaf = {k: _extract_matches(text, pats) for k, pats in FOUR_LEAF_KEYS.items()}
+    ten_steps = {k: _extract_matches(text, pats) for k, pats in TEN_STEPS_KEYS.items()}
+    return {"FourLeaf": four_leaf, "TenSteps": ten_steps}
+
+def read_text_from_uploaded_file(up_file) -> str:
+    """
+    Safely read text from an uploaded file-like object (Streamlit's UploadedFile).
+    Supports: .txt, .docx, .pdf, .pptx (if python-pptx installed).
+    Falls back to empty string on failure.
+    """
+    name = (up_file.name or "").lower()
+    try:
+        if name.endswith(".txt"):
+            return up_file.read().decode("utf-8", errors="ignore")
+
+        if name.endswith(".docx") and _DocxDocument is not None:
+            up_file.seek(0)
+            doc = _DocxDocument(up_file)
+            return "\n".join(p.text for p in doc.paragraphs)
+
+        if name.endswith(".pdf") and _PdfReader is not None:
+            out = []
+            up_file.seek(0)
+            r = _PdfReader(up_file)
+            for page in r.pages:
+                try:
+                    out.append(page.extract_text() or "")
+                except Exception:
+                    continue
+            return "\n".join(out)
+
+        if name.endswith(".pptx") and _PptxPresentation is not None:
+            up_file.seek(0)
+            prs = _PptxPresentation(up_file)
+            slides = []
+            for s in prs.slides:
+                txt = []
+                for shape in s.shapes:
+                    if hasattr(shape, "text"):
+                        txt.append(shape.text)
+                slides.append("\n".join(txt))
+            return "\n\n".join(slides)
+
+    except Exception:
+        pass
+
+    # Unknown or failed parsing: best-effort binary decode
+    try:
+        up_file.seek(0)
+        return up_file.read().decode("utf-8", errors="ignore")
+    except Exception:
+        return ""
+# ===== End Evidence Extraction (Step 1) =====
+
 # ---------------- UI theme (Navy + Pale Yellow) ----------------
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
 
