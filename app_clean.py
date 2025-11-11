@@ -1,14 +1,33 @@
-# app_clean.py — IC-LicAI Expert Console (single-paste version)
-# UK English (“Analyse”). Robust to missing libs. No PDFs generated (DOCX/TXT only).
-
-from __future__ import annotations
+# app_clean.py — IC-LicAI Expert Console
+# UK English (“Analyse”). Robust optional imports.
 
 import io
 import re
 from pathlib import Path
-from typing import Dict, List, Any
-
+from datetime import date
 import streamlit as st
+
+# Optional: python-docx support
+try:
+    from docx import Document  # type: ignore
+    HAVE_DOCX = True
+except Exception:
+    HAVE_DOCX = False
+    Document = None  # type: ignore
+
+# Optional: PDF reader
+try:
+    from PyPDF2 import PdfReader  # type: ignore
+    HAVE_PYPDF2 = True
+except Exception:
+    HAVE_PYPDF2 = False
+
+# Optional: pandas for IA Register
+try:
+    import pandas as pd  # type: ignore
+    HAVE_PANDAS = True
+except Exception:
+    HAVE_PANDAS = False
 
 # ---------- Optional libraries ----------
 HAVE_DOCX = False
