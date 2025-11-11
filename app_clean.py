@@ -1,8 +1,13 @@
-# app_clean.py — IC-LicAI Expert Console (EU theme, Expert-style Narratives)
-# Single-file Streamlit app. Paste this whole file into your repo.
-# requirements.txt:
+# app_clean.py — IC-LicAI Expert Console (LOCKED BUILD)
+# Single-file Streamlit app with:
+#  • PUBLIC_MODE toggle (internal vs. public output depth)
+#  • Passphrase gate via st.secrets["APP_KEY"] (or env APP_KEY)
+#  • “CONFIDENTIAL — Internal Evaluation Draft (No Distribution)” watermark on exports (internal mode)
+#  • Safe exports (never touches /srv/shared; soft-fails if write blocked)
+#
+# requirements.txt
 #   streamlit>=1.36
-#   python-docx>=1.1  (optional; falls back to .txt)
+#   python-docx>=1.1   # optional; falls back to .txt if missing
 
 from __future__ import annotations
 import io
@@ -13,14 +18,22 @@ from typing import Dict, Any, List, Tuple
 
 import streamlit as st
 
-# ---------- Optional DOCX (fallback to .txt) ----------
+# ========================= LOCK SETTINGS =========================
+# Set to False for full internal mode (richer narratives + assumptions/training + watermark + server save)
+# Set to True  for public/demo mode (reduced detail, no server save, generic reports)
+PUBLIC_MODE: bool = False
+
+# Require a passphrase if set in Streamlit secrets or env var
+REQUIRE_PASS: bool = True
+
+# ================== Optional DOCX (fallback to .txt) ==============
 try:
     from docx import Document  # type: ignore
     HAVE_DOCX = True
 except Exception:
     HAVE_DOCX = False
 
-# ================= UI THEME =================
+# ============================= THEME =============================
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
 
 def _inject_theme() -> None:
@@ -52,7 +65,33 @@ def _inject_theme() -> None:
 _inject_theme()
 st.markdown('<div class="ic-title-bar">IC-LicAI Expert Console</div>', unsafe_allow_html=True)
 
-# ================= Writable Root (robust) =================
+# ============================ AUTH ===============================
+def _auth_gate() -> None:
+    if not REQUIRE_PASS:
+        return
+    secret = st.secrets.get("APP_KEY", None)
+    if not secret:
+        # also allow env var for local runs
+        secret = os.environ.get("APP_KEY", None)
+    if not secret:
+        with st.expander("Access control"):
+            st.info(
+                "Set a passphrase in **st.secrets[\"APP_KEY\"]** (Streamlit Cloud → Settings → Secrets) "
+                "or environment variable **APP_KEY** for local runs."
+            )
+        return  # no secret configured → allow, but hint admin to set one
+    # Require entry
+    st.write(" ")
+    key = st.text_input("Enter access passphrase", type="password")
+    if not key:
+        st.stop()
+    if key != secret:
+        st.error("Incorrect passphrase.")
+        st.stop()
+
+_auth_gate()
+
+# ====================== WRITABLE ROOT (SAFE) =====================
 def _detect_writable_root() -> Path:
     # Avoid /srv/shared; prefer ./out → ~/out → /tmp/ic-licai-out
     for p in [Path("./out"), Path(os.path.expanduser("~"))/"out", Path(tempfile.gettempdir())/"ic-licai-out"]:
@@ -77,15 +116,27 @@ def _export_bytes_as_docx_or_txt(title: str, body: str) -> Tuple[bytes, str, str
     base = _safe_filename(title) or "ICLicAI_Report"
     if HAVE_DOCX:
         doc = Document()
+        # Watermark header (internal only)
+        header = "CONFIDENTIAL — Internal Evaluation Draft (No Distribution)" if not PUBLIC_MODE else None
+        if header:
+            p = doc.add_paragraph()
+            run = p.add_run(header)
+            run.bold = True
         doc.add_heading(title, 0)
         for para in body.split("\n\n"):
             doc.add_paragraph(para)
         bio = io.BytesIO(); doc.save(bio)
         return bio.getvalue(), f"{base}.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    # TXT fallback with watermark
+    if not PUBLIC_MODE:
+        body = "CONFIDENTIAL — Internal Evaluation Draft (No Distribution)\n\n" + body
     data = body.encode("utf-8")
     return data, f"{base}.txt", "text/plain"
 
 def _save_bytes_to_server(folder: Path, std_name: str, data: bytes) -> Tuple[Path | None, str]:
+    # In PUBLIC_MODE we do not write to server storage at all
+    if PUBLIC_MODE:
+        return None, "Public mode: server save disabled (download only)."
     try:
         _ensure_dir(folder)
         p = folder / std_name
@@ -94,7 +145,7 @@ def _save_bytes_to_server(folder: Path, std_name: str, data: bytes) -> Tuple[Pat
     except Exception as e:
         return None, f"Server save skipped ({type(e).__name__}: {e}). Download still works."
 
-# ================= Evidence ingest =================
+# ========================= EVIDENCE INGEST =======================
 TEXT_EXT = {".txt", ".csv"}
 
 def _read_text_from_uploads(files: List[st.runtime.uploaded_file_manager.UploadedFile]) -> Tuple[str, Dict[str, int]]:
@@ -115,7 +166,7 @@ def _read_text_from_uploads(files: List[st.runtime.uploaded_file_manager.Uploade
             chunks.append(f"[[FILE:{name}]]")
     return "\n".join(chunks), counts
 
-# ================= SME-friendly cues =================
+# ====================== SME-FRIENDLY CUES ========================
 FOUR_LEAF_KEYS: Dict[str, List[str]] = {
     "Human": [
         "team","staff","employee","hire","recruit","training","trained","trainer","onboarding",
@@ -157,7 +208,7 @@ SECTOR_CUES = {
     ],
 }
 
-# ================= Analysis =================
+# ============================ ANALYSIS ===========================
 def _count_hits(text: str, words: List[str]) -> int:
     t = text
     return sum(1 for w in words if w in t)
@@ -169,7 +220,7 @@ def _analyse_to_maps(text: str) -> Tuple[Dict[str, Any], Dict[str, Any], str, Di
     t = (text or "").lower()
     sector = st.session_state.get("sector","Other")
 
-    # Four-Leaf (with sector cues mixed for some leaves)
+    # Four-Leaf (with sector cues for structure/customer/strategic)
     ic_map: Dict[str, Any] = {}
     hit_counts: Dict[str,int] = {}
     for leaf, cues in FOUR_LEAF_KEYS.items():
@@ -179,21 +230,22 @@ def _analyse_to_maps(text: str) -> Tuple[Dict[str, Any], Dict[str, Any], str, Di
         hits = _count_hits(t, effective)
         hit_counts[leaf] = hits
         tick = hits > 0
-        if leaf == "Human":
-            nar = ("Human Capital evidenced (people/roles/training)."
-                   if tick else "No strong people/skills cues detected.")
-        elif leaf == "Structural":
-            nar = ("Structural Capital present (SOPs/processes/systems/registers/ISO/QMS)."
-                   if tick else "No explicit systems/processes/registers referenced.")
-        elif leaf == "Customer":
-            nar = ("Customer Capital indicated (contracts/POs/CRM/pipeline/channels)."
-                   if tick else "Little/no explicit evidence of customer relationships.")
+
+        # Narrative depth varies by PUBLIC_MODE
+        if PUBLIC_MODE:
+            nar = ("Signals detected." if tick else "No clear signals detected.")
         else:
-            nar = ("Strategic alliances present (partners/MoUs/JVs/universities/councils/grants)."
-                   if tick else "No clear references to strategic partners/alliances.")
+            if leaf == "Human":
+                nar = ("Human Capital evidenced (people/roles/training)." if tick else "No strong people/skills cues detected.")
+            elif leaf == "Structural":
+                nar = ("Structural Capital present (SOPs/processes/systems/registers/ISO/QMS)." if tick else "No explicit systems/processes/registers referenced.")
+            elif leaf == "Customer":
+                nar = ("Customer Capital indicated (contracts/POs/CRM/pipeline/channels)." if tick else "Little/no explicit evidence of customer relationships.")
+            else:
+                nar = ("Strategic alliances present (partners/MoUs/JVs/universities/councils/grants)." if tick else "No clear references to strategic partners/alliances.")
         ic_map[leaf] = {"tick": tick, "narrative": nar, "hits": hits}
 
-    # Ten-Steps with SME boosters
+    # Ten-Steps
     base = 3
     boosts = {
         "Identify": 2 if any(w in t for w in ["asset","intangible","know-how","knowhow","dataset","algorithm"]) else 0,
@@ -215,65 +267,72 @@ def _analyse_to_maps(text: str) -> Tuple[Dict[str, Any], Dict[str, Any], str, Di
     for step in TEN_STEPS:
         s = max(1, min(10, base + boosts.get(step, 0)))
         scores.append(s)
-        narratives.append(f"{step}: readiness ≈ {s}/10 based on SME-language cues in evidence.")
+        if PUBLIC_MODE:
+            narratives.append(f"{step}: readiness ≈ {s}/10.")
+        else:
+            narratives.append(f"{step}: readiness ≈ {s}/10 based on SME-language cues in evidence.")
     ten = {"scores": scores, "narratives": narratives}
 
-    # Evidence quality (%): proportion of cue families hit vs total families considered
+    # Evidence quality heuristic
     families_total = 4 + len(TEN_STEPS)
     families_hit = sum(1 for v in ic_map.values() if v["tick"]) + sum(1 for s in scores if s > base)
     quality = int(round(100 * families_hit / max(1, families_total)))
 
-    # Plain-language summary
+    # Summary
     ticks = [k for k, v in ic_map.items() if v["tick"]]
     gaps  = [k for k, v in ic_map.items() if not v["tick"]]
-    summary = (
-        f"{st.session_state.get('case_name','Untitled Customer')} is a "
-        f"{st.session_state.get('company_size','Micro (1–10)')} in {sector}.\n"
-        f"Evidence suggests: {', '.join(ticks) if ticks else 'no obvious IC signals'}"
-        f"{'; gaps: ' + ', '.join(gaps) if gaps else ''}.\n"
-        "Ten-Steps scores are heuristic — experts should review and adjust."
-    )
+    if PUBLIC_MODE:
+        summary = (
+            f"{st.session_state.get('case_name','Untitled Customer')} — baseline IC signals: "
+            f"{', '.join(ticks) if ticks else 'none detected'}."
+        )
+    else:
+        summary = (
+            f"{st.session_state.get('case_name','Untitled Customer')} is a "
+            f"{st.session_state.get('company_size','Micro (1–10)')} in {st.session_state.get('sector','Other')}.\n"
+            f"Evidence suggests: {', '.join(ticks) if ticks else 'no obvious IC signals'}"
+            f"{'; gaps: ' + ', '.join(gaps) if gaps else ''}.\n"
+            "Ten-Steps scores are heuristic — experts should review and adjust."
+        )
     return ic_map, ten, summary, hit_counts, quality
 
-# ===== Narrative builders: Assumptions + Training/Evidence =====
+# ========== Assumptions + Training/Evidence (suppressed in public) ==========
 def _build_assumptions(ic_map: Dict[str, Any], ten: Dict[str, Any]) -> List[str]:
+    if PUBLIC_MODE:
+        return []
     a: List[str] = []
     if ic_map["Customer"]["tick"]:
         a.append("CRM/pipeline and signed MSAs/SOWs/SLAs exist and can attribute revenues per customer.")
     else:
         a.append("Customer agreements can be produced (MSA/SOW/SLA) to attribute revenues.")
     if ic_map["Structural"]["tick"]:
-        a.append("Core artefacts (software/datasets/templates/brand) are identifiable and separable without value loss.")
+        a.append("Core artefacts are identifiable and separable without value loss.")
     else:
         a.append("Artefacts can be separated into licence-ready packs with minimal rework.")
-    if ten["scores"][2] >= 6:  # Protect
-        a.append("Baseline legal protections (NDA, copyright/mark) are in place; trade-secret controls feasible.")
+    if ten["scores"][2] >= 6:
+        a.append("Baseline legal protections are in place; trade-secret controls feasible.")
     else:
-        a.append("NDA/templates can be implemented quickly; copyright/mark/secret posture to follow.")
+        a.append("NDA/templates implementable quickly; copyright/mark/secret posture to follow.")
     a.append("Governance cadence (monthly KPIs; quarterly board) will support auditability and valuation.")
-    a.append("IAS 38 positioning will follow Areopa practice: explicit, separable assets evidenced and revenue-linked.")
+    a.append("IAS 38 positioning will follow explicit, separable assets evidenced and revenue-linked.")
     return a
 
 def _build_training_and_evidence(ic_map: Dict[str, Any], ten: Dict[str, Any]) -> Tuple[List[str], List[str]]:
-    collect: List[str] = []
-    train: List[str] = []
-
-    # Evidence to collect now
-    collect += [
+    if PUBLIC_MODE:
+        return [], []
+    collect: List[str] = [
         "Signed MSAs/SOWs/SLAs + renewal/price clauses",
         "SOPs & QMS excerpts with owners and versions",
-        "IPR file: NDAs, TM/copyright proofs, trade-secret policy snapshot",
+        "IPR file: NDAs, mark/copyright proofs, trade-secret policy snapshot",
         "Asset packs: specs/datasets/docs + version logs tied to releases",
         "KPI & Board-pack pages: licence counts, royalty receipts, performance",
     ]
-    # Training sprints
-    train += [
-        "Ten-Steps for SMEs — logging evidence while you work (60–90 min)",
+    train: List[str] = [
+        "Ten-Steps for SMEs — logging evidence while you work",
         "Separability & FRAND — licence-ready bundles, royalty corridors, audit",
         "Trade-secret operations — access control, doc hygiene, leak pathways",
         "IAS 38 evidence — cost trail, revenue attribution, useful life/impairment",
     ]
-    # Tailor with gaps
     if not ic_map["Customer"]["tick"]:
         collect.append("Customer pipeline export and two signed customer references")
         train.append("Customer evidence — mapping SLAs/POs/invoices to assets")
@@ -282,7 +341,7 @@ def _build_training_and_evidence(ic_map: Dict[str, Any], ten: Dict[str, Any]) ->
         train.append("SOP authoring quickstart")
     return collect, train
 
-# ================= Session defaults =================
+# =========================== SESSION =============================
 ss = st.session_state
 ss.setdefault("case_name", "Untitled Customer")
 ss.setdefault("company_size", "Micro (1–10)")
@@ -306,7 +365,7 @@ SECTORS = [
     "Professional Services","Mobility/Transport","Energy","Other",
 ]
 
-# ================= Sidebar =================
+# ============================ NAV ================================
 st.sidebar.markdown("### Navigate")
 page = st.sidebar.radio(
     "",
@@ -315,7 +374,7 @@ page = st.sidebar.radio(
     key="nav",
 )
 
-# ================= PAGES =================
+# ============================ PAGES ==============================
 
 # -- 1) Customer
 if page == "Customer":
@@ -327,7 +386,7 @@ if page == "Customer":
         with c2:
             size = st.selectbox("Company size", SIZES, index=SIZES.index(ss.get("company_size", SIZES[0])))
         with c3:
-            sector = st.selectbox("Sector / Industry", SECTORS, index=SECTORS.index(ss.get("sector", "Other")))
+            sector = st.selectbox("Sector / Industry", SECTORS, index=SectorsIndex := SECTORS.index(ss.get("sector", "Other")))
         notes = st.text_area("Analyst notes (optional)", value=ss.get("notes", ""), height=120)
 
         st.markdown("---")
@@ -342,7 +401,7 @@ if page == "Customer":
         if submitted:
             ss["case_name"] = case_name or "Untitled Customer"
             ss["company_size"] = size
-            ss["sector"] = sector
+            ss["sector"] = SECTORS[SectorsIndex]
             ss["notes"] = notes
             if uploads:
                 ss["uploads"] = uploads
@@ -367,7 +426,7 @@ elif page == "Analyse Evidence":
         ss["ic_map"] = ic_map; ss["ten_steps"] = ten; ss["narrative"] = summary
         ss["hit_counts"] = hits; ss["evidence_quality"] = quality
 
-        # Build assumptions + training/evidence lists
+        # Build assumptions + training/evidence lists (suppressed in public mode)
         ss["assumptions"] = _build_assumptions(ic_map, ten)
         collect, train = _build_training_and_evidence(ic_map, ten)
         ss["collect_list"] = collect; ss["training_list"] = train
@@ -382,16 +441,18 @@ elif page == "Expert View":
 
     colA, colB = st.columns([1,1])
     with colA:
-        st.subheader("Evidence Quality")
-        st.progress(min(100, max(0, ss.get("evidence_quality", 0))) / 100.0, text=f"{ss.get('evidence_quality',0)}% evidence coverage (heuristic)")
-        st.caption("Coverage = cue families hit vs. total families (4 leaves + 10 steps).")
+        if not PUBLIC_MODE:
+            st.subheader("Evidence Quality")
+            st.progress(min(100, max(0, ss.get("evidence_quality", 0))) / 100.0, text=f"{ss.get('evidence_quality',0)}% evidence coverage (heuristic)")
+            st.caption("Coverage = cue families hit vs. total families (4 leaves + 10 steps).")
 
         st.subheader("4-Leaf Map")
         ic_map: Dict[str, Any] = ss.get("ic_map", {})
         for leaf in ["Human","Structural","Customer","Strategic Alliance"]:
             row = ic_map.get(leaf, {"tick": False, "narrative": f"No assessment yet for {leaf}.", "hits": 0})
             tick = "✓" if row["tick"] else "•"
-            st.markdown(f"- **{leaf}**: {tick}  _(hits: {row.get('hits',0)})_")
+            suffix = "" if PUBLIC_MODE else f"  _(hits: {row.get('hits',0)})_"
+            st.markdown(f"- **{leaf}**: {tick}{suffix}")
             st.caption(row["narrative"])
 
     with colB:
@@ -402,23 +463,25 @@ elif page == "Expert View":
             for s, n in zip(TEN_STEPS, ten["narratives"]):
                 st.markdown(f"**{s}** — {n}")
 
-    st.markdown("---")
-    st.subheader("Assumptions & Judgements (editable)")
-    assumptions_text = "\n".join(f"• {x}" for x in ss.get("assumptions", [])) or "• (add assumptions)"
-    assumptions_text = st.text_area("Assumptions", value=assumptions_text, height=140, key="assumptions_edit")
+    # Internal-only editable blocks
+    if not PUBLIC_MODE:
+        st.markdown("---")
+        st.subheader("Assumptions & Judgements (editable)")
+        assumptions_text = "\n".join(f"• {x}" for x in ss.get("assumptions", [])) or "• (add assumptions)"
+        assumptions_text = st.text_area("Assumptions", value=assumptions_text, height=140, key="assumptions_edit")
 
-    st.subheader("Evidence to Collect (editable)")
-    collect_text = "\n".join(f"• {x}" for x in ss.get("collect_list", [])) or "• (add evidence items)"
-    collect_text = st.text_area("Collect list", value=collect_text, height=140, key="collect_edit")
+        st.subheader("Evidence to Collect (editable)")
+        collect_text = "\n".join(f"• {x}" for x in ss.get("collect_list", [])) or "• (add evidence items)"
+        collect_text = st.text_area("Collect list", value=collect_text, height=140, key="collect_edit")
 
-    st.subheader("Training Plan (editable)")
-    training_text = "\n".join(f"• {x}" for x in ss.get("training_list", [])) or "• (add training items)"
-    training_text = st.text_area("Training list", value=training_text, height=140, key="training_edit")
+        st.subheader("Training Plan (editable)")
+        training_text = "\n".join(f"• {x}" for x in ss.get("training_list", [])) or "• (add training items)"
+        training_text = st.text_area("Training list", value=training_text, height=140, key="training_edit")
 
-    # keep edits
-    ss["assumptions"] = [line.lstrip("• ").strip() for line in assumptions_text.splitlines() if line.strip()]
-    ss["collect_list"] = [line.lstrip("• ").strip() for line in collect_text.splitlines() if line.strip()]
-    ss["training_list"] = [line.lstrip("• ").strip() for line in training_text.splitlines() if line.strip()]
+        # persist edits
+        ss["assumptions"] = [line.lstrip("• ").strip() for line in assumptions_text.splitlines() if line.strip()]
+        ss["collect_list"] = [line.lstrip("• ").strip() for line in collect_text.splitlines() if line.strip()]
+        ss["training_list"] = [line.lstrip("• ").strip() for line in training_text.splitlines() if line.strip()]
 
 # -- 4) Reports & Exports
 elif page == "Reports":
@@ -432,32 +495,41 @@ elif page == "Reports":
         ten    = ss.get("ten_steps", {"scores":[5]*10, "narratives":[f"{s}: tbd" for s in TEN_STEPS]})
 
         b: List[str] = []
-        b.append(f"Executive Summary\n\n{ss.get('narrative','(no summary)')}\n")
-        b.append(f"Evidence Quality: ~{ss.get('evidence_quality',0)}% coverage (heuristic)\n")
+        if not PUBLIC_MODE:
+            b.append(f"Executive Summary\n\n{ss.get('narrative','(no summary)')}\n")
+            b.append(f"Evidence Quality: ~{ss.get('evidence_quality',0)}% coverage (heuristic)\n")
+        else:
+            b.append(f"Executive Summary\n\n{ss.get('narrative','(no summary)')}\n")
 
         b.append("Four-Leaf Analysis")
         for leaf in ["Human","Structural","Customer","Strategic Alliance"]:
             row = ic_map.get(leaf, {"tick": False, "narrative": "", "hits": 0})
-            b.append(f"- {leaf}: {'✓' if row.get('tick') else '•'} — {row.get('narrative','')} (hits: {row.get('hits',0)})")
+            tail = "" if PUBLIC_MODE else f" (hits: {row.get('hits',0)})"
+            b.append(f"- {leaf}: {'✓' if row.get('tick') else '•'} — {row.get('narrative','')}{tail}")
 
         b.append("\nTen-Steps Readiness")
         for s, n in zip(TEN_STEPS, ten["narratives"]):
             b.append(f"- {n}")
 
-        b.append("\nAssumptions & Judgements")
-        for x in ss.get("assumptions", []):
-            b.append(f"- {x}")
+        if not PUBLIC_MODE:
+            b.append("\nAssumptions & Judgements")
+            for x in ss.get("assumptions", []):
+                b.append(f"- {x}")
 
-        b.append("\nEvidence to Collect")
-        for x in ss.get("collect_list", []):
-            b.append(f"- {x}")
+            b.append("\nEvidence to Collect")
+            for x in ss.get("collect_list", []):
+                b.append(f"- {x}")
 
-        b.append("\nTraining Plan")
-        for x in ss.get("training_list", []):
-            b.append(f"- {x}")
+            b.append("\nTraining Plan")
+            for x in ss.get("training_list", []):
+                b.append(f"- {x}")
 
         b.append("\nNotes")
-        b.append("This narrative is advisory-first; expert review is required for final scoring and IAS 38 positioning.")
+        if PUBLIC_MODE:
+            b.append("This document is provided for high-level evaluation only.")
+        else:
+            b.append("CONFIDENTIAL. Advisory-first; expert review required for final scoring and accounting treatment.")
+
         return title, "\n".join(b)
 
     def _compose_lic_text() -> Tuple[str,str]:
@@ -469,13 +541,16 @@ elif page == "Reports":
         b.append("- Defensive licence (IP pooling, non-assert across partners)")
         b.append("- Co-creation licence (shared ownership of Foreground IP, revenue-sharing)")
         b.append("\nGovernance & Audit")
-        b.append("IA Register maintained; evidence bundles per licence; board-pack reporting on royalties and performance.")
-        b.append("\nAssumptions & Judgements")
-        for x in ss.get("assumptions", []):
-            b.append(f"- {x}")
-        b.append("\nTraining Plan (licensing-focused)")
-        for x in ss.get("training_list", []):
-            b.append(f"- {x}")
+        b.append("IA Register maintained; evidence bundles per licence; regular reporting on royalties and performance.")
+        if not PUBLIC_MODE:
+            b.append("\nAssumptions & Judgements")
+            for x in ss.get("assumptions", []):
+                b.append(f"- {x}")
+            b.append("\nTraining Plan (licensing-focused)")
+            for x in ss.get("training_list", []):
+                b.append(f"- {x}")
+        else:
+            b.append("\n(Details suppressed in public mode.)")
         return title, "\n".join(b)
 
     c1, c2 = st.columns(2)
@@ -495,7 +570,8 @@ elif page == "Reports":
             st.download_button("⬇️ Download Licensing Report", data, file_name=fname, mime=mime, key="dl_lic")
             (st.success if path else st.warning)(msg)
 
-    st.caption(f"Server save root: {OUT_ROOT}. If saving is restricted, downloads still work.")
+    footer = "Server save root: disabled (public mode)" if PUBLIC_MODE else f"Server save root: {OUT_ROOT}"
+    st.caption(footer)
 
 # -- 5) Licensing Templates
 elif page == "Licensing Templates":
