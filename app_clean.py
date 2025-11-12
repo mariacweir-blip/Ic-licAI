@@ -1,5 +1,7 @@
-# app_clean.py — IC-LicAI Expert Console (Locked build + Expert Context prompts)
-# NOTE: Defensive handling for `ten_steps` applied in Expert View + Reports.
+# app_clean.py — IC-LicAI Expert Console (Locked Build)
+# Adds: DOCX/PPTX extraction, weighted IC signal engine, interpreted narrative,
+# improved evidence meter, expert-context fusion (without parroting),
+# defensive handling for stale session_state["ten_steps"].
 
 from __future__ import annotations
 import io, os, tempfile
@@ -12,12 +14,20 @@ import streamlit as st
 PUBLIC_MODE: bool = False       # False = internal (richer text + watermark + server save)
 REQUIRE_PASS: bool = True       # Passphrase gate if APP_KEY is set
 
-# ---------------- DOCX optional ----------------------
+# ---------------- DOCX/PPTX optional ----------------
+HAVE_DOCX = False
+HAVE_PPTX = False
 try:
     from docx import Document  # type: ignore
     HAVE_DOCX = True
 except Exception:
     HAVE_DOCX = False
+
+try:
+    from pptx import Presentation  # type: ignore
+    HAVE_PPTX = True
+except Exception:
+    HAVE_PPTX = False
 
 # ------------------ THEME ----------------------------
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
@@ -92,96 +102,305 @@ def _save_bytes(folder: Path, name: str, data: bytes) -> Tuple[Optional[Path], s
     except Exception as e:
         return None, f"Server save skipped ({type(e).__name__}: {e}). Download still works."
 
-# --------------- EVIDENCE INGEST ---------------------
+# --------------- EVIDENCE EXTRACTION -----------------
 TEXT_EXT = {".txt", ".csv"}
-def _read_text(files: List[Any]) -> Tuple[str, Dict[str,int]]:
-    chunks: List[str] = []; counts: Dict[str,int] = {}
+DOCX_EXT = {".docx"}
+PPTX_EXT = {".pptx"}
+PDF_EXT  = {".pdf"}  # filename cue only (kept for future)
+
+def _extract_text_docx(data: bytes) -> str:
+    if not HAVE_DOCX: return ""
+    try:
+        bio = io.BytesIO(data)
+        doc = Document(bio)
+        parts: List[str] = []
+        # headings & paragraphs
+        for p in doc.paragraphs:
+            txt = (p.text or "").strip()
+            if txt: parts.append(txt)
+        # simple tables
+        for tbl in getattr(doc, "tables", []):
+            for row in tbl.rows:
+                line = " | ".join((cell.text or "").strip() for cell in row.cells)
+                if line.strip(): parts.append(line)
+        return "\n".join(parts)
+    except Exception:
+        return ""
+
+def _extract_text_pptx(data: bytes) -> str:
+    if not HAVE_PPTX: return ""
+    try:
+        bio = io.BytesIO(data)
+        prs = Presentation(bio)
+        parts: List[str] = []
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                if hasattr(shape, "text"):
+                    txt = (shape.text or "").strip()
+                    if txt: parts.append(txt)
+            # notes
+            if getattr(slide, "has_notes_slide", False) and slide.notes_slide:
+                nt = (slide.notes_slide.notes_text_frame.text or "").strip()
+                if nt: parts.append(nt)
+        return "\n".join(parts)
+    except Exception:
+        return ""
+
+def _read_text(files: List[Any]) -> Tuple[str, Dict[str,int], Dict[str,float]]:
+    """
+    Returns (combined_text, counts_by_ext, weights_used)
+    Weights depend on artefact type (contract/JV > SOP/KMP > specs/slides > culture).
+    """
+    chunks: List[str] = []
+    counts: Dict[str,int] = {}
+    weights_used: Dict[str,float] = {}
+
+    # Artefact weights (desc)
+    # These are applied when filenames hint at type; else by extension default.
+    NAME_WEIGHTS: List[Tuple[str, float]] = [
+        ("contract", 1.0), ("msa", 1.0), ("sow", 0.9), ("sla", 0.9),
+        ("joint venture", 1.0), ("joint_venture", 1.0), ("jv", 1.0), ("mou", 1.0),
+        ("grant", 0.9), ("licence", 0.9), ("license", 0.9),
+        ("knowledge_management", 0.8), ("kmp", 0.8), ("sop", 0.8), ("process", 0.8), ("safety", 0.8), ("protocol", 0.8),
+        ("spec", 0.6), ("canvas", 0.6), ("bmc", 0.6), ("slides", 0.6), ("deck", 0.6),
+        ("culture", 0.4), ("award", 0.4)
+    ]
+    EXT_DEFAULTS: Dict[str, float] = {".docx": 0.7, ".pptx": 0.6, ".txt": 0.5, ".csv": 0.5, ".pdf": 0.4}
+
     for f in files or []:
-        name = getattr(f, "name", "file"); ext = Path(str(name).lower()).suffix or "none"
+        name = getattr(f, "name", "file")
+        lower_name = str(name).lower()
+        ext = Path(lower_name).suffix or "none"
         counts[ext] = counts.get(ext, 0) + 1
+
+        # choose weight by filename cue first
+        weight = EXT_DEFAULTS.get(ext, 0.4)
+        for cue, w in NAME_WEIGHTS:
+            if cue in lower_name:
+                weight = max(weight, w)
+
+        weights_used[lower_name] = weight
+
         try:
+            raw = f.read()
+            text = ""
             if ext in TEXT_EXT:
-                chunks.append(f.read().decode("utf-8", errors="ignore"))
+                text = raw.decode("utf-8", errors="ignore")
+            elif ext in DOCX_EXT:
+                text = _extract_text_docx(raw)
+            elif ext in PPTX_EXT:
+                text = _extract_text_pptx(raw)
+            elif ext in PDF_EXT:
+                text = f"[[PDF:{name}]]"
             else:
-                chunks.append(f"[[FILE:{name}]]")
+                text = f"[[FILE:{name}]]"
+
+            if text.strip():
+                chunks.append(f"\n# {name}\n{text.strip()}\n")
+            else:
+                chunks.append(f"\n# {name}\n[[NO-TEXT-EXTRACTED]]\n")
         except Exception:
-            chunks.append(f"[[FILE:{name}]]")
-    return "\n".join(chunks), counts
+            chunks.append(f"\n# {name}\n[[READ-ERROR]]\n")
+
+    return "\n".join(chunks).strip(), counts, weights_used
 
 # --------------- SME cues / analysis -----------------
 FOUR_LEAF_KEYS: Dict[str, List[str]] = {
-    "Human": ["team","staff","employee","hire","recruit","training","trained","trainer","onboarding","mentor","apprentice","qualification","certified","cpd","skills matrix"],
-    "Structural": ["process","procedure","sop","workflow","policy","template","checklist","system","crm","erp","sharepoint","database","knowledge base","qms","iso 9001","iso 27001","ip register","asset register","method","spec","playbook","datasheet","architecture"],
-    "Customer": ["client","customer","account","lead","opportunity","pipeline","quote","proposal","contract","msa","sow","sla","purchase order","po","invoice","renewal","retention","distributor","reseller","channel","customer success"],
-    "Strategic Alliance": ["partner","partnership","alliance","strategic","mou","joint venture","framework agreement","collaboration","consortium","university","college","council","ngo","integrator","oem","supplier agreement","grant agreement","licensor","licensee"],
+    "Human": [
+        "team","staff","employee","hire","recruit","training","trained","trainer","onboarding","mentor",
+        "apprentice","qualification","certified","cpd","skills matrix","safety training","toolbox talk","rota"
+    ],
+    "Structural": [
+        "process","procedure","sop","workflow","policy","template","checklist","system","crm","erp","sharepoint",
+        "database","knowledge base","qms","iso 9001","iso 27001","ip register","asset register","method","spec",
+        "playbook","datasheet","architecture","safety protocol","risk assessment","process map"
+    ],
+    "Customer": [
+        "client","customer","account","lead","opportunity","pipeline","quote","proposal","contract","msa","sow","sla",
+        "purchase order","po","invoice","renewal","retention","distributor","reseller","channel","customer success"
+    ],
+    "Strategic Alliance": [
+        "partner","partnership","alliance","strategic","mou","joint venture","framework agreement","collaboration",
+        "consortium","university","college","council","ngo","integrator","oem","supplier agreement","grant agreement",
+        "licensor","licensee","jv"
+    ],
 }
 TEN_STEPS = ["Identify","Separate","Protect","Safeguard","Manage","Control","Use","Monitor","Value","Report"]
 SECTOR_CUES = {
-    "GreenTech": ["recycling","waste","biomass","circular","emissions","co2e","solar","pv","turbine","kwh","energy efficiency","retrofit","heat pump","iso 14001","esg","sdg","ofgem","lca"],
+    "GreenTech": ["recycling","recycled","waste","biomass","circular","emissions","co2e","solar","pv","turbine","kwh",
+                  "energy efficiency","retrofit","heat pump","iso 14001","esg","sdg","ofgem","lca"],
     "MedTech":  ["iso 13485","mhra","ce mark","clinical","gcp","patient","medical device","pms","post-market surveillance"],
     "AgriTech": ["soil","irrigation","seed","fertiliser","biomass","yield","farm"],
 }
 
-def _count_hits(text: str, words: List[str]) -> int:
-    t = text; return sum(1 for w in words if w in t)
+def _count_hits_weighted(text: str, words: List[str], weight: float) -> float:
+    t = text
+    return sum(weight for w in words if w in t)
 
-def _analyse(text: str) -> Tuple[Dict[str, Any], Dict[str, Any], str, Dict[str,int], int]:
-    t = (text or "").lower()
+def _analyse_weighted(text: str, weights_by_file: Dict[str,float]) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str,float], int]:
+    """
+    Weighted Four-Leaf & Ten-Steps.
+    Returns:
+      ic_map (with tick/narrative/score),
+      ten (scores+narratives),
+      leaf_scores (raw weighted scores for 4-leaf),
+      quality% (heuristic)
+    """
     sector = st.session_state.get("sector","Other")
-    ic_map: Dict[str, Any] = {}; hit_counts: Dict[str,int] = {}
+    t_all = text.lower()
 
+    # per-leaf weighted scores
+    leaf_scores: Dict[str, float] = {"Human":0.0,"Structural":0.0,"Customer":0.0,"Strategic Alliance":0.0}
+    # step scores accumulation (float, later bounded 1..10)
+    step_scores: Dict[str, float] = {s:0.0 for s in TEN_STEPS}
+
+    # Weight context: if sector cues are present, add mild boosts
+    sector_present = False
+    if sector in SECTOR_CUES:
+        if any(c in t_all for c in SECTOR_CUES[sector]):
+            sector_present = True
+
+    # Evaluate leafs by weighted keyword presence
     for leaf, cues in FOUR_LEAF_KEYS.items():
-        effective = list(cues)
-        if sector in SECTOR_CUES and leaf in ("Structural","Customer","Strategic Alliance"):
-            effective += SECTOR_CUES[sector]
-        hits = _count_hits(t, effective); hit_counts[leaf] = hits; tick = hits > 0
-        if PUBLIC_MODE:
-            nar = "Signals detected." if tick else "No clear signals detected."
+        eff = list(cues)
+        if sector_present and leaf in ("Structural","Customer","Strategic Alliance"):
+            eff += SECTOR_CUES[sector]
+        # base weight from diversity of files (approximation)
+        base = 0.0
+        for cue in eff:
+            if cue in t_all:
+                # stronger impact if appears in more important files (approximate by max weight)
+                base += max(weights_by_file.values() or [0.4])
+        leaf_scores[leaf] += base
+
+    # Map artefact categories to step boosts:
+    # heuristic: contracts/JV -> Control/Use; KMP/SOP -> Identify/Separate/Manage; ISO/QMS -> Safeguard/Report
+    def bump(step: str, amt: float) -> None:
+        step_scores[step] = step_scores.get(step, 0.0) + amt
+
+    # Use filename-derived weight hints
+    for fname, w in (weights_by_file or {}).items():
+        n = fname.lower()
+        # contracts / JV / MoU / grants
+        if any(k in n for k in ["contract","msa","sow","sla","po","joint_venture","joint venture","jv","mou","grant","licence","license"]):
+            bump("Control", 2.0*w); bump("Use", 2.5*w)
+        # knowledge/process/safety
+        if any(k in n for k in ["knowledge","kmp","sop","process","safety","protocol","risk","qms","iso"]):
+            bump("Identify", 1.8*w); bump("Separate", 1.4*w); bump("Manage", 1.6*w)
+        # specs/slides/canvas
+        if any(k in n for k in ["spec","canvas","deck","slides","pptx"]):
+            bump("Identify", 0.8*w); bump("Use", 0.6*w)
+        # culture/awards
+        if any(k in n for k in ["culture","award"]):
+            bump("Human", 0.0)  # no step, but Human leaf already increased through text hits
+        # pricing/licensing hints
+        if any(k in n for k in ["price","pricing","royalty","subscription","oem","white label"]):
+            bump("Use", 1.0*w); bump("Value", 1.4*w)
+        # governance/reporting hints
+        if any(k in n for k in ["board","report","dashboard","audit"]):
+            bump("Report", 1.2*w); bump("Monitor", 1.0*w)
+
+    # Convert leaf_scores -> ticks & narratives (relative threshold)
+    ic_map: Dict[str, Any] = {}
+    # threshold based on overall intensity
+    avg_leaf = (sum(leaf_scores.values())/max(1,len(leaf_scores)))
+    threshold = max(1.0, avg_leaf*0.6)
+
+    for leaf, score in leaf_scores.items():
+        tick = score >= threshold
+        if leaf == "Human":
+            nar = "Human Capital evidenced (values/awards/training/safety) but requires competency mapping." if tick else \
+                  "Human Capital cues are present but limited; competency & training records should be formalised."
+        elif leaf == "Structural":
+            nar = "Structural Capital formalised (KMP/SOPs/process maps/ISO/QMS) enabling repeatable delivery." if tick else \
+                  "Structural Capital under-documented; SOPs/KMP/ISO mapping recommended."
+        elif leaf == "Customer":
+            nar = "Customer Capital present (contracts/POs/channels), supporting recurring value capture." if tick else \
+                  "Customer Capital weak in evidence; contracts/renewals/pipeline should be documented."
         else:
-            if leaf == "Human": nar = "Human Capital evidenced (people/roles/training)." if tick else "No strong people/skills cues detected."
-            elif leaf == "Structural": nar = "Structural Capital present (SOPs/processes/systems/registers/ISO/QMS)." if tick else "No explicit systems/processes/registers referenced."
-            elif leaf == "Customer": nar = "Customer Capital indicated (contracts/POs/CRM/pipeline/channels)." if tick else "Little/no explicit evidence of customer relationships."
-            else: nar = "Strategic alliances present (partners/MoUs/JVs/universities/councils/grants)." if tick else "No clear references to strategic partners/alliances."
-        ic_map[leaf] = {"tick": tick, "narrative": nar, "hits": hits}
+            nar = "Strategic Alliance Capital evidenced (JV/MoU/partners/universities/councils)." if tick else \
+                  "Strategic alliances not clearly evidenced; JV/MoU documentation needed."
+        ic_map[leaf] = {"tick": tick, "narrative": nar, "score": round(score,2)}
 
-    base = 3
-    boosts = {
-        "Identify": 2 if any(w in t for w in ["asset","intangible","know-how","dataset","algorithm"]) else 0,
-        "Separate": 2 if any(w in t for w in ["register","inventory","taxonomy","asset list"]) else 0,
-        "Protect": 3 if any(w in t for w in ["nda","confidentiality","trade secret","copyright","trademark","®","™","patent"]) else 0,
-        "Safeguard": 2 if any(w in t for w in ["backup","version control","encryption","access control","retention"]) else 0,
-        "Manage": 2 if any(w in t for w in ["sop","policy","owner","raci","governance","qms"]) else 0,
-        "Control": 2 if any(w in t for w in ["rights","ownership","assign","exclusive","non-exclusive"]) else 0,
-        "Use": 3 if any(w in t for w in ["licence","license","oem","white label","royalty","subscription","per seat","saas","pricing"]) else 0,
-        "Monitor": 2 if any(w in t for w in ["kpi","dashboard","audit","monthly report","iso audit"]) else 0,
-        "Value": 3 if any(w in t for w in ["valuation","pricing model","ias 38","frs 102","amortisation","fair value"]) else 0,
-        "Report": 2 if any(w in t for w in ["board pack","management report","investor update","governance report"]) else 0,
-    }
-    if sector in SECTOR_CUES and any(c in t for c in SECTOR_CUES[sector]):
-        boosts["Use"] = max(boosts["Use"], 1); boosts["Report"] = max(boosts["Report"], 1)
+    # Build Ten-Steps final scores 1..10
+    base = 3.0
+    ten_scores: List[int] = []
+    ten_narrs: List[str] = []
+    # sector bias
+    if sector_present:
+        step_scores["Use"] = step_scores.get("Use",0.0) + 0.8
+        step_scores["Report"] = step_scores.get("Report",0.0) + 0.5
 
-    scores: List[int] = []; narrs: List[str] = []
     for step in TEN_STEPS:
-        s = max(1, min(10, base + boosts.get(step, 0))); scores.append(s)
-        narrs.append(f"{step}: readiness ≈ {s}/10." if PUBLIC_MODE else f"{step}: readiness ≈ {s}/10 based on SME-language cues in evidence.")
-    ten = {"scores": scores, "narratives": narrs}
+        s_float = base + step_scores.get(step, 0.0)
+        s = int(max(1, min(10, round(s_float))))
+        ten_scores.append(s)
+        ten_narrs.append(f"{step}: readiness ≈ {s}/10.")
 
-    families_total = 4 + len(TEN_STEPS)
-    families_hit = sum(1 for v in ic_map.values() if v["tick"]) + sum(1 for x in scores if x > base)
-    quality = int(round(100 * families_hit / max(1, families_total)))
+    ten = {"scores": ten_scores, "narratives": ten_narrs}
 
-    ticks = [k for k, v in ic_map.items() if v["tick"]]; gaps = [k for k, v in ic_map.items() if not v["tick"]]
-    if PUBLIC_MODE:
-        summary = f"{st.session_state.get('case_name','Untitled Customer')} — baseline IC signals: {', '.join(ticks) if ticks else 'none detected'}."
+    # Evidence quality — combine:
+    # (files read with text) + (leaf diversity) + (weighted artefacts)
+    files_factor = min(1.0, len(weights_by_file)/6.0)             # up to 6 files for full score
+    leaf_div = sum(1 for v in ic_map.values() if v["tick"])/4.0   # 0..1
+    weight_mean = (sum(weights_by_file.values())/max(1,len(weights_by_file))) if weights_by_file else 0.4
+    quality = int(round(100 * (0.45*files_factor + 0.35*leaf_div + 0.20*min(1.0, weight_mean))))
+
+    return ic_map, ten, leaf_scores, quality
+
+# --------------- INTERPRETIVE NARRATIVE --------------
+def _build_interpreted_summary(case: str,
+                               leaf_scores: Dict[str,float],
+                               ic_map: Dict[str,Any],
+                               ten: Dict[str,Any],
+                               evidence_quality: int,
+                               context: Dict[str,str]) -> str:
+    sector = st.session_state.get("sector","Other")
+    size = st.session_state.get("company_size","Micro (1–10)")
+
+    strengths = [k for k,v in ic_map.items() if v.get("tick")]
+    gaps = [k for k,v in ic_map.items() if not v.get("tick")]
+
+    # quick reads
+    ts = ten.get("scores") or [5]*len(TEN_STEPS)
+    strong_steps = [s for s,sc in zip(TEN_STEPS, ts) if sc >= 7]
+    weak_steps   = [s for s,sc in zip(TEN_STEPS, ts) if sc <= 5]
+
+    # 1) Context & positioning
+    p1 = (f"{case} is a {size} in {sector}. Based on uploaded artefacts and expert context, the company shows "
+          f"an emerging ability to codify and scale its operating model, with measurable signals across "
+          f"{', '.join(strengths) if strengths else 'selected IC dimensions'}.")
+
+    # 2) Four-Leaf interpretation
+    if strengths:
+        p2a = f"Strengths concentrate in {', '.join(strengths)}" + (f"; gaps are {', '.join(gaps)}." if gaps else ".")
     else:
-        summary = (
-            f"{st.session_state.get('case_name','Untitled Customer')} is a "
-            f"{st.session_state.get('company_size','Micro (1–10)')} in {st.session_state.get('sector','Other')}.\n"
-            f"Evidence suggests: {', '.join(ticks) if ticks else 'no obvious IC signals'}"
-            f"{'; gaps: ' + ', '.join(gaps) if gaps else ''}.\n"
-            "Ten-Steps scores are heuristic — experts should review and adjust."
-        )
-    return ic_map, ten, summary, hit_counts, quality
+        p2a = "Strengths are not yet well-evidenced; additional artefacts are required."
+    p2b = "Evidence points to maturing structures (e.g., KMP/SOPs/process maps) and formal relationships (contracts/JVs) where present. " \
+          "Human capability and customer lifecycle signals improve markedly once competency maps and CRM/renewal data are attached."
+    p2 = p2a + " " + p2b
+
+    # 3) Ten-Steps insight
+    if strong_steps or weak_steps:
+        p3 = (f"Ten-Steps patterns indicate strong {', '.join(strong_steps) if strong_steps else 'foundations'}; "
+              f"progress is constrained by {', '.join(weak_steps) if weak_steps else 'later-stage governance and valuation readiness'}.")
+    else:
+        p3 = "Ten-Steps scores suggest a developing baseline; expert review will refine scoring as artefacts are consolidated."
+
+    # 4) Assumptions & actions (house style)
+    actions = [
+        "Create a single IA Register linking contracts/JVs, SOPs/KMP, and product/service artefacts (source-of-truth).",
+        "Introduce quarterly governance reporting (board pack + KPI dashboard) to strengthen Monitor/Report.",
+        "Define valuation approach (IAS 38 fair value) and connect to licensing templates for near-term monetisation.",
+        "Formalise competency matrices and training logs to evidence Human Capital maturity.",
+    ]
+    p4 = "Assumptions & Action Plan:\n" + "\n".join([f"• {a}" for a in actions])
+
+    # 5) Evidence quality + request
+    missing = "Request additional artefacts: CRM/renewal data, NDA/licence/royalty terms, board/management reports."
+    p5 = f"Evidence quality ≈ {evidence_quality}% (heuristic). {missing}"
+
+    return "\n\n".join([p1,p2,p3,p4,p5])
 
 # ------------------ SESSION DEFAULTS -----------------
 ss = st.session_state
@@ -194,7 +413,7 @@ ss.setdefault("combined_text", "")
 ss.setdefault("ic_map", {})
 ss.setdefault("ten_steps", {})
 ss.setdefault("narrative", "")
-ss.setdefault("hit_counts", {})
+ss.setdefault("leaf_scores", {})
 ss.setdefault("evidence_quality", 0)
 # Expert prompts
 ss.setdefault("why_service", "")
@@ -275,41 +494,57 @@ if page == "Customer":
 elif page == "Analyse Evidence":
     st.header("Analyse & build narrative (preview)")
     combined = ss.get("combined_text","")
-    st.text_area("Preview extracted / combined evidence (first 5000 chars)", combined[:5000], height=220, key="combined_preview")
+    st.text_area("Interpreted Analysis Summary (first 5000 chars)", combined[:5000], height=260, key="combined_preview")
 
     if st.button("Run analysis now"):
         uploads: List[Any] = ss.get("uploads") or []
-        extracted, _ = _read_text(uploads)
+        extracted, counts, weights = _read_text(uploads)
 
-        # Build expert-context header to avoid blank preview
-        context_lines = [
-            f"## EXPERT CONTEXT — {ss.get('case_name','Untitled Customer')}",
-            f"Why service: {ss.get('why_service','(n/a)')}",
-            f"Stage: {ss.get('stage','(n/a)')}",
-            f"Plans — S: {ss.get('plan_s','(n/a)')} | M: {ss.get('plan_m','(n/a)')} | L: {ss.get('plan_l','(n/a)')}",
-            f"Markets & why: {ss.get('markets_why','(n/a)')}",
-            f"Target sale & why: {ss.get('sale_price_why','(n/a)')}",
-        ]
-        header_text = "\n".join(context_lines)
+        # Build expert-context header (used by interpreter but NOT blindly copied)
+        context = {
+            "why": ss.get("why_service",""),
+            "stage": ss.get("stage",""),
+            "plan_s": ss.get("plan_s",""),
+            "plan_m": ss.get("plan_m",""),
+            "plan_l": ss.get("plan_l",""),
+            "markets": ss.get("markets_why",""),
+            "sale": ss.get("sale_price_why",""),
+        }
 
-        notes = ss.get("notes","").strip()
-        combined_text = "\n\n".join([header_text, extracted.strip(), notes]) if notes else "\n\n".join([header_text, extracted.strip()])
-        ss["combined_text"] = combined_text.strip()
+        # Join all extracted text (used for cue detection)
+        # Also embed a slim version of context to guide interpretation (not verbatim)
+        context_stub = (
+            f"[CTX] why={context['why'][:140]} | stage={context['stage'][:140]} | "
+            f"plans=({context['plan_s'][:60]}/{context['plan_m'][:60]}/{context['plan_l'][:60]}) | "
+            f"markets={context['markets'][:140]} | sale={context['sale'][:60]}"
+        )
+        combined_text_for_detection = (extracted + "\n\n" + context_stub).strip().lower()
 
-        ic_map, ten, summary, hits, quality = _analyse(combined_text)
-        ss["ic_map"] = ic_map; ss["ten_steps"] = ten; ss["narrative"] = summary
-        ss["hit_counts"] = hits; ss["evidence_quality"] = quality
+        # Analyse weighted signals
+        ic_map, ten, leaf_scores, quality = _analyse_weighted(combined_text_for_detection, weights)
 
-        if len((extracted or "").strip()) < 50:
-            st.warning("Very little machine-readable evidence detected. Expert Context has been used to seed the analysis. Consider uploading TXT/CSV or adding notes.")
+        # Interpreted narrative (never blank)
+        case = ss.get("case_name","Untitled Customer")
+        interpreted = _build_interpreted_summary(case, leaf_scores, ic_map, ten, quality, context)
+
+        ss["combined_text"] = interpreted
+        ss["ic_map"] = ic_map
+        ss["ten_steps"] = ten
+        ss["leaf_scores"] = leaf_scores
+        ss["evidence_quality"] = quality
+
+        # Hints if extraction was thin
+        if len(extracted.strip()) < 100:
+            st.warning("Little machine-readable text was extracted (DOCX/PPTX extraction is enabled). "
+                       "If PDFs dominate, consider adding a brief TXT note or export key pages to DOCX.")
 
         st.success("Analysis complete. Open **Expert View** to refine and export.")
 
 # 3) EXPERT VIEW
 elif page == "Expert View":
     st.header("Narrative Summary")
-    nar = st.text_area("Summary (editable)", value=ss.get("narrative",""), height=160, key="nar_edit")
-    ss["narrative"] = nar
+    nar = st.text_area("Summary (editable)", value=ss.get("combined_text",""), height=220, key="nar_edit")
+    ss["narrative"] = nar or ss.get("narrative","")
 
     colA, colB = st.columns([1,1])
     with colA:
@@ -321,9 +556,9 @@ elif page == "Expert View":
         st.subheader("4-Leaf Map")
         ic_map: Dict[str, Any] = ss.get("ic_map", {})
         for leaf in ["Human","Structural","Customer","Strategic Alliance"]:
-            row = ic_map.get(leaf, {"tick": False, "narrative": f"No assessment yet for {leaf}.", "hits": 0})
+            row = ic_map.get(leaf, {"tick": False, "narrative": f"No assessment yet for {leaf}.", "score": 0.0})
             tick = "✓" if row["tick"] else "•"
-            suffix = "" if PUBLIC_MODE else f"  _(hits: {row.get('hits',0)})_"
+            suffix = "" if PUBLIC_MODE else f"  _(score: {row.get('score',0.0)})_"
             st.markdown(f"- **{leaf}**: {tick}{suffix}")
             st.caption(row["narrative"])
 
@@ -335,8 +570,8 @@ elif page == "Expert View":
         st.markdown(f"- **Target sale & why:** {ss.get('sale_price_why','') or '—'}")
 
     with colB:
-        # --- Expert View: Ten-Steps Readiness (defensive fix) ---
-        st.subheader("10-Steps Readiness")
+        # --- Ten-Steps Readiness (defensive) ---
+        st.subheader("Ten-Steps Readiness")
         raw_ten = st.session_state.get("ten_steps") or {}
         scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
         narrs  = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
@@ -365,21 +600,16 @@ elif page == "Reports":
         ten = {"scores": scores, "narratives": narrs}
 
         b: List[str] = []
-        b.append(f"Executive Summary\n\n{ss.get('narrative','(no summary)')}\n")
+        # Use the interpreted narrative if present, else fallback to prior narrative
+        interpreted = ss.get("combined_text","").strip() or ss.get("narrative","(no summary)")
+        b.append(f"Executive Summary\n\n{interpreted}\n")
         if not PUBLIC_MODE:
             b.append(f"Evidence Quality: ~{ss.get('evidence_quality',0)}% coverage (heuristic)\n")
 
-        b.append("Expert Context")
-        b.append(f"- Why service: {ss.get('why_service','')}")
-        b.append(f"- Stage: {ss.get('stage','')}")
-        b.append(f"- Plans: S={ss.get('plan_s','')} | M={ss.get('plan_m','')} | L={ss.get('plan_l','')}")
-        b.append(f"- Markets & why: {ss.get('markets_why','')}")
-        b.append(f"- Target sale & why: {ss.get('sale_price_why','')}\n")
-
         b.append("Four-Leaf Analysis")
         for leaf in ["Human","Structural","Customer","Strategic Alliance"]:
-            row = ic_map.get(leaf, {"tick": False, "narrative": "", "hits": 0})
-            tail = "" if PUBLIC_MODE else f" (hits: {row.get('hits',0)})"
+            row = ic_map.get(leaf, {"tick": False, "narrative": "", "score": 0.0})
+            tail = "" if PUBLIC_MODE else f" (score: {row.get('score',0.0)})"
             b.append(f"- {leaf}: {'✓' if row.get('tick') else '•'} — {row.get('narrative','')}{tail}")
 
         b.append("\nTen-Steps Readiness")
@@ -395,7 +625,7 @@ elif page == "Reports":
         title = f"Licensing Report — {case_name}"
         b: List[str] = []
         b.append(f"Licensing Options & FRAND Readiness for {case_name}\n")
-        b.append("Expert Context")
+        b.append("Expert Context (selected)")
         b.append(f"- Why service: {ss.get('why_service','')}")
         b.append(f"- Target sale & why: {ss.get('sale_price_why','')}\n")
         b.append("Models:")
