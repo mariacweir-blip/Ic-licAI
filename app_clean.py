@@ -1,6 +1,5 @@
-# app.py — IC-LicAI Expert Console (Locked build + Expert Context prompts)
-# Changes vs prior: adds 5 required expert questions; folds answers into analysis & reports;
-# shows warnings for thin evidence; stays compatible with Streamlit 1.38.
+# app_clean.py — IC-LicAI Expert Console (Locked build + Expert Context prompts)
+# NOTE: Defensive handling for `ten_steps` applied in Expert View + Reports.
 
 from __future__ import annotations
 import io, os, tempfile
@@ -336,9 +335,15 @@ elif page == "Expert View":
         st.markdown(f"- **Target sale & why:** {ss.get('sale_price_why','') or '—'}")
 
     with colB:
+        # --- Expert View: Ten-Steps Readiness (defensive fix) ---
         st.subheader("10-Steps Readiness")
-        ten = ss.get("ten_steps", {"scores":[5]*10, "narratives":[f"{s}: tbd" for s in TEN_STEPS]})
-        st.dataframe({"Step": TEN_STEPS, "Score (1–10)": ten["scores"]}, hide_index=True, use_container_width=True)
+        raw_ten = st.session_state.get("ten_steps") or {}
+        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
+        narrs  = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
+        ten = {"scores": scores, "narratives": narrs}
+
+        st.dataframe({"Step": TEN_STEPS, "Score (1–10)": ten["scores"]},
+                     hide_index=True, use_container_width=True)
         with st.expander("Narrative per step"):
             for s, n in zip(TEN_STEPS, ten["narratives"]):
                 st.markdown(f"**{s}** — {n}")
@@ -352,7 +357,13 @@ elif page == "Reports":
     def _compose_ic() -> Tuple[str,str]:
         title = f"IC Report — {case_name}"
         ic_map = ss.get("ic_map", {})
-        ten = ss.get("ten_steps", {"scores":[5]*10, "narratives":[f"{s}: tbd" for s in TEN_STEPS]})
+
+        # defensive read of ten_steps
+        raw_ten = st.session_state.get("ten_steps") or {}
+        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
+        narrs  = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
+        ten = {"scores": scores, "narratives": narrs}
+
         b: List[str] = []
         b.append(f"Executive Summary\n\n{ss.get('narrative','(no summary)')}\n")
         if not PUBLIC_MODE:
