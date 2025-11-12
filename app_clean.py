@@ -1,7 +1,8 @@
 # app_clean.py — IC-LicAI Expert Console (Locked Build)
 # Adds: DOCX/PPTX extraction, weighted IC signal engine, interpreted narrative,
 # improved evidence meter, expert-context fusion (without parroting),
-# defensive handling for stale session_state["ten_steps"].
+# defensive handling for stale session_state["ten_steps"],
+# + ESG/double materiality & multi-stream value narrative (Sugai 7-stakeholder model).
 
 from __future__ import annotations
 import io, os, tempfile
@@ -376,8 +377,9 @@ def _build_interpreted_summary(case: str,
         p2a = f"Strengths concentrate in {', '.join(strengths)}" + (f"; gaps are {', '.join(gaps)}." if gaps else ".")
     else:
         p2a = "Strengths are not yet well-evidenced; additional artefacts are required."
-    p2b = "Evidence points to maturing structures (e.g., KMP/SOPs/process maps) and formal relationships (contracts/JVs) where present. " \
-          "Human capability and customer lifecycle signals improve markedly once competency maps and CRM/renewal data are attached."
+    p2b = ("Evidence points to maturing structures (e.g., KMP/SOPs/process maps) and formal relationships "
+           "(contracts/JVs) where present. Human capability and customer lifecycle signals improve markedly once "
+           "competency maps and CRM/renewal data are attached.")
     p2 = p2a + " " + p2b
 
     # 3) Ten-Steps insight
@@ -400,7 +402,25 @@ def _build_interpreted_summary(case: str,
     missing = "Request additional artefacts: CRM/renewal data, NDA/licence/royalty terms, board/management reports."
     p5 = f"Evidence quality ≈ {evidence_quality}% (heuristic). {missing}"
 
-    return "\n\n".join([p1,p2,p3,p4,p5])
+    # 6) ESG & double materiality — 7-stakeholder view (Sugai, full form first)
+    p6 = (
+        "ESG, circular-economy and stakeholder impacts are interpreted using the 7-Stakeholder Model (Sugai), "
+        "developed by Professor Philip Sugai at Doshisha University’s Value Research Center, and applied in recent "
+        "collaborative research on ESG value monetisation with Areopa. This lens highlights both financial materiality "
+        "(effects on cash flows, risk and asset strength) and impact materiality (effects the organisation has on "
+        "Employees, Customers, Investors, Partners, Suppliers, Nature and Communities)."
+    )
+
+    # 7) Multiple simultaneous value streams via IA + licensing (abbreviated form)
+    p7 = (
+        "From an intangible-asset and licensing perspective, the evidence supports multiple simultaneous value streams: "
+        "direct revenues (licences, JV returns, service fees), investor value (reduced risk and a clearer IC story), "
+        "customer and partner value (trust, compliance and service performance), and regenerative value for communities "
+        "and nature. According to the Sugai 7-Stakeholder Model, these streams operate in parallel rather than as a "
+        "single product line, which is central to Areopa’s next-generation IC and commercialisation approach."
+    )
+
+    return "\n\n".join([p1, p2, p3, p4, p5, p6, p7])
 
 # ------------------ SESSION DEFAULTS -----------------
 ss = st.session_state
@@ -616,122 +636,60 @@ elif page == "Reports":
         for s, n in zip(TEN_STEPS, ten["narratives"]):
             b.append(f"- {n}")
 
+        # ESG & double materiality section (Sugai & Areopa)
+        b.append("\nESG & Double Materiality — 7-Stakeholder Value View (Sugai & Areopa)")
+        b.append(
+            "This assessment applies the 7-Stakeholder Model (Sugai), developed by Professor Philip Sugai at "
+            "Doshisha University’s Value Research Center and applied in recent collaborative research on ESG value "
+            "monetisation with Areopa, to interpret both financial materiality (effects on cost, capability, risk and "
+            "firm value) and impact materiality across Employees, Customers, Investors, Partners, Suppliers, Nature "
+            "and Communities."
+        )
+        b.append(
+            "ESG-related artefacts (policies, safety systems, circular processes, community initiatives, regulatory "
+            "engagements) are treated as intangible assets that reinforce Human, Structural, Customer and Strategic "
+            "Alliance Capital. According to the Sugai 7-Stakeholder Model, this distributed pattern of impacts and "
+            "dependencies supports more resilient, regenerative value creation and prepares the organisation for "
+            "CSRD/ESRS-style reporting."
+        )
+
         b.append("\nNotes")
         b.append("This document is provided for high-level evaluation only." if PUBLIC_MODE
                  else "CONFIDENTIAL. Advisory-first; expert review required for final scoring and accounting treatment.")
         return title, "\n".join(b)
 
     def _compose_lic() -> Tuple[str,str]:
-        """
-        Licensing report tuned for Technology Transfer Officers / spin-offs.
-        Uses context + 4-Leaf + Ten-Steps patterns, but does NOT expose
-        internal formulas or parameters.
-        """
         title = f"Licensing Report — {case_name}"
-        sector = ss.get("sector", "Other")
-        size = ss.get("company_size", "Micro (1–10)")
-
-        # defensive read of ten_steps
-        raw_ten = st.session_state.get("ten_steps") or {}
-        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
-        ten = {"scores": scores}
-
-        # simple aggregates for readability
-        step_map = dict(zip(TEN_STEPS, scores))
-        early_chain = [step_map.get(s, 5) for s in ["Identify","Separate","Protect","Safeguard","Manage"]]
-        late_chain  = [step_map.get(s, 5) for s in ["Control","Use","Monitor","Value","Report"]]
-
-        def _band(vals: List[int]) -> str:
-            if not vals:
-                return "developing"
-            avg = sum(vals)/len(vals)
-            if avg >= 7:
-                return "strong"
-            if avg >= 5:
-                return "emerging"
-            return "early-stage"
-
-        early_band = _band(early_chain)
-        late_band  = _band(late_chain)
-
-        ic_map = ss.get("ic_map", {})
-        strengths = [k for k,v in ic_map.items() if v.get("tick")]
-        gaps      = [k for k,v in ic_map.items() if not v.get("tick")]
-
         b: List[str] = []
-
-        # A. Context
-        b.append(f"A. Context and Objective\n")
-        b.append(
-            f"{case_name} is a {size} operating in {sector}. The purpose of this report is to support a "
-            f"Technology Transfer Office (TTO) and the company in assessing whether the current Intellectual "
-            f"Capital position is compatible with fair, reasonable and non-discriminatory (FRAND) licensing "
-            f"and with typical university spin-off requirements.\n"
-        )
-        b.append("Key expert inputs:\n"
-                 f"- Why service: {ss.get('why_service','(not recorded)')}\n"
-                 f"- Stage of products/services: {ss.get('stage','(not recorded)')}\n"
-                 f"- Target sale price & rationale: {ss.get('sale_price_why','(not recorded)')}\n")
-
-        # B. Asset & IC focus (using 4-Leaf)
-        b.append("\nB. Asset and IC Focus\n")
-        if strengths:
-            b.append(f"Evidence indicates stronger signals in: {', '.join(strengths)}.")
-        else:
-            b.append("No dominant IC strengths are yet evidenced across the four IC categories.")
-        if gaps:
-            b.append(f" Gaps or weakly evidenced areas: {', '.join(gaps)}.")
-        b.append(
-            "\nFor licensing design, Structural and Customer Capital artefacts "
-            "(e.g. SOPs, KMP, contracts, CRM/renewals) will be treated as the primary basis "
-            "for defining fields of use, performance obligations and audit trails.\n"
-        )
-
-        # C. Ten-Steps Licensing Readiness
-        b.append("C. Ten-Steps Licensing Readiness\n")
-        b.append(
-            f"Early-chain licensing hygiene (Identify–Manage) is {early_band}, while commercial and "
-            f"governance readiness (Control–Report) is {late_band}. This suggests that the core know-how and "
-            f"artefacts are at least partially documented, but that licence operations and monitoring "
-            f"will require additional structure before scaling.\n"
-        )
-        b.append("Indicative observations:\n"
-                 f"- Asset capture & separation (Identify/Separate): score range {min(early_chain) if early_chain else 0}–{max(early_chain) if early_chain else 0}.\n"
-                 f"- Commercialisation mechanics (Control/Use/Value): score range "
-                 f"{min(late_chain) if late_chain else 0}–{max(late_chain) if late_chain else 0}.\n"
-                 f"- Governance & reporting (Monitor/Report): typically mid-range; board-level KPIs and licence dashboards are not yet standardised.\n")
-
-        # D. Licensing models (for TTO)
-        b.append("\nD. Candidate Licensing Models\n")
-        b.append("1) Revenue-based licence (preferred for spin-offs)\n"
-                 "   • Royalty or revenue-share model linked to clearly separable products/services.\n"
-                 "   • FRAND corridor set by comparable market rates, with annual review.\n"
-                 "   • Standard university clauses: audit rights, sublicensing conditions, change-of-control.\n")
-        b.append("2) Co-creation / Joint Development licence\n"
-                 "   • Appropriate where Background IP is mixed with Foreground results from a project.\n"
-                 "   • Foreground IP ownership split and publication rights defined upfront.\n"
-                 "   • Revenue-sharing logic aligned with each party’s contribution and risk.\n")
-        b.append("3) Knowledge / data-driven licence\n"
-                 "   • Used where value is mainly in datasets, methods, playbooks or training content.\n"
-                 "   • Strong emphasis on permitted fields of use, re-use restrictions and attribution.\n")
-
-        # E. FRAND & governance checkpoints
-        b.append("\nE. FRAND and Governance Checkpoints\n")
-        b.append("For the TTO, the following checkpoints should be satisfied before executing a licence:\n"
-                 "• Non-discrimination: equivalent partners in similar positions can access similar terms.\n"
-                 "• Reasonableness: pricing corridor justified using transparent assumptions and benchmarks.\n"
-                 "• Transparency: IA Register and licence register maintained; changes traceable over time.\n"
-                 "• Auditability: royalty and performance data can be evidenced from contracts/CRM/finance systems.\n")
-
-        # F. Immediate actions (actionable for VM/TTO)
-        b.append("\nF. Immediate Actions (next 3–9 months)\n")
-        b.append("• Finalise and centralise the IA Register (contracts, JVs, SOPs/KMP, datasets, software, brands).\n"
-                 "• Map at least one priority product/service to a pilot licence model, including KPIs and audit trail.\n"
-                 "• Draft a standard term sheet and heads-of-terms for FRAND-aligned licences, re-usable across deals.\n"
-                 "• Align internal governance so that board/management receive quarterly updates on licensed assets.\n")
-
+        b.append(f"Licensing Options & FRAND Readiness for {case_name}\n")
+        b.append("Expert Context (selected)")
+        b.append(f"- Why service: {ss.get('why_service','')}")
+        b.append(f"- Target sale & why: {ss.get('sale_price_why','')}\n")
+        b.append("Models:")
+        b.append("- Revenue licence (royalties, FRAND-aligned terms, annual audit clause)")
+        b.append("- Defensive licence (IP pooling, non-assert across partners)")
+        b.append("- Co-creation licence (shared ownership of Foreground IP, revenue-sharing)")
+        b.append("\nGovernance & Audit")
+        b.append("IA Register maintained; evidence bundles per licence; regular royalty/performance reporting.")
         if PUBLIC_MODE:
-            b.append("\n(Details suppressed in public mode; internal versions may include more granular scoring.)")
+            b.append("\n(Details suppressed in public mode.)")
+
+        # ESG & regenerative licensing (Sugai model + multi-stream value)
+        b.append("\nESG & Regenerative Licensing Considerations")
+        b.append(
+            "Licensing options should reflect the organisation’s ESG and circular-economy profile, using the "
+            "7-Stakeholder Model (Sugai), developed by Professor Philip Sugai at Doshisha University’s Value Research "
+            "Center and applied in recent collaborative research on ESG value monetisation with Areopa, to assess "
+            "impacts and dependencies across Employees, Customers, Investors, Partners, Suppliers, Nature and "
+            "Communities."
+        )
+        b.append(
+            "In practice this supports regenerative and FRAND-aligned licensing terms, including stakeholder-aware "
+            "fields of use, non-discrimination commitments, obligations linked to safety or environmental performance, "
+            "and value-sharing mechanisms. According to the Sugai 7-Stakeholder Model, such clauses help ensure that "
+            "IC-based revenue models create multiple simultaneous value streams, not just a single narrow financial "
+            "return."
+        )
 
         return title, "\n".join(b)
 
