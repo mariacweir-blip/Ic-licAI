@@ -828,3 +828,195 @@ elif page == "Analyse Evidence":
             )
 
         st.success("Analysis complete. Open **Expert View** to refine and export.")
+        # 3) EXPERT VIEW
+elif page == "Expert View":
+    st.header("Narrative Summary")
+    nar = st.text_area(
+        "Summary (editable)",
+        value=ss.get("combined_text", ""),
+        height=220,
+        key="nar_edit",
+    )
+    ss["narrative"] = nar or ss.get("narrative", "")
+    ss["combined_text"] = ss["narrative"]
+
+    colA, colB = st.columns([1, 1])
+    with colA:
+        if not PUBLIC_MODE:
+            st.subheader("Evidence Quality")
+            st.progress(min(100, max(0, ss.get("evidence_quality", 0))) / 100.0)
+            st.caption(f"{ss.get('evidence_quality', 0)}% evidence coverage (heuristic)")
+
+        st.subheader("4-Leaf Map")
+        ic_map: Dict[str, Any] = ss.get("ic_map", {})
+        for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
+            row = ic_map.get(
+                leaf,
+                {"tick": False, "narrative": f"No assessment yet for {leaf}.", "score": 0.0},
+            )
+            tick = "✓" if row["tick"] else "•"
+            suffix = "" if PUBLIC_MODE else f"  _(score: {row.get('score', 0.0)})_"
+            st.markdown(f"- **{leaf}**: {tick}{suffix}")
+            st.caption(row["narrative"])
+
+        st.subheader("Expert Context (read-only)")
+        st.markdown(f"- **Why service:** {ss.get('why_service', '') or '—'}")
+        st.markdown(f"- **Stage:** {ss.get('stage', '') or '—'}")
+        st.markdown(
+            f"- **Plans:** S={ss.get('plan_s', '') or '—'} | "
+            f"M={ss.get('plan_m', '') or '—'} | L={ss.get('plan_l', '') or '—'}"
+        )
+        st.markdown(f"- **Markets & why:** {ss.get('markets_why', '') or '—'}")
+        st.markdown(f"- **Target sale & why:** {ss.get('sale_price_why', '') or '—'}")
+
+    with colB:
+        st.subheader("Ten-Steps Readiness")
+        raw_ten = ss.get("ten_steps") or {}
+        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
+        narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
+        ten = {"scores": scores, "narratives": narrs}
+
+        st.dataframe(
+            {"Step": TEN_STEPS, "Score (1–10)": ten["scores"]},
+            hide_index=True,
+            use_container_width=True,
+        )
+        with st.expander("Narrative per step"):
+            for s, n in zip(TEN_STEPS, ten["narratives"]):
+                st.markdown(f"**{s}** — {n}")
+
+# 4) REPORTS
+elif page == "Reports":
+    st.header("Reports & Exports")
+    case_name = ss.get("case_name", "Untitled_Customer")
+    case_folder = OUT_ROOT / _safe(case_name)
+
+    def _compose_ic() -> Tuple[str, str]:
+        title = f"IC Report — {case_name}"
+        ic_map = ss.get("ic_map", {})
+
+        raw_ten = ss.get("ten_steps") or {}
+        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
+        narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
+        ten = {"scores": scores, "narratives": narrs}
+
+        b: List[str] = []
+        interpreted = ss.get("combined_text", "").strip() or ss.get("narrative", "(no summary)")
+        b.append(f"Executive Summary\n\n{interpreted}\n")
+        if not PUBLIC_MODE:
+            b.append(f"Evidence Quality: ~{ss.get('evidence_quality', 0)}% coverage (heuristic)\n")
+
+        b.append("Four-Leaf Analysis")
+        for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
+            row = ic_map.get(leaf, {"tick": False, "narrative": "", "score": 0.0})
+            tail = "" if PUBLIC_MODE else f" (score: {row.get('score', 0.0)})"
+            b.append(f"- {leaf}: {'✓' if row.get('tick') else '•'} — {row.get('narrative', '')}{tail}")
+
+        b.append("\nTen-Steps Readiness")
+        for s, n in zip(TEN_STEPS, ten["narratives"]):
+            b.append(f"- {n}")
+
+        b.append("\nNotes")
+        b.append(
+            "This document is provided for high-level evaluation only."
+            if PUBLIC_MODE
+            else "CONFIDENTIAL. Advisory-first; expert review required for final scoring and accounting treatment."
+        )
+        return title, "\n".join(b)
+
+    def _compose_lic() -> Tuple[str, str]:
+        title = f"Licensing Report — {case_name}"
+        b: List[str] = []
+        b.append(f"Licensing Options & FRAND Readiness for {case_name}\n")
+        b.append("Expert Context (selected)")
+        b.append(f"- Why service: {ss.get('why_service', '')}")
+        b.append(f"- Target sale & why: {ss.get('sale_price_why', '')}\n")
+        b.append("Models:")
+        b.append("- Revenue licence (royalties, FRAND-aligned terms, annual audit clause)")
+        b.append("- Defensive licence (IP pooling, non-assert across partners)")
+        b.append("- Co-creation licence (shared ownership of Foreground IP, revenue-sharing)")
+        b.append("\nGovernance & Audit")
+        b.append(
+            "IA Register maintained; evidence bundles per licence; regular royalty/performance "
+            "reporting aligned to board and investor expectations."
+        )
+        if PUBLIC_MODE:
+            b.append("\n(Details suppressed in public mode.)")
+        return title, "\n".join(b)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Generate IC Report (DOCX/TXT)", key="btn_ic"):
+            title, body = _compose_ic()
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                "⬇️ Download IC Report",
+                data,
+                file_name=fname,
+                mime=mime,
+                key="dl_ic",
+            )
+            (st.success if path else st.warning)(msg)
+    with c2:
+        if st.button("Generate Licensing Report (DOCX/TXT)", key="btn_lic"):
+            title, body = _compose_lic()
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                "⬇️ Download Licensing Report",
+                data,
+                file_name=fname,
+                mime=mime,
+                key="dl_lic",
+            )
+            (st.success if path else st.warning)(msg)
+
+    st.caption("Server save root: disabled (public mode)" if PUBLIC_MODE else f"Server save root: {OUT_ROOT}")
+
+# 5) LICENSING TEMPLATES
+elif page == "Licensing Templates":
+    st.header("Licensing Templates (editable DOCX/TXT)")
+    case = ss.get("case_name", "Untitled Customer")
+    sector = ss.get("sector", "Other")
+
+    template = st.selectbox(
+        "Choose a template:",
+        ["FRAND Standard", "Co-creation (Joint Development)", "Knowledge (Non-traditional)"],
+        index=0,
+    )
+
+    if st.button("Generate template", key="btn_make_template"):
+        if template == "FRAND Standard":
+            title = f"FRAND Standard template — {case}"
+            body = (
+                f"FRAND Standard — {case} ({sector})\n\n"
+                "Scope, definitions, essentiality clause, non-discrimination clause, reasonable fee corridor, "
+                "audit & verification, termination, governing law (EU), dispute resolution.\n"
+            )
+        elif template == "Co-creation (Joint Development)":
+            title = f"Co-creation template — {case}"
+            body = (
+                f"Co-creation / Joint Development — {case} ({sector})\n\n"
+                "Background IP, Foreground IP, contributions, ownership split, publication rights, "
+                "commercial model, revenue sharing, exit/assignment, FRAND alignment where applicable.\n"
+            )
+        else:
+            title = f"Knowledge licence (non-traditional) — {case}"
+            body = (
+                f"Knowledge Licence — {case} ({sector})\n\n"
+                "Codified know-how (copyright/trade secret), permitted fields of use, attribution, "
+                "commercial vs social-benefit pathways, verification, revocation, jurisdiction.\n"
+            )
+
+        data, fname, mime = _export_bytes(title, body)
+        folder = OUT_ROOT / _safe(case)
+        path, msg = _save_bytes(folder, fname, data)
+        st.download_button(
+            "⬇️ Download Template",
+            data,
+            file_name=fname,
+            mime=mime,
+            key="dl_tpl",
+        )
+        (st.success if path else st.warning)(msg)
