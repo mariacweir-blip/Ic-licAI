@@ -1,6 +1,8 @@
-# app_clean.py — IC-LicAI Expert Console (Locked Build, Option 1)
+# app_clean.py — IC-LicAI Expert Console (Locked Build, Structural + FRAND + Narrative Upgrade)
 # Adds: DOCX/PPTX extraction, weighted IC signal engine, interpreted narrative,
-# radar dashboard, CSV semantic extraction, and robust expert-context auto-split.
+# radar dashboard, CSV semantic extraction, robust expert-context auto-split,
+# IAS 38 Structural Capital emphasis, FRAND-aware licensing templates,
+# Seven Stakeholder / ESG narrative, and "Company" terminology in the UI.
 
 from __future__ import annotations
 import io, os, tempfile, re, csv
@@ -31,7 +33,8 @@ except Exception:
 
 # ------------------ THEME ----------------------------
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
-st.markdown("""
+st.markdown(
+    """
 <style>
   .stApp { background:#FFF3BF; }
   .block-container { max-width:1250px; padding-top:1.2rem; padding-bottom:2rem; }
@@ -45,7 +48,9 @@ st.markdown("""
   section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] span { color:#E7F0FF!important; }
   .stRadio div[role="radiogroup"] label { color:#E7F0FF!important; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 st.markdown('<div class="ic-title-bar">IC-LicAI Expert Console</div>', unsafe_allow_html=True)
 
 # ------------------ AUTH GATE ------------------------
@@ -101,7 +106,11 @@ def _export_bytes(title: str, body: str) -> Tuple[bytes, str, str]:
             doc.add_paragraph(para)
         bio = io.BytesIO()
         doc.save(bio)
-        return bio.getvalue(), f"{base}.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        return (
+            bio.getvalue(),
+            f"{base}.docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
     if not PUBLIC_MODE:
         body = "CONFIDENTIAL — Internal Evaluation Draft (No Distribution)\n\n" + body
     return body.encode("utf-8"), f"{base}.txt", "text/plain"
@@ -204,13 +213,37 @@ def _read_text(files: List[Any]) -> Tuple[str, Dict[str, int], Dict[str, float]]
     weights_used: Dict[str, float] = {}
 
     NAME_WEIGHTS: List[Tuple[str, float]] = [
-        ("contract", 1.0), ("msa", 1.0), ("sow", 0.9), ("sla", 0.9),
-        ("joint venture", 1.0), ("joint_venture", 1.0), ("jv", 1.0), ("mou", 1.0),
-        ("grant", 0.9), ("licence", 0.9), ("license", 0.9),
-        ("knowledge_management", 0.8), ("kmp", 0.8), ("sop", 0.8), ("process", 0.8),
-        ("safety", 0.8), ("protocol", 0.8),
-        ("spec", 0.6), ("canvas", 0.6), ("bmc", 0.6), ("slides", 0.6), ("deck", 0.6),
-        ("culture", 0.4), ("award", 0.4),
+        ("contract", 1.0),
+        ("msa", 1.0),
+        ("sow", 0.9),
+        ("sla", 0.9),
+        ("agreement", 0.9),
+        ("joint venture", 1.0),
+        ("joint_venture", 1.0),
+        ("jv", 1.0),
+        ("mou", 1.0),
+        ("grant", 0.9),
+        ("licence", 0.9),
+        ("license", 0.9),
+        ("register", 0.9),
+        ("knowledge_management", 0.8),
+        ("kmp", 0.8),
+        ("sop", 0.8),
+        ("process", 0.8),
+        ("safety", 0.8),
+        ("protocol", 0.8),
+        ("spec", 0.6),
+        ("canvas", 0.6),
+        ("bmc", 0.6),
+        ("slides", 0.6),
+        ("deck", 0.6),
+        ("board_pack", 0.8),
+        ("board", 0.8),
+        ("pricing", 0.7),
+        ("tariff", 0.7),
+        ("dataset", 0.7),
+        ("culture", 0.4),
+        ("award", 0.4),
     ]
     EXT_DEFAULTS: Dict[str, float] = {
         ".docx": 0.7,
@@ -261,59 +294,267 @@ def _read_text(files: List[Any]) -> Tuple[str, Dict[str, int], Dict[str, float]]
 # --------------- SME cues / analysis -----------------
 FOUR_LEAF_KEYS: Dict[str, List[str]] = {
     "Human": [
-        "team", "staff", "employee", "hire", "recruit", "training", "trained", "trainer",
-        "onboarding", "mentor", "apprentice", "qualification", "certified", "cpd",
-        "skills matrix", "safety training", "toolbox talk", "rota",
+        "team",
+        "staff",
+        "employee",
+        "hire",
+        "recruit",
+        "training",
+        "trained",
+        "trainer",
+        "onboarding",
+        "mentor",
+        "apprentice",
+        "qualification",
+        "certified",
+        "cpd",
+        "skills matrix",
+        "safety training",
+        "toolbox talk",
+        "rota",
     ],
     "Structural": [
-        "process", "procedure", "sop", "workflow", "policy", "template", "checklist",
-        "system", "crm", "erp", "sharepoint", "database", "knowledge base", "qms",
-        "iso 9001", "iso 27001", "ip register", "asset register", "method", "spec",
-        "playbook", "datasheet", "architecture", "safety protocol",
-        "risk assessment", "process map",
+        # IAS 38 explicit / documented assets
+        "contract",
+        "agreement",
+        "joint venture",
+        "joint_venture",
+        "jv",
+        "mou",
+        "grant",
+        "licence",
+        "license",
+        "nda",
+        "non-disclosure",
+        "confidentiality",
+        "ip register",
+        "asset register",
+        "register",
+        "policy",
+        "sop",
+        "procedure",
+        "process",
+        "workflow",
+        "protocol",
+        "safety protocol",
+        "process map",
+        "manual",
+        "guide",
+        "handbook",
+        "template",
+        "checklist",
+        "board pack",
+        "board report",
+        "pricing sheet",
+        "tariff",
+        "datasheet",
+        "dataset",
+        "crm",
+        "erp",
+        "qms",
+        "iso 9001",
+        "iso 27001",
+        "knowledge base",
+        "architecture",
     ],
     "Customer": [
-        "client", "customer", "account", "lead", "opportunity", "pipeline", "quote",
-        "proposal", "contract", "msa", "sow", "sla", "purchase order", "po", "invoice",
-        "renewal", "retention", "distributor", "reseller", "channel", "customer success",
+        "client",
+        "customer",
+        "account",
+        "lead",
+        "opportunity",
+        "pipeline",
+        "quote",
+        "proposal",
+        "contract",
+        "msa",
+        "sow",
+        "sla",
+        "purchase order",
+        "po",
+        "invoice",
+        "renewal",
+        "retention",
+        "distributor",
+        "reseller",
+        "channel",
+        "customer success",
+        "crm",
+        "subscription",
     ],
     "Strategic Alliance": [
-        "partner", "partnership", "alliance", "strategic", "mou", "joint venture",
-        "framework agreement", "collaboration", "consortium", "university", "college",
-        "council", "ngo", "integrator", "oem", "supplier agreement", "grant agreement",
-        "licensor", "licensee", "jv",
+        "partner",
+        "partnership",
+        "alliance",
+        "strategic",
+        "mou",
+        "joint venture",
+        "framework agreement",
+        "collaboration",
+        "consortium",
+        "university",
+        "college",
+        "council",
+        "ngo",
+        "integrator",
+        "oem",
+        "supplier agreement",
+        "grant agreement",
+        "licensor",
+        "licensee",
+        "jv",
     ],
 }
 
-TEN_STEPS = ["Identify", "Separate", "Protect", "Safeguard", "Manage",
-             "Control", "Use", "Monitor", "Value", "Report"]
+TEN_STEPS = [
+    "Identify",
+    "Separate",
+    "Protect",
+    "Safeguard",
+    "Manage",
+    "Control",
+    "Use",
+    "Monitor",
+    "Value",
+    "Report",
+]
 
 SECTOR_CUES = {
     "GreenTech": [
-        "recycling", "recycled", "waste", "biomass", "circular", "emissions", "co2e",
-        "solar", "pv", "turbine", "kwh", "energy efficiency", "retrofit", "heat pump",
-        "iso 14001", "esg", "sdg", "ofgem", "lca",
+        "recycling",
+        "recycled",
+        "waste",
+        "biomass",
+        "circular",
+        "emissions",
+        "co2e",
+        "solar",
+        "pv",
+        "turbine",
+        "kwh",
+        "energy efficiency",
+        "retrofit",
+        "heat pump",
+        "iso 14001",
+        "esg",
+        "sdg",
+        "ofgem",
+        "lca",
     ],
     "MedTech": [
-        "iso 13485", "mhra", "ce mark", "clinical", "gcp", "patient",
-        "medical device", "pms", "post-market surveillance",
+        "iso 13485",
+        "mhra",
+        "ce mark",
+        "clinical",
+        "gcp",
+        "patient",
+        "medical device",
+        "pms",
+        "post-market surveillance",
     ],
     "AgriTech": [
-        "soil", "irrigation", "seed", "fertiliser", "biomass", "yield", "farm",
+        "soil",
+        "irrigation",
+        "seed",
+        "fertiliser",
+        "biomass",
+        "yield",
+        "farm",
     ],
 }
+
+# Explicit structural cues (IAS 38-compliant artefact hints)
+EXPLICIT_STRUCTURAL_CUES: List[str] = [
+    "contract",
+    "agreement",
+    "msa",
+    "sow",
+    "sla",
+    "mou",
+    "joint venture",
+    "joint_venture",
+    "jv",
+    "grant",
+    "licence",
+    "license",
+    "ip register",
+    "asset register",
+    "register",
+    "policy",
+    "sop",
+    "procedure",
+    "process",
+    "workflow",
+    "protocol",
+    "safety protocol",
+    "process map",
+    "manual",
+    "guide",
+    "handbook",
+    "template",
+    "checklist",
+    "board pack",
+    "board report",
+    "pricing sheet",
+    "tariff",
+    "datasheet",
+    "dataset",
+    "qms",
+    "iso 9001",
+    "iso 27001",
+]
+
+# ESG & Seven Stakeholder cues (Sugai / Weir)
+ESG_CUES: List[str] = [
+    "esg",
+    "sdg",
+    "carbon",
+    "emissions",
+    "net zero",
+    "scope 1",
+    "scope 2",
+    "scope 3",
+    "sustainability",
+    "governance",
+    "diversity",
+    "inclusion",
+    "impact",
+    "stakeholder",
+]
+
+SEVEN_STAKEHOLDER_CUES: List[str] = [
+    "employee",
+    "staff",
+    "worker",
+    "investor",
+    "shareholder",
+    "lender",
+    "customer",
+    "client",
+    "supplier",
+    "vendor",
+    "partner",
+    "alliance",
+    "community",
+    "local authority",
+    "municipality",
+    "ngo",
+    "nature",
+    "environment",
+    "biodiversity",
+]
 
 
 def _analyse_weighted(
     text: str,
     weights_by_file: Dict[str, float],
-) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, float], int]:
+) -> Tuple[Dict[str, Any], Dict[str, float], Dict[str, Any], int]:
     """
     Weighted Four-Leaf & Ten-Steps.
     Returns:
       ic_map (with tick/narrative/score),
-      ten (scores+narratives),
       leaf_scores (raw weighted scores for 4-leaf),
+      ten (scores+narratives),
       quality% (heuristic)
     """
     sector = st.session_state.get("sector", "Other")
@@ -332,6 +573,14 @@ def _analyse_weighted(
         if any(c in t_all for c in SECTOR_CUES[sector]):
             sector_present = True
 
+    # ----- Structural vs Tacit weighting -----
+    # Base structural emphasis: any explicit artefact cues → strong Structural score
+    max_weight = max(weights_by_file.values() or [0.4])
+    for cue in EXPLICIT_STRUCTURAL_CUES:
+        if cue in t_all:
+            leaf_scores["Structural"] += max_weight * 1.5  # audit-ready bump
+
+    # Four-Leaf, including sector cues
     for leaf, cues in FOUR_LEAF_KEYS.items():
         eff = list(cues)
         if sector_present and leaf in ("Structural", "Customer", "Strategic Alliance"):
@@ -339,35 +588,64 @@ def _analyse_weighted(
         base = 0.0
         for cue in eff:
             if cue in t_all:
-                base += max(weights_by_file.values() or [0.4])
+                base += max_weight
         leaf_scores[leaf] += base
 
+    # Ten-Steps scoring (file-name based + ESG / FRAND cues)
     def bump(step: str, amt: float) -> None:
         step_scores[step] = step_scores.get(step, 0.0) + amt
 
     for fname, w in (weights_by_file or {}).items():
         n = fname.lower()
-        if any(k in n for k in ["contract", "msa", "sow", "sla", "po",
-                                "joint_venture", "joint venture", "jv",
-                                "mou", "grant", "licence", "license"]):
+        # Contracts / JV / MoU / grants → Structural + Customer + Strategic Alliance + Control/Use/Value
+        if any(k in n for k in ["contract", "msa", "sow", "sla", "po", "agreement"]):
+            leaf_scores["Structural"] += 2.0 * w
+            leaf_scores["Customer"] += 1.2 * w
             bump("Control", 2.0 * w)
             bump("Use", 2.5 * w)
-        if any(k in n for k in ["knowledge", "kmp", "sop", "process",
-                                "safety", "protocol", "risk", "qms", "iso"]):
+        if any(k in n for k in ["joint_venture", "joint venture", "jv", "mou", "grant"]):
+            leaf_scores["Structural"] += 2.0 * w
+            leaf_scores["Strategic Alliance"] += 1.5 * w
+            bump("Control", 2.0 * w)
+            bump("Use", 2.0 * w)
+
+        # Knowledge / SOP / KMP / safety / ISO → Structural + Human
+        if any(k in n for k in ["knowledge", "kmp", "sop", "process", "safety", "protocol", "risk", "qms", "iso"]):
+            leaf_scores["Structural"] += 1.8 * w
+            leaf_scores["Human"] += 0.8 * w
             bump("Identify", 1.8 * w)
             bump("Separate", 1.4 * w)
             bump("Manage", 1.6 * w)
+            bump("Safeguard", 1.0 * w)
+
+        # Specs/slides/canvas → Structural + Use
         if any(k in n for k in ["spec", "canvas", "deck", "slides", "pptx"]):
+            leaf_scores["Structural"] += 0.8 * w
             bump("Identify", 0.8 * w)
             bump("Use", 0.6 * w)
-        if any(k in n for k in ["price", "pricing", "royalty",
-                                "subscription", "oem", "white label"]):
-            bump("Use", 1.0 * w)
-            bump("Value", 1.4 * w)
-        if any(k in n for k in ["board", "report", "dashboard", "audit"]):
-            bump("Report", 1.2 * w)
-            bump("Monitor", 1.0 * w)
 
+        # Pricing/licensing hints → Use/Value (multi value streams)
+        if any(k in n for k in ["price", "pricing", "royalty", "subscription", "oem", "white label"]):
+            bump("Use", 1.2 * w)
+            bump("Value", 1.6 * w)
+
+        # Governance/reporting → Monitor/Report
+        if any(k in n for k in ["board", "report", "dashboard", "audit"]):
+            bump("Report", 1.4 * w)
+            bump("Monitor", 1.2 * w)
+
+    # ESG & Seven Stakeholder presence → boost Report/Value (double materiality)
+    esg_hits = any(c in t_all for c in ESG_CUES)
+    stakeholder_hits = any(c in t_all for c in SEVEN_STAKEHOLDER_CUES)
+    if esg_hits or stakeholder_hits:
+        bump("Report", 1.2)
+        bump("Value", 1.0)
+
+    if sector_present:
+        bump("Use", 0.8)
+        bump("Report", 0.5)
+
+    # Convert leaf_scores -> ticks & narratives
     ic_map: Dict[str, Any] = {}
     avg_leaf = (sum(leaf_scores.values()) / max(1, len(leaf_scores)))
     threshold = max(1.0, avg_leaf * 0.6)
@@ -376,36 +654,39 @@ def _analyse_weighted(
         tick = score >= threshold
         if leaf == "Human":
             nar = (
-                "Human Capital cues are present but limited; competency & training records should be formalised."
-                if tick else
-                "Human Capital not yet clearly evidenced; competency mapping and training logs are needed."
+                "Human Capital evidenced (values, awards, training and safety practice), but competency and role-mapping "
+                "should be consolidated into a formal skills register."
+                if tick
+                else "Human Capital is not yet clearly evidenced; competency mapping, training logs and safety records are needed."
             )
         elif leaf == "Structural":
             nar = (
-                "Structural Capital formalised (KMP/SOPs/process maps/ISO/QMS) enabling repeatable delivery."
-                if tick else
-                "Structural Capital under-documented; SOPs/KMP/ISO mapping recommended."
+                "Structural Capital appears IAS 38-ready in places (contracts, SOPs, protocols, registers and board packs "
+                "are present), supporting audit-ready recognition on the balance sheet."
+                if tick
+                else "Structural Capital is under-documented; explicit artefacts (contracts, registers, SOPs, board packs, "
+                "pricing, datasets) should be consolidated into an auditable IA Register."
             )
         elif leaf == "Customer":
             nar = (
-                "Customer Capital present (contracts/POs/channels), supporting recurring value capture."
-                if tick else
-                "Customer Capital weak in evidence; contracts/renewals/pipeline should be documented."
+                "Customer Capital is evidenced through contracts, renewal logic and channels, supporting recurring value capture "
+                "and future licensing opportunities."
+                if tick
+                else "Customer Capital appears weak in the evidence; contracts, renewals, CRM and pipeline data should be structured."
             )
         else:
             nar = (
-                "Strategic Alliance Capital evidenced (JV/MoU/partners/universities/councils)."
-                if tick else
-                "Strategic alliances not clearly evidenced; JV/MoU documentation needed."
+                "Strategic Alliance Capital is evidenced (JVs, MoUs, partners, universities, councils), enabling co-creation "
+                "and ecosystem-based licensing opportunities."
+                if tick
+                else "Strategic alliances are not clearly evidenced; JV/MoU documentation and partner frameworks are needed."
             )
         ic_map[leaf] = {"tick": tick, "narrative": nar, "score": round(score, 2)}
 
+    # Ten-Steps scores
     base = 3.0
     ten_scores: List[int] = []
     ten_narrs: List[str] = []
-    if sector_present:
-        step_scores["Use"] = step_scores.get("Use", 0.0) + 0.8
-        step_scores["Report"] = step_scores.get("Report", 0.0) + 0.5
 
     for step in TEN_STEPS:
         s_float = base + step_scores.get(step, 0.0)
@@ -415,12 +696,13 @@ def _analyse_weighted(
 
     ten = {"scores": ten_scores, "narratives": ten_narrs}
 
+    # Evidence quality metric
     files_factor = min(1.0, len(weights_by_file) / 6.0)
     leaf_div = sum(1 for v in ic_map.values() if v["tick"]) / 4.0
     weight_mean = (sum(weights_by_file.values()) / max(1, len(weights_by_file))) if weights_by_file else 0.4
     quality = int(round(100 * (0.45 * files_factor + 0.35 * leaf_div + 0.20 * min(1.0, weight_mean))))
 
-    return ic_map, ten, leaf_scores, quality
+    return ic_map, leaf_scores, ten, quality
 
 # --------------- INTERPRETIVE NARRATIVE --------------
 def _build_interpreted_summary(
@@ -441,46 +723,82 @@ def _build_interpreted_summary(
     strong_steps = [s for s, sc in zip(TEN_STEPS, ts) if sc >= 7]
     weak_steps = [s for s, sc in zip(TEN_STEPS, ts) if sc <= 5]
 
+    # Detect whether ESG & Seven Stakeholder cues are present
+    narrative_text = context.get("why", "") + " " + context.get("markets", "")
+    seven_hit = any(c in narrative_text.lower() for c in SEVEN_STAKEHOLDER_CUES)
+    esg_hit = any(c in narrative_text.lower() for c in ESG_CUES)
+
+    # 1) Context & positioning
     p1 = (
-        f"{case} is a {size} in {sector}. Based on uploaded artefacts and expert context, "
-        f"the company shows an emerging ability to codify and scale its operating model, "
-        f"with measurable signals across {', '.join(strengths) if strengths else 'selected IC dimensions'}."
+        f"{case} is a {size} in {sector}. Based on uploaded artefacts and expert context, the company shows an "
+        f"emerging ability to codify and scale its operating model, with measurable signals across "
+        f"{', '.join(strengths) if strengths else 'selected IC dimensions'}."
     )
 
+    # 2) Four-Leaf interpretation (explicit vs tacit, IAS 38)
     if strengths:
         p2a = f"Strengths concentrate in {', '.join(strengths)}" + (f"; gaps are {', '.join(gaps)}." if gaps else ".")
     else:
         p2a = "Strengths are not yet well-evidenced; additional artefacts are required."
 
     p2b = (
-        "Evidence points to maturing structures (e.g., KMP/SOPs/process maps) and formal relationships "
-        "(contracts/JVs) where present. Human capability and customer lifecycle signals improve markedly "
-        "once competency maps, CRM data and renewal information are attached."
+        "Evidence points to maturing Structural Capital where explicit artefacts — contracts, SOPs, protocols, registers, "
+        "board materials and datasets — are present. These are the primary candidates for IAS 38-compliant recognition on "
+        "the balance sheet. Human, Customer and Strategic Alliance Capital are reflected mainly through tacit know-how, "
+        "relationships and informal practice, which require codification before they become audit-ready."
     )
     p2 = p2a + " " + p2b
 
+    # 3) Ten-Steps insight and readiness for licensing
     if strong_steps or weak_steps:
         p3 = (
             f"Ten-Steps patterns indicate strong {', '.join(strong_steps) if strong_steps else 'foundations'}; "
-            f"progress is constrained by {', '.join(weak_steps) if weak_steps else 'later-stage governance and valuation readiness'}."
+            f"progress is constrained by {', '.join(weak_steps) if weak_steps else 'later-stage governance, valuation and reporting readiness'}."
         )
     else:
         p3 = (
-            "Ten-Steps scores suggest a developing baseline; expert review will refine scoring "
-            "as artefacts are consolidated."
+            "Ten-Steps scores suggest a developing baseline; expert review will refine scoring as artefacts are "
+            "consolidated and IA governance is embedded."
         )
 
-    actions = [
-        "Create a single IA Register linking contracts/JVs, SOPs/KMP, and product/service artefacts (source-of-truth).",
-        "Introduce quarterly governance reporting (board pack + KPI dashboard) to strengthen Monitor/Report.",
-        "Define valuation approach (IAS 38 fair value) and connect to licensing templates for near-term monetisation and multiple value streams.",
-        "Formalise competency matrices and training logs to evidence Human Capital maturity.",
-    ]
-    p4 = "Assumptions & Action Plan:\n" + "\n".join([f"• {a}" for a in actions])
+    # 4) Seven Stakeholder / ESG framing and value streams
+    if seven_hit or esg_hit:
+        p4_intro = (
+            "Using the Seven Stakeholder Model (SSM) as defined by Professor Philip Sugai and Dr Maria Weir, "
+            "the company can frame value creation across employees, investors, customers, partners and suppliers, "
+            "communities and the natural environment. This provides a structured way to connect ESG performance "
+            "and double materiality to concrete intangible assets."
+        )
+    else:
+        p4_intro = (
+            "Applying the Seven Stakeholder Model (SSM) as defined by Professor Philip Sugai and Dr Maria Weir "
+            "would allow the company to frame value creation across employees, investors, customers, partners and "
+            "suppliers, communities and the natural environment, even if these links are not yet fully articulated "
+            "in the evidence set."
+        )
 
+    p4_mid = (
+        "From a commercialisation perspective, explicit Structural Capital (contracts, data, software, methods, indices, "
+        "protocols) can support multiple simultaneous value streams — including revenue licences, access or community "
+        "licences, co-creation arrangements and data/algorithm sharing — provided that ownership, rights and governance "
+        "are clarified."
+    )
+
+    actions = [
+        "Create a single IA Register linking all explicit artefacts (contracts, JVs, SOPs, protocols, datasets, board packs) to the 4-Leaf Model.",
+        "Map each explicit asset to at least one licensing-ready value stream (revenue, access/community, co-creation, defensive or data/algorithm sharing).",
+        "Introduce quarterly governance reporting (board pack + KPI dashboard) to strengthen Monitor and Report and to evidence ESG and stakeholder impacts.",
+        "Define valuation approach (IAS 38 fair value) and link to licensing templates so that audit-ready Structural Capital supports near-term monetisation.",
+        "Formalise competency matrices and training logs so that tacit Human Capital can be progressively codified into Structural Capital.",
+    ]
+    p4_actions = "Assumptions & Action Plan:\n" + "\n".join([f"• {a}" for a in actions])
+
+    p4 = p4_intro + "\n\n" + p4_mid + "\n\n" + p4_actions
+
+    # 5) Evidence quality and next evidence requests
     missing = (
-        "Request additional artefacts: CRM/renewal data, NDA/licence/royalty terms, "
-        "board/management reports."
+        "Request additional artefacts: CRM/renewal data, NDA/licence/royalty and access terms, IA or IP registers, "
+        "board/management reports, and any ESG or stakeholder dashboards used in internal decision-making."
     )
     p5 = f"Evidence quality ≈ {evidence_quality}% (heuristic). {missing}"
 
@@ -507,10 +825,8 @@ def _auto_split_expert_block(text: str) -> Dict[str, str]:
     if not t:
         return {k: "" for k in keys}
 
-    # First try paragraphs split by blank lines
     blocks = [b.strip() for b in t.replace("\r\n", "\n").split("\n\n") if b.strip()]
 
-    # If still short, fall back to sentence-based split
     if len(blocks) < 5:
         blocks = [s.strip() for s in re.split(r"(?<=[.!?])\s+", t) if s.strip()]
 
@@ -521,7 +837,7 @@ def _auto_split_expert_block(text: str) -> Dict[str, str]:
 
 # ------------------ SESSION DEFAULTS -----------------
 ss = st.session_state
-ss.setdefault("case_name", "Untitled Customer")
+ss.setdefault("case_name", "Untitled Company")
 ss.setdefault("company_size", "Micro (1–10)")
 ss.setdefault("sector", "Other")
 ss.setdefault("uploads", [])
@@ -571,20 +887,20 @@ SECTORS = [
 st.sidebar.markdown("### Navigate")
 page = st.sidebar.radio(
     "",
-    ("Customer", "Analyse Evidence", "Expert View", "Reports", "Licensing Templates"),
+    ("Company", "Analyse Evidence", "Expert View", "Reports", "Licensing Templates"),
     index=0,
     key="nav",
 )
 
 # -------------------- PAGES -------------------------
 
-# 1) CUSTOMER (with required prompts + auto-split)
-if page == "Customer":
-    st.header("Customer details")
-    with st.form("customer_form"):
+# 1) COMPANY (with required prompts + auto-split)
+if page == "Company":
+    st.header("Company details")
+    with st.form("company_form"):
         c1, c2, c3 = st.columns([1.1, 1, 1])
         with c1:
-            case_name = st.text_input("Customer / Company name *", ss.get("case_name", ""))
+            case_name = st.text_input("Company name *", ss.get("case_name", ""))
         with c2:
             size = st.selectbox(
                 "Company size",
@@ -613,7 +929,7 @@ if page == "Customer":
         )
 
         why_service = st.text_area(
-            "Why is the customer seeking this service? *",
+            "Why is the company seeking this service? *",
             ss.get("why_service", ""),
             height=90,
         )
@@ -681,7 +997,7 @@ if page == "Customer":
                     sale_price_why = derived["sale_price_why"]
 
             missing = [
-                ("Customer / Company name", case_name),
+                ("Company name", case_name),
                 ("Why service", why_service),
                 ("Stage", stage),
                 ("Short plan", plan_s),
@@ -708,7 +1024,7 @@ if page == "Customer":
                 ss["auto_split_on_save"] = auto_split
                 if uploads:
                     ss["uploads"] = uploads
-                st.success("Saved customer details & expert context.")
+                st.success("Saved company details & expert context.")
 
     if ss.get("uploads"):
         st.info(f"{len(ss['uploads'])} file(s) stored in session. Go to **Analyse Evidence** next.")
@@ -736,7 +1052,10 @@ elif page == "Analyse Evidence":
         st.subheader("IC Radar (4-Leaf + Ten-Steps)")
 
         ic_map: Dict[str, Any] = ss.get("ic_map", {})
-        ten = ss.get("ten_steps", {"scores": [5] * len(TEN_STEPS), "narratives": [f"{s}: tbd" for s in TEN_STEPS]})
+        ten = ss.get(
+            "ten_steps",
+            {"scores": [5] * len(TEN_STEPS), "narratives": [f"{s}: tbd" for s in TEN_STEPS]},
+        )
 
         leaf_labels = ["Human", "Structural", "Customer", "Strategic Alliance"]
         leaf_vals = [float(ic_map.get(l, {}).get("score", 0.0)) for l in leaf_labels]
@@ -791,7 +1110,6 @@ elif page == "Analyse Evidence":
 
         ss["file_counts"] = counts or {}
 
-        # Build expert-context dict (fed into interpreter, but not blindly copied)
         context = {
             "why": ss.get("why_service", ""),
             "stage": ss.get("stage", ""),
@@ -810,9 +1128,9 @@ elif page == "Analyse Evidence":
 
         combined_text_for_detection = (extracted + "\n\n" + context_stub).strip().lower()
 
-        ic_map, ten, leaf_scores, quality = _analyse_weighted(combined_text_for_detection, weights)
+        ic_map, leaf_scores, ten, quality = _analyse_weighted(combined_text_for_detection, weights)
 
-        case = ss.get("case_name", "Untitled Customer")
+        case = ss.get("case_name", "Untitled Company")
         interpreted = _build_interpreted_summary(case, leaf_scores, ic_map, ten, quality, context)
 
         ss["combined_text"] = interpreted
@@ -828,7 +1146,8 @@ elif page == "Analyse Evidence":
             )
 
         st.success("Analysis complete. Open **Expert View** to refine and export.")
-        # 3) EXPERT VIEW
+
+# 3) EXPERT VIEW
 elif page == "Expert View":
     st.header("Narrative Summary")
     nar = st.text_area(
@@ -888,7 +1207,7 @@ elif page == "Expert View":
 # 4) REPORTS
 elif page == "Reports":
     st.header("Reports & Exports")
-    case_name = ss.get("case_name", "Untitled_Customer")
+    case_name = ss.get("case_name", "Untitled Company")
     case_folder = OUT_ROOT / _safe(case_name)
 
     def _compose_ic() -> Tuple[str, str]:
@@ -920,28 +1239,72 @@ elif page == "Reports":
         b.append(
             "This document is provided for high-level evaluation only."
             if PUBLIC_MODE
-            else "CONFIDENTIAL. Advisory-first; expert review required for final scoring and accounting treatment."
+            else "CONFIDENTIAL. Advisory-first; expert review required for final scoring, licensing design and accounting treatment."
         )
         return title, "\n".join(b)
 
     def _compose_lic() -> Tuple[str, str]:
         title = f"Licensing Report — {case_name}"
         b: List[str] = []
-        b.append(f"Licensing Options & FRAND Readiness for {case_name}\n")
+        b.append(f"Licensing Options & FRAND-Informed Readiness for {case_name}\n")
+
+        b.append("Status & Disclaimer")
+        b.append(
+            "This report is an advisory draft only. It does not constitute legal advice and must be "
+            "reviewed and adapted by qualified legal counsel before signature or implementation.\n"
+        )
+
         b.append("Expert Context (selected)")
         b.append(f"- Why service: {ss.get('why_service', '')}")
         b.append(f"- Target sale & why: {ss.get('sale_price_why', '')}\n")
-        b.append("Models:")
-        b.append("- Revenue licence (royalties, FRAND-aligned terms, annual audit clause)")
-        b.append("- Defensive licence (IP pooling, non-assert across partners)")
-        b.append("- Co-creation licence (shared ownership of Foreground IP, revenue-sharing)")
-        b.append("\nGovernance & Audit")
+
+        b.append("Licensing Model Families")
         b.append(
-            "IA Register maintained; evidence bundles per licence; regular royalty/performance "
-            "reporting aligned to board and investor expectations."
+            "- Revenue licences: royalty or fee-based licences (e.g. per unit, per user, per dataset) with "
+            "FRAND-informed fee corridors, audit rights and performance conditions."
         )
+        b.append(
+            "- Access / community licences: royalty-free or low-fee licences that prioritise fair, reasonable "
+            "and non-discriminatory access (FRAND-aligned) for social, educational or public-good outcomes."
+        )
+        b.append(
+            "- Co-creation / joint development licences: shared ownership of Foreground IP, clear contribution "
+            "records, revenue sharing, and publication rights aligned to partner mandates."
+        )
+        b.append(
+            "- Defensive and cross-licence arrangements: IP pooling, non-assert agreements and mutual access "
+            "to codified know-how to reduce litigation risk and accelerate adoption."
+        )
+        b.append(
+            "- Data / algorithm licences: controlled use of datasets, indices, scoring models and algorithms "
+            "with clear field-of-use, access tiers and governance.\n"
+        )
+
+        b.append("FRAND & Seven Stakeholder Perspective")
+        b.append(
+            "FRAND is treated here as a design principle rather than a legal certification. For each proposed "
+            "licence family, the company should consider fairness, reasonableness and non-discrimination across "
+            "the seven stakeholders defined in the Sugai–Weir model (employees, investors, customers, partners "
+            "and suppliers, communities and the natural environment). Royalty-bearing and royalty-free licences "
+            "can both be FRAND-aligned when access criteria, pricing rationales and governance are clearly stated.\n"
+        )
+
+        b.append("Governance & Audit Expectations")
+        b.append(
+            "- Maintain an IA Register that links each explicit asset (software, indices, datasets, methods, "
+            "processes, brand, training content) to its licensing model(s)."
+        )
+        b.append(
+            "- Define board-level oversight for licensing, including regular reporting on licence performance, "
+            "compliance, ESG and stakeholder impacts."
+        )
+        b.append(
+            "- Ensure that key contracts, JVs, MoUs and access licences are auditable and compatible with "
+            "applicable accounting standards (e.g. IAS 38 for intangible assets).\n"
+        )
+
         if PUBLIC_MODE:
-            b.append("\n(Details suppressed in public mode.)")
+            b.append("(Details suppressed in public mode.)")
         return title, "\n".join(b)
 
     c1, c2 = st.columns(2)
@@ -977,7 +1340,7 @@ elif page == "Reports":
 # 5) LICENSING TEMPLATES
 elif page == "Licensing Templates":
     st.header("Licensing Templates (editable DOCX/TXT)")
-    case = ss.get("case_name", "Untitled Customer")
+    case = ss.get("case_name", "Untitled Company")
     sector = ss.get("sector", "Other")
 
     template = st.selectbox(
@@ -987,26 +1350,95 @@ elif page == "Licensing Templates":
     )
 
     if st.button("Generate template", key="btn_make_template"):
+        disclaimer = (
+            "STATUS: Non-binding draft template. This document is provided for internal discussion only and must be "
+            "reviewed and adapted by qualified legal counsel before signature or implementation.\n\n"
+        )
+
         if template == "FRAND Standard":
             title = f"FRAND Standard template — {case}"
             body = (
-                f"FRAND Standard — {case} ({sector})\n\n"
-                "Scope, definitions, essentiality clause, non-discrimination clause, reasonable fee corridor, "
-                "audit & verification, termination, governing law (EU), dispute resolution.\n"
+                f"FRAND Standard Licence — {case} ({sector})\n\n"
+                + disclaimer
+                + "1. Purpose & Scope\n"
+                "   - Define the licensed technology, dataset, index, software or method.\n"
+                "   - Specify fields of use, territories and permitted users.\n\n"
+                "2. Access & FRAND-Informed Principles\n"
+                "   - Describe how fees (including possible royalty-free tiers) are set on a fair, reasonable and\n"
+                "     non-discriminatory basis across comparable users.\n"
+                "   - Include access considerations for social, community or public-good partners where relevant.\n\n"
+                "3. Financial Terms\n"
+                "   - Royalty or fee structure (e.g. per unit, per user, revenue share, or capped fees).\n"
+                "   - Invoicing, payment schedule, late payment and currency terms.\n\n"
+                "4. Governance, Reporting & Audit\n"
+                "   - Licensee reporting obligations (KPIs, usage, sublicensing, ESG/stakeholder indicators if applicable).\n"
+                "   - Audit rights and frequency; treatment of under-reporting or non-compliance.\n\n"
+                "5. IP Ownership & Improvements\n"
+                "   - Background IP ownership and reservation of rights.\n"
+                "   - Treatment of improvements, derivative works and feedback.\n\n"
+                "6. Compliance, Term & Termination\n"
+                "   - Conditions for suspension or termination (breach, non-payment, misuse).\n"
+                "   - Survival of key clauses (confidentiality, audit, data protection).\n\n"
+                "7. Data, AI & Regulatory Considerations (if applicable)\n"
+                "   - Data protection, confidentiality and AI/automated decision-making safeguards.\n"
+                "   - Reference to applicable laws, standards or regulatory guidance.\n\n"
+                "8. Governing Law & Dispute Resolution\n"
+                "   - Governing law (e.g. EU Member State law).\n"
+                "   - Mechanism for dispute resolution (negotiation, mediation, arbitration, courts).\n"
             )
         elif template == "Co-creation (Joint Development)":
             title = f"Co-creation template — {case}"
             body = (
-                f"Co-creation / Joint Development — {case} ({sector})\n\n"
-                "Background IP, Foreground IP, contributions, ownership split, publication rights, "
-                "commercial model, revenue sharing, exit/assignment, FRAND alignment where applicable.\n"
+                f"Co-creation / Joint Development Licence — {case} ({sector})\n\n"
+                + disclaimer
+                + "1. Parties, Purpose & Project Definition\n"
+                "   - Identify all parties and describe the joint development project and objectives.\n\n"
+                "2. Background IP\n"
+                "   - List key Background IP contributed by each party and conditions of use.\n\n"
+                "3. Foreground IP & Ownership Structure\n"
+                "   - Define Foreground IP and allocate ownership shares (e.g. 50/50 or by contribution).\n"
+                "   - Set rules for registration, maintenance and enforcement of Foreground IP.\n\n"
+                "4. Contributions, Resources & Cost Sharing\n"
+                "   - Describe personnel, facilities, data and funding contributed by each party.\n"
+                "   - Agree cost-sharing mechanisms for development and exploitation.\n\n"
+                "5. Commercialisation & Revenue Sharing\n"
+                "   - Outline commercialisation routes (direct sales, licensing, joint ventures).\n"
+                "   - Define revenue sharing mechanisms, including treatment of royalty-free access for selected stakeholders.\n\n"
+                "6. Publication, Academic Use & Confidentiality\n"
+                "   - Academic and scientific publication rights (timing, review, attribution).\n"
+                "   - Confidentiality obligations and carve-outs.\n\n"
+                "7. Governance, Decision-Making & Dispute Resolution\n"
+                "   - Governance structure (steering committee, decision rules).\n"
+                "   - Escalation and dispute resolution framework.\n\n"
+                "8. Term, Exit & Transition\n"
+                "   - Term and conditions for early termination.\n"
+                "   - Exit options (buy-out, assignment, break clauses) and treatment of Foreground IP on exit.\n"
             )
         else:
             title = f"Knowledge licence (non-traditional) — {case}"
             body = (
                 f"Knowledge Licence — {case} ({sector})\n\n"
-                "Codified know-how (copyright/trade secret), permitted fields of use, attribution, "
-                "commercial vs social-benefit pathways, verification, revocation, jurisdiction.\n"
+                + disclaimer
+                + "1. Knowledge Asset Definition\n"
+                "   - Describe the codified know-how (e.g. methods, training materials, playbooks, indices, checklists).\n\n"
+                "2. Scope of Licence & Field of Use\n"
+                "   - Specify permitted uses (internal training, consulting, product development, policy design, etc.).\n"
+                "   - Clarify any restricted uses and prohibited activities.\n\n"
+                "3. Access & Stakeholder Considerations\n"
+                "   - Define standard and, where appropriate, community or social-benefit access tiers.\n"
+                "   - Reference a FRAND-informed approach to fairness, reasonableness and non-discrimination\n"
+                "     across employees, investors, customers, partners, suppliers, communities and nature.\n\n"
+                "4. Attribution & Moral Rights\n"
+                "   - Conditions for attribution (branding, acknowledgements, citation requirements).\n\n"
+                "5. Confidentiality, Data Protection & Safeguards\n"
+                "   - Treatment of confidential information and personal data.\n"
+                "   - Safeguards where AI or automated decision-making is involved.\n\n"
+                "6. Term, Revocation & Review\n"
+                "   - Duration, renewal and review points.\n"
+                "   - Conditions for revocation or modification of the licence.\n\n"
+                "7. Governing Law & Dispute Resolution\n"
+                "   - Governing law.\n"
+                "   - Mechanism for addressing disputes.\n"
             )
 
         data, fname, mime = _export_bytes(title, body)
