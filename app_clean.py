@@ -1444,3 +1444,336 @@ elif page == "LIP Console":
         with st.expander("Narrative per step"):
             for s, n in zip(TEN_STEPS, ten["narratives"]):
                 st.markdown(f"**{s}** — {n}")
+
+# 4) REPORTS
+elif page == "Reports":
+    st.header("Reports & Exports")
+    case_name = ss.get("case_name", "Untitled Company")
+    case_folder = OUT_ROOT / _safe(case_name)
+
+    def _compose_ic() -> Tuple[str, str]:
+        title = f"IC Report — {case_name}"
+        ic_map = ss.get("ic_map", {})
+
+        raw_ten = ss.get("ten_steps") or {}
+        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
+        narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
+        ten = {"scores": scores, "narratives": narrs}
+
+        b: List[str] = []
+        interpreted = ss.get("combined_text", "").strip() or ss.get("narrative", "(no summary)")
+        b.append(f"Executive Summary\n\n{interpreted}\n")
+        if not PUBLIC_MODE:
+            b.append(f"Evidence Quality: ~{ss.get('evidence_quality', 0)}% coverage (heuristic)\n")
+
+        b.append("Four-Leaf Analysis")
+        for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
+            row = ic_map.get(leaf, {"tick": False, "narrative": "", "score": 0.0})
+            tail = "" if PUBLIC_MODE else f" (score: {row.get('score', 0.0)})"
+            b.append(f"- {leaf}: {'✓' if row.get('tick') else '•'} — {row.get('narrative', '')}{tail}")
+
+        b.append("\nTen-Steps Readiness")
+        for s, n in zip(TEN_STEPS, ten["narratives"]):
+            b.append(f"- {n}")
+
+        b.append("\nNotes")
+        b.append(
+            "This document is provided for high-level evaluation only."
+            if PUBLIC_MODE
+            else "CONFIDENTIAL. Advisory-first; company and LIP review required for final scoring, licensing design and accounting treatment."
+        )
+
+        b.append("\n\n© Areopa 1987–2025. All rights reserved.")
+        return title, "\n".join(b)
+
+    def _compose_lic() -> Tuple[str, str]:
+        title = f"Licensing Report — {case_name}"
+        b: List[str] = []
+        b.append(f"Licensing Options & FRAND-Informed Readiness for {case_name}\n")
+
+        b.append("Status & Disclaimer")
+        b.append(
+            "This report is an advisory draft only. It does not constitute legal advice and must be "
+            "reviewed and adapted by qualified legal counsel before signature or implementation.\n"
+        )
+
+        b.append("Company Context (selected)")
+        b.append(f"- Why service: {ss.get('why_service', '')}")
+        b.append(f"- Target sale & why: {ss.get('sale_price_why', '')}\n")
+
+        b.append("Licensing Model Families")
+        b.append(
+            "- Revenue licences: royalty or fee-based licences (e.g. per unit, per user, revenue share, or per dataset) with "
+            "FRAND-informed fee corridors, audit rights and performance conditions."
+        )
+        b.append(
+            "- Access / community licences: royalty-free or low-fee licences that prioritise fair, reasonable "
+            "and non-discriminatory access (FRAND-aligned) for social, educational or public-good outcomes."
+        )
+        b.append(
+            "- Co-creation / joint development licences: shared ownership of Foreground IP, clear contribution "
+            "records, revenue sharing, and publication rights aligned to partner mandates."
+        )
+        b.append(
+            "- Defensive and cross-licence arrangements: IP pooling, non-assert agreements and mutual access "
+            "to codified know-how to reduce litigation risk and accelerate adoption."
+        )
+        b.append(
+            "- Data / algorithm licences: controlled use of datasets, indices, scoring models and algorithms "
+            "with clear field-of-use, access tiers and governance.\n"
+        )
+
+        b.append("FRAND & Seven Stakeholder Perspective")
+        b.append(
+            "FRAND is treated here as a design principle rather than a legal certification. For each proposed "
+            "licence family, the company should consider fairness, reasonableness and non-discrimination across "
+            "the seven stakeholders defined in the Sugai–Weir model (employees, investors, customers, partners "
+            "and suppliers, communities and the natural environment). Royalty-bearing and royalty-free licences "
+            "can both be FRAND-aligned when access criteria, pricing rationales and governance are clearly stated.\n"
+        )
+
+        b.append("Governance & Audit Expectations")
+        b.append(
+            "- Maintain an IA Register that links each explicit asset (software, indices, datasets, methods, "
+            "processes, brand, training content, CRM data) to its licensing model(s)."
+        )
+        b.append(
+            "- Define board-level oversight for licensing, including regular reporting on licence performance, "
+            "compliance, ESG and stakeholder impacts."
+        )
+        b.append(
+            "- Ensure that key contracts, JVs, MoUs and access licences are auditable and compatible with "
+            "applicable accounting standards (e.g. IAS 38 for intangible assets).\n"
+        )
+
+        if PUBLIC_MODE:
+            b.append("(Details suppressed in public mode.)")
+
+        b.append("\n© Areopa 1987–2025. All rights reserved.")
+        return title, "\n".join(b)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Generate IC Report (DOCX/TXT)", key="btn_ic"):
+            title, body = _compose_ic()
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                "⬇️ Download IC Report",
+                data,
+                file_name=fname,
+                mime=mime,
+                key="dl_ic",
+            )
+            (st.success if path else st.warning)(msg)
+    with c2:
+        if st.button("Generate Licensing Report (DOCX/TXT)", key="btn_lic"):
+            title, body = _compose_lic()
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                "⬇️ Download Licensing Report",
+                data,
+                file_name=fname,
+                mime=mime,
+                key="dl_lic",
+            )
+            (st.success if path else st.warning)(msg)
+
+    st.caption("Server save root: disabled (public mode)" if PUBLIC_MODE else f"Server save root: {OUT_ROOT}")
+
+# 5) LICENSING TEMPLATES
+elif page == "Licensing Templates":
+    st.header("Licensing Templates (editable DOCX/TXT)")
+    case = ss.get("case_name", "Untitled Company")
+    sector = ss.get("sector", "Other")
+
+    template = st.selectbox(
+        "Choose a template:",
+        ["FRAND Standard", "Co-creation (Joint Development)", "Knowledge (Non-traditional)"],
+        index=0,
+    )
+
+    if st.button("Generate template", key="btn_make_template"):
+        disclaimer = (
+            "STATUS: Non-binding draft template. This document is provided for internal discussion only and must be "
+            "reviewed and adapted by qualified legal counsel before signature or implementation.\n\n"
+        )
+
+        if template == "FRAND Standard":
+            title = f"FRAND Standard template — {case}"
+            body = (
+                f"FRAND Standard Licence — {case} ({sector})\n\n"
+                + disclaimer
+                + "1. Purpose & Scope\n"
+                "   - Define the licensed technology, dataset, index, software or method.\n"
+                "   - Specify fields of use, territories and permitted users.\n\n"
+                "2. Access & FRAND-Informed Principles\n"
+                "   - Describe how fees (including possible royalty-free tiers) are set on a fair, reasonable and\n"
+                "     non-discriminatory basis across comparable users.\n"
+                "   - Include access considerations for social, community or public-good partners where relevant.\n\n"
+                "3. Financial Terms\n"
+                "   - Royalty or fee structure (e.g. per unit, per user, revenue share, or capped fees).\n"
+                "   - Invoicing, payment schedule, late payment and currency terms.\n\n"
+                "4. Governance, Reporting & Audit\n"
+                "   - Licensee reporting obligations (KPIs, usage, sublicensing, ESG/stakeholder indicators if applicable).\n"
+                "   - Audit rights and frequency; treatment of under-reporting or non-compliance.\n\n"
+                "5. IP Ownership & Improvements\n"
+                "   - Background IP ownership and reservation of rights.\n"
+                "   - Treatment of improvements, derivative works and feedback.\n\n"
+                "6. Compliance, Term & Termination\n"
+                "   - Conditions for suspension or termination (breach, non-payment, misuse).\n"
+                "   - Survival of key clauses (confidentiality, audit, data protection).\n\n"
+                "7. Data, AI & Regulatory Considerations (if applicable)\n"
+                "   - Data protection, confidentiality and AI/automated decision-making safeguards.\n"
+                "   - Reference to applicable laws, standards or regulatory guidance.\n\n"
+                "8. Governing Law & Dispute Resolution\n"
+                "   - Governing law (e.g. EU Member State law).\n"
+                "   - Mechanism for dispute resolution (negotiation, mediation, arbitration, courts).\n"
+                "\n© Areopa 1987–2025. All rights reserved.\n"
+            )
+        elif template == "Co-creation (Joint Development)":
+            title = f"Co-creation template — {case}"
+            body = (
+                f"Co-creation / Joint Development Licence — {case} ({sector})\n\n"
+                + disclaimer
+                + "1. Parties, Purpose & Project Definition\n"
+                "   - Identify all parties and describe the joint development project and objectives.\n\n"
+                "2. Background IP\n"
+                "   - List key Background IP contributed by each party and conditions of use.\n\n"
+                "3. Foreground IP & Ownership Structure\n"
+                "   - Define Foreground IP and allocate ownership shares (e.g. 50/50 or by contribution).\n"
+                "   - Set rules for registration, maintenance and enforcement of Foreground IP.\n\n"
+                "4. Contributions, Resources & Cost Sharing\n"
+                "   - Describe personnel, facilities, data and funding contributed by each party.\n"
+                "   - Agree cost-sharing mechanisms for development and exploitation.\n\n"
+                "5. Commercialisation & Revenue Sharing\n"
+                "   - Outline commercialisation routes (direct sales, licensing, joint ventures).\n"
+                "   - Define revenue sharing mechanisms, including treatment of royalty-free access for selected stakeholders.\n\n"
+                "6. Publication, Academic Use & Confidentiality\n"
+                "   - Academic and scientific publication rights (timing, review, attribution).\n"
+                "   - Confidentiality obligations and carve-outs.\n\n"
+                "7. Governance, Decision-Making & Dispute Resolution\n"
+                "   - Governance structure (steering committee, decision rules).\n"
+                "   - Escalation and dispute resolution framework.\n\n"
+                "8. Term, Exit & Transition\n"
+                "   - Term and conditions for early termination.\n"
+                "   - Exit options (buy-out, assignment, break clauses) and treatment of Foreground IP on exit.\n"
+                "\n© Areopa 1987–2025. All rights reserved.\n"
+            )
+        else:
+            title = f"Knowledge licence (non-traditional) — {case}"
+            body = (
+                f"Knowledge Licence — {case} ({sector})\n\n"
+                + disclaimer
+                + "1. Knowledge Asset Definition\n"
+                "   - Describe the codified know-how (e.g. methods, training materials, playbooks, indices, checklists).\n\n"
+                "2. Scope of Licence & Field of Use\n"
+                "   - Specify permitted uses (internal training, consulting, product development, policy design, etc.).\n"
+                "   - Clarify any restricted uses and prohibited activities.\n\n"
+                "3. Access & Stakeholder Considerations\n"
+                "   - Define standard and, where appropriate, community or social-benefit access tiers.\n"
+                "   - Reference a FRAND-informed approach to fairness, reasonableness and non-discrimination\n"
+                "     across employees, investors, customers, partners, suppliers, communities and nature.\n\n"
+                "4. Attribution & Moral Rights\n"
+                "   - Conditions for attribution (branding, acknowledgements, citation requirements).\n\n"
+                "5. Confidentiality, Data Protection & Safeguards\n"
+                "   - Treatment of confidential information and personal data.\n"
+                "   - Safeguards where AI or automated decision-making is involved.\n\n"
+                "6. Term, Revocation & Review\n"
+                "   - Duration, renewal and review points.\n"
+                "   - Conditions for revocation or modification of the licence.\n\n"
+                "7. Governing Law & Dispute Resolution\n"
+                "   - Governing law.\n"
+                "   - Mechanism for addressing disputes.\n"
+                "\n© Areopa 1987–2025. All rights reserved.\n"
+            )
+
+        data, fname, mime = _export_bytes(title, body)
+        folder = OUT_ROOT / _safe(case)
+        path, msg = _save_bytes(folder, fname, data)
+        st.download_button(
+            "⬇️ Download Template",
+            data,
+            file_name=fname,
+            mime=mime,
+            key="dl_tpl",
+        )
+        (st.success if path else st.warning)(msg)
+
+# 6) LIP ASSISTANT (AI chat)
+elif page == "LIP Assistant":
+    st.header("LIP Assistant — Licensing & Intangibles Partner Assistant")
+    st.caption(
+        "A helper for the Licensing & Intangibles Partner. "
+        "It re-uses the IC narrative, Structural Capital logic and FRAND models. "
+        "If an OpenAI API key is configured, it will use AI; otherwise it falls back to a local explanation."
+    )
+
+    if ss.get("combined_text", ""):
+        st.success("IC narrative available from Analyse Evidence / LIP Console.")
+    else:
+        st.warning("No IC narrative stored yet. Run **Analyse Evidence** first for best results.")
+
+    # Chat history display
+    chat_container = st.container()
+    with chat_container:
+        if ss.get("lip_chat_history"):
+            for msg in ss["lip_chat_history"]:
+                if msg["role"] == "user":
+                    st.markdown(f"**You:** {msg['content']}")
+                else:
+                    st.markdown(f"**LIP Assistant:** {msg['content']}")
+
+    st.markdown("---")
+
+    context_focus = st.selectbox(
+        "Focus of this question:",
+        ["IC findings", "Licensing options", "Both"],
+        index=2,
+    )
+
+    question = st.text_area(
+        "Your question to the LIP Assistant",
+        "",
+        height=120,
+        help="Example: 'Which assets look IAS 38-ready?' or 'How could we structure a royalty-free community licence?'",
+    )
+
+    if st.button("Ask LIP Assistant"):
+        if not question.strip():
+            st.error("Please enter a question.")
+        else:
+            # Build context summary tuned to requested focus
+            full_context = _build_lip_context_summary()
+            if context_focus == "IC findings":
+                # Nudge assistant more towards IC / Structural
+                full_context = "FOCUS: IC & Structural Capital.\n" + full_context
+            elif context_focus == "Licensing options":
+                full_context = "FOCUS: Licensing & FRAND.\n" + full_context
+            else:
+                full_context = "FOCUS: Both IC and Licensing.\n" + full_context
+
+            answer = _call_lip_ai(question.strip(), full_context)
+
+            ss["lip_chat_history"].append({"role": "user", "content": question.strip()})
+            ss["lip_chat_history"].append({"role": "assistant", "content": answer})
+
+            st.markdown(f"**You:** {question.strip()}")
+            st.markdown(f"**LIP Assistant:** {answer}")
+
+    if ss.get("lip_chat_history"):
+        if st.button("Clear LIP Assistant history"):
+            ss["lip_chat_history"] = []
+            st.success("LIP Assistant chat history cleared.")
+
+# ---------------- GLOBAL FOOTER ----------------
+st.markdown(
+    """
+<hr style="margin-top:2rem;margin-bottom:0.5rem;">
+<div style="font-size:0.8rem;color:#444;">
+  © Areopa 1987–2025. All rights reserved. IC-LicAI Expert Console — Structural Capital & FRAND-ready licensing support.
+</div>
+""",
+    unsafe_allow_html=True,
+)
