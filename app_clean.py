@@ -2,7 +2,15 @@
 # Adds: DOCX/PPTX extraction, weighted IC signal engine, interpreted narrative,
 # radar dashboard, CSV semantic extraction, robust company-context auto-split,
 # IAS 38 Structural Capital emphasis, FRAND-aware licensing templates,
-# Seven Stakeholder / ESG narrative, LIP Console, and LIP Assistant (beta).
+# Seven Stakeholder / ESG narrative, LIP Console, and LIP Assistant (AI-enabled).
+#
+# NEW in this build (8-point combined spec):
+# - Structural Capital dominance preserved and made explicit in comments
+# - Tacit vs Codified + pipeline heuristics (translation layer – Option A)
+# - Tacit → codified transition and pending pipeline treated as tacit in narrative
+# - AI chat box “Licensing & Intangibles Partner Assistant” using OpenAI when available
+# - Local fallback if no API key / library
+# - Global © Areopa 1987–2025 footer
 
 from __future__ import annotations
 import io, os, tempfile, re, csv
@@ -539,6 +547,89 @@ SEVEN_STAKEHOLDER_CUES: List[str] = [
     "biodiversity",
 ]
 
+# -------- Translation Layer (Option A) – Tacit vs Codified & Pipeline -----
+# These heuristics are used primarily to give the AI LIP Assistant
+# a simple “tacit / codified / pending pipeline” snapshot that aligns
+# with Structural Capital dominance and IAS 38.
+
+TACIT_HINTS: List[str] = [
+    "informal",
+    "in heads",
+    "word of mouth",
+    "relationship",
+    "relationships",
+    "reputation",
+    "network",
+    "networks",
+    "experience only",
+    "people-based",
+]
+
+PIPELINE_HINTS: List[str] = [
+    "pipeline",
+    "prospect",
+    "prospects",
+    "in negotiation",
+    "under negotiation",
+    "mou",
+    "letter of intent",
+    "loi",
+    "in discussion",
+    "under discussion",
+]
+
+CODED_HINTS: List[str] = EXPLICIT_STRUCTURAL_CUES + [
+    "documented",
+    "written",
+    "stored",
+    "registered",
+    "codified",
+    "standardised",
+    "standardized",
+]
+
+
+def _estimate_tacit_codified_pipeline(text: str) -> Dict[str, Any]:
+    """
+    Very lightweight translation snapshot:
+    - counts signals for codified (explicit structural) vs tacit (people / reputation)
+    - counts basic pipeline cues (treated as tacit until contracted)
+    Used only to give a high-level summary to the AI assistant and LIP.
+    """
+    t = (text or "").lower()
+    if not t:
+        return {"codified_hits": 0, "tacit_hits": 0, "pipeline_hits": 0, "summary": "No evidence text available."}
+
+    codified_hits = sum(t.count(c) for c in CODED_HINTS)
+    tacit_hits = sum(t.count(c) for c in TACIT_HINTS)
+    pipeline_hits = sum(t.count(c) for c in PIPELINE_HINTS)
+
+    parts: List[str] = []
+    if codified_hits:
+        parts.append(
+            f"Detected ~{codified_hits} codified/explicit cues (contracts, SOPs, registers, policies, datasets, CRM)."
+        )
+    if tacit_hits:
+        parts.append(
+            f"Detected ~{tacit_hits} tacit cues (informal relationships, reputation, people-based practices)."
+        )
+    if pipeline_hits:
+        parts.append(
+            f"Detected ~{pipeline_hits} pipeline cues (MoUs, prospects, in negotiation), treated as tacit until codified."
+        )
+
+    if not parts:
+        parts.append(
+            "No strong tacit/codified or pipeline cues detected in the current text; additional artefacts may be needed."
+        )
+
+    return {
+        "codified_hits": codified_hits,
+        "tacit_hits": tacit_hits,
+        "pipeline_hits": pipeline_hits,
+        "summary": " ".join(parts),
+    }
+
 # --------------- ANALYSIS ENGINE ---------------------
 def _analyse_weighted(
     text: str,
@@ -551,6 +642,10 @@ def _analyse_weighted(
       leaf_scores (raw weighted scores for 4-leaf),
       ten (scores+narratives),
       quality% (heuristic)
+    NOTE: Structural Capital dominance:
+    - Explicit Structural cues + codified artefacts are intentionally weighted
+      so that, where there is conflict between 'who' and 'what', Structural wins
+      for IAS 38 readiness.
     """
     sector = st.session_state.get("sector", "Other")
     t_all = (text or "").lower()
@@ -726,10 +821,25 @@ def _build_interpreted_summary(
     strong_steps = [s for s, sc in zip(TEN_STEPS, ts) if sc >= 7]
     weak_steps = [s for s, sc in zip(TEN_STEPS, ts) if sc <= 5]
 
-    # Detect whether ESG & Seven Stakeholder cues are present
     narrative_text = context.get("why", "") + " " + context.get("markets", "")
     seven_hit = any(c in narrative_text.lower() for c in SEVEN_STAKEHOLDER_CUES)
     esg_hit = any(c in narrative_text.lower() for c in ESG_CUES)
+
+    # Tacit vs codified snapshot (translation layer)
+    combined_for_tacit = (
+        (context.get("why", "") or "")
+        + " "
+        + (context.get("stage", "") or "")
+        + " "
+        + (context.get("plan_s", "") or "")
+        + " "
+        + (context.get("plan_m", "") or "")
+        + " "
+        + (context.get("plan_l", "") or "")
+        + " "
+        + (context.get("markets", "") or "")
+    )
+    tacit_snapshot = _estimate_tacit_codified_pipeline(combined_for_tacit)
 
     # 1) Context & positioning
     p1 = (
@@ -750,7 +860,12 @@ def _build_interpreted_summary(
         "the balance sheet. Human, Customer and Strategic Alliance Capital are reflected mainly through tacit know-how, "
         "relationships and informal practice, which require codification before they become audit-ready."
     )
-    p2 = p2a + " " + p2b
+    p2c = (
+        f" From a tacit/codified perspective, {tacit_snapshot['summary']} "
+        "Pending pipeline items (prospects, MoUs, in-negotiation deals) are treated as tacit value until translated "
+        "into explicit contracts or structured datasets."
+    )
+    p2 = p2a + " " + p2b + p2c
 
     # 3) Ten-Steps insight and readiness for licensing
     if strong_steps or weak_steps:
@@ -837,6 +952,124 @@ def _auto_split_expert_block(text: str) -> Dict[str, str]:
         out[k] = chunk
     return out
 
+# ------------------ LIP AI ASSISTANT HELPERS -----------------
+def _build_lip_context_summary() -> str:
+    """
+    Build a compact context string for the AI-based LIP Assistant.
+    Uses:
+      - case name, sector, size
+      - IC map ticks
+      - Ten-Steps high level
+      - tacit/codified/pipeline snapshot
+      - stored narrative
+    """
+    ss = st.session_state
+    case = ss.get("case_name", "Untitled Company")
+    sector = ss.get("sector", "Other")
+    size = ss.get("company_size", "Micro (1–10)")
+    ic_map: Dict[str, Any] = ss.get("ic_map", {})
+    ten = ss.get("ten_steps", {})
+    scores = ten.get("scores") or [5] * len(TEN_STEPS)
+
+    leaf_flags = ", ".join(
+        f"{leaf}={'Y' if ic_map.get(leaf, {}).get('tick') else 'N'}"
+        for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]
+    )
+
+    tacit_src = (
+        (ss.get("why_service", "") or "")
+        + " "
+        + (ss.get("stage", "") or "")
+        + " "
+        + (ss.get("plan_s", "") or "")
+        + " "
+        + (ss.get("plan_m", "") or "")
+        + " "
+        + (ss.get("plan_l", "") or "")
+        + " "
+        + (ss.get("markets_why", "") or "")
+    )
+    tacit_snapshot = _estimate_tacit_codified_pipeline(tacit_src)
+
+    narrative = ss.get("combined_text", "") or ss.get("narrative", "")
+    narrative_short = narrative[:900]
+
+    return (
+        f"Company: {case} | size={size} | sector={sector}\n"
+        f"Four-Leaf ticks: {leaf_flags}\n"
+        f"Ten-Steps scores (1–10): {scores}\n"
+        f"Tacit vs Codified & pipeline snapshot: {tacit_snapshot['summary']}\n"
+        f"IC narrative (truncated): {narrative_short}"
+    )
+
+
+def _call_lip_ai(question: str, context_summary: str) -> str:
+    """
+    AI-enabled LIP Assistant.
+    - If OPENAI_API_KEY (or st.secrets['OPENAI_API_KEY']) is set and openai>=1.x is available,
+      uses the API to generate an answer.
+    - Otherwise, falls back to a local, rule-based explanation using existing narrative.
+    """
+    api_key = st.secrets.get("OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY", None)
+    if not api_key:
+        # Local fallback using existing narrative and FRAND text
+        ss = st.session_state
+        narrative = ss.get("combined_text", "") or ss.get("narrative", "")
+        lic_snippet = (
+            "The current tool supports revenue licences, access/community licences, co-creation/joint development, "
+            "defensive/cross-licence arrangements and data/algorithm licences, framed through a FRAND-informed lens "
+            "across the Seven Stakeholder Model."
+        )
+        answer_parts = [
+            "LIP Assistant (offline mode – no API key set).",
+            "",
+            f"Question: {question}",
+        ]
+        if "structural" in question.lower() or "ias 38" in question.lower():
+            answer_parts.append(
+                "- Structural Capital is treated as the home for explicit, documented assets (contracts, SOPs, registers, "
+                "CRM, datasets, board packs). Where both tacit and explicit signals exist, Structural is deliberately "
+                "weighted to dominate, reflecting IAS 38 audit-readiness."
+            )
+        answer_parts.append("- FRAND / licensing view: " + lic_snippet)
+        if narrative:
+            answer_parts.append(
+                "- IC narrative extract:\n" + narrative[:800] + ("..." if len(narrative) > 800 else "")
+            )
+        else:
+            answer_parts.append("- No stored IC narrative yet; run Analyse Evidence for richer insights.")
+        return "\n\n".join(answer_parts)
+
+    try:
+        from openai import OpenAI  # type: ignore
+
+        client = OpenAI(api_key=api_key)
+
+        system_msg = (
+            "You are the 'Licensing & Intangibles Partner Assistant' (LIP Assistant) for Areopa's IC-LicAI tool. "
+            "You specialise in Intellectual Capital (4-Leaf Model), IAS 38-ready Structural Capital, tacit vs codified "
+            "knowledge, FRAND-style licensing models and the Seven Stakeholder Model (Sugai–Weir). "
+            "Give concise, practical answers that a Licensing & Intangibles Partner can use directly with SMEs."
+        )
+        user_msg = (
+            "Context from the IC-LicAI console:\n"
+            f"{context_summary}\n\n"
+            "User question:\n"
+            f"{question}"
+        )
+
+        completion = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_msg},
+            ],
+            temperature=0.3,
+        )
+        return completion.choices[0].message.content.strip()
+    except Exception as e:
+        return f"LIP Assistant (AI) error: {e}"
+
 # ------------------ SESSION DEFAULTS -----------------
 ss = st.session_state
 ss.setdefault("case_name", "Untitled Company")
@@ -862,8 +1095,11 @@ ss.setdefault("sale_price_why", "")
 ss.setdefault("full_context_block", "")
 ss.setdefault("auto_split_on_save", True)
 
-# LIP Assistant state
+# Legacy simple LIP log (kept but no longer used in UI)
 ss.setdefault("lip_history", [])
+
+# New chat-style LIP AI history
+ss.setdefault("lip_chat_history", [])
 
 SIZES = [
     "Micro (1–10)",
@@ -1208,339 +1444,3 @@ elif page == "LIP Console":
         with st.expander("Narrative per step"):
             for s, n in zip(TEN_STEPS, ten["narratives"]):
                 st.markdown(f"**{s}** — {n}")
-
-# 4) REPORTS
-elif page == "Reports":
-    st.header("Reports & Exports")
-    case_name = ss.get("case_name", "Untitled Company")
-    case_folder = OUT_ROOT / _safe(case_name)
-
-    def _compose_ic() -> Tuple[str, str]:
-        title = f"IC Report — {case_name}"
-        ic_map = ss.get("ic_map", {})
-
-        raw_ten = ss.get("ten_steps") or {}
-        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
-        narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
-        ten = {"scores": scores, "narratives": narrs}
-
-        b: List[str] = []
-        interpreted = ss.get("combined_text", "").strip() or ss.get("narrative", "(no summary)")
-        b.append(f"Executive Summary\n\n{interpreted}\n")
-        if not PUBLIC_MODE:
-            b.append(f"Evidence Quality: ~{ss.get('evidence_quality', 0)}% coverage (heuristic)\n")
-
-        b.append("Four-Leaf Analysis")
-        for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
-            row = ic_map.get(leaf, {"tick": False, "narrative": "", "score": 0.0})
-            tail = "" if PUBLIC_MODE else f" (score: {row.get('score', 0.0)})"
-            b.append(f"- {leaf}: {'✓' if row.get('tick') else '•'} — {row.get('narrative', '')}{tail}")
-
-        b.append("\nTen-Steps Readiness")
-        for s, n in zip(TEN_STEPS, ten["narratives"]):
-            b.append(f"- {n}")
-
-        b.append("\nNotes")
-        b.append(
-            "This document is provided for high-level evaluation only."
-            if PUBLIC_MODE
-            else "CONFIDENTIAL. Advisory-first; company and LIP review required for final scoring, licensing design and accounting treatment."
-        )
-        return title, "\n".join(b)
-
-    def _compose_lic() -> Tuple[str, str]:
-        title = f"Licensing Report — {case_name}"
-        b: List[str] = []
-        b.append(f"Licensing Options & FRAND-Informed Readiness for {case_name}\n")
-
-        b.append("Status & Disclaimer")
-        b.append(
-            "This report is an advisory draft only. It does not constitute legal advice and must be "
-            "reviewed and adapted by qualified legal counsel before signature or implementation.\n"
-        )
-
-        b.append("Company Context (selected)")
-        b.append(f"- Why service: {ss.get('why_service', '')}")
-        b.append(f"- Target sale & why: {ss.get('sale_price_why', '')}\n")
-
-        b.append("Licensing Model Families")
-        b.append(
-            "- Revenue licences: royalty or fee-based licences (e.g. per unit, per user, revenue share, or per dataset) with "
-            "FRAND-informed fee corridors, audit rights and performance conditions."
-        )
-        b.append(
-            "- Access / community licences: royalty-free or low-fee licences that prioritise fair, reasonable "
-            "and non-discriminatory access (FRAND-aligned) for social, educational or public-good outcomes."
-        )
-        b.append(
-            "- Co-creation / joint development licences: shared ownership of Foreground IP, clear contribution "
-            "records, revenue sharing, and publication rights aligned to partner mandates."
-        )
-        b.append(
-            "- Defensive and cross-licence arrangements: IP pooling, non-assert agreements and mutual access "
-            "to codified know-how to reduce litigation risk and accelerate adoption."
-        )
-        b.append(
-            "- Data / algorithm licences: controlled use of datasets, indices, scoring models and algorithms "
-            "with clear field-of-use, access tiers and governance.\n"
-        )
-
-        b.append("FRAND & Seven Stakeholder Perspective")
-        b.append(
-            "FRAND is treated here as a design principle rather than a legal certification. For each proposed "
-            "licence family, the company should consider fairness, reasonableness and non-discrimination across "
-            "the seven stakeholders defined in the Sugai–Weir model (employees, investors, customers, partners "
-            "and suppliers, communities and the natural environment). Royalty-bearing and royalty-free licences "
-            "can both be FRAND-aligned when access criteria, pricing rationales and governance are clearly stated.\n"
-        )
-
-        b.append("Governance & Audit Expectations")
-        b.append(
-            "- Maintain an IA Register that links each explicit asset (software, indices, datasets, methods, "
-            "processes, brand, training content, CRM data) to its licensing model(s)."
-        )
-        b.append(
-            "- Define board-level oversight for licensing, including regular reporting on licence performance, "
-            "compliance, ESG and stakeholder impacts."
-        )
-        b.append(
-            "- Ensure that key contracts, JVs, MoUs and access licences are auditable and compatible with "
-            "applicable accounting standards (e.g. IAS 38 for intangible assets).\n"
-        )
-
-        if PUBLIC_MODE:
-            b.append("(Details suppressed in public mode.)")
-        return title, "\n".join(b)
-
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Generate IC Report (DOCX/TXT)", key="btn_ic"):
-            title, body = _compose_ic()
-            data, fname, mime = _export_bytes(title, body)
-            path, msg = _save_bytes(case_folder, fname, data)
-            st.download_button(
-                "⬇️ Download IC Report",
-                data,
-                file_name=fname,
-                mime=mime,
-                key="dl_ic",
-            )
-            (st.success if path else st.warning)(msg)
-    with c2:
-        if st.button("Generate Licensing Report (DOCX/TXT)", key="btn_lic"):
-            title, body = _compose_lic()
-            data, fname, mime = _export_bytes(title, body)
-            path, msg = _save_bytes(case_folder, fname, data)
-            st.download_button(
-                "⬇️ Download Licensing Report",
-                data,
-                file_name=fname,
-                mime=mime,
-                key="dl_lic",
-            )
-            (st.success if path else st.warning)(msg)
-
-    st.caption("Server save root: disabled (public mode)" if PUBLIC_MODE else f"Server save root: {OUT_ROOT}")
-
-# 5) LICENSING TEMPLATES
-elif page == "Licensing Templates":
-    st.header("Licensing Templates (editable DOCX/TXT)")
-    case = ss.get("case_name", "Untitled Company")
-    sector = ss.get("sector", "Other")
-
-    template = st.selectbox(
-        "Choose a template:",
-        ["FRAND Standard", "Co-creation (Joint Development)", "Knowledge (Non-traditional)"],
-        index=0,
-    )
-
-    if st.button("Generate template", key="btn_make_template"):
-        disclaimer = (
-            "STATUS: Non-binding draft template. This document is provided for internal discussion only and must be "
-            "reviewed and adapted by qualified legal counsel before signature or implementation.\n\n"
-        )
-
-        if template == "FRAND Standard":
-            title = f"FRAND Standard template — {case}"
-            body = (
-                f"FRAND Standard Licence — {case} ({sector})\n\n"
-                + disclaimer
-                + "1. Purpose & Scope\n"
-                "   - Define the licensed technology, dataset, index, software or method.\n"
-                "   - Specify fields of use, territories and permitted users.\n\n"
-                "2. Access & FRAND-Informed Principles\n"
-                "   - Describe how fees (including possible royalty-free tiers) are set on a fair, reasonable and\n"
-                "     non-discriminatory basis across comparable users.\n"
-                "   - Include access considerations for social, community or public-good partners where relevant.\n\n"
-                "3. Financial Terms\n"
-                "   - Royalty or fee structure (e.g. per unit, per user, revenue share, or capped fees).\n"
-                "   - Invoicing, payment schedule, late payment and currency terms.\n\n"
-                "4. Governance, Reporting & Audit\n"
-                "   - Licensee reporting obligations (KPIs, usage, sublicensing, ESG/stakeholder indicators if applicable).\n"
-                "   - Audit rights and frequency; treatment of under-reporting or non-compliance.\n\n"
-                "5. IP Ownership & Improvements\n"
-                "   - Background IP ownership and reservation of rights.\n"
-                "   - Treatment of improvements, derivative works and feedback.\n\n"
-                "6. Compliance, Term & Termination\n"
-                "   - Conditions for suspension or termination (breach, non-payment, misuse).\n"
-                "   - Survival of key clauses (confidentiality, audit, data protection).\n\n"
-                "7. Data, AI & Regulatory Considerations (if applicable)\n"
-                "   - Data protection, confidentiality and AI/automated decision-making safeguards.\n"
-                "   - Reference to applicable laws, standards or regulatory guidance.\n\n"
-                "8. Governing Law & Dispute Resolution\n"
-                "   - Governing law (e.g. EU Member State law).\n"
-                "   - Mechanism for dispute resolution (negotiation, mediation, arbitration, courts).\n"
-            )
-        elif template == "Co-creation (Joint Development)":
-            title = f"Co-creation template — {case}"
-            body = (
-                f"Co-creation / Joint Development Licence — {case} ({sector})\n\n"
-                + disclaimer
-                + "1. Parties, Purpose & Project Definition\n"
-                "   - Identify all parties and describe the joint development project and objectives.\n\n"
-                "2. Background IP\n"
-                "   - List key Background IP contributed by each party and conditions of use.\n\n"
-                "3. Foreground IP & Ownership Structure\n"
-                "   - Define Foreground IP and allocate ownership shares (e.g. 50/50 or by contribution).\n"
-                "   - Set rules for registration, maintenance and enforcement of Foreground IP.\n\n"
-                "4. Contributions, Resources & Cost Sharing\n"
-                "   - Describe personnel, facilities, data and funding contributed by each party.\n"
-                "   - Agree cost-sharing mechanisms for development and exploitation.\n\n"
-                "5. Commercialisation & Revenue Sharing\n"
-                "   - Outline commercialisation routes (direct sales, licensing, joint ventures).\n"
-                "   - Define revenue sharing mechanisms, including treatment of royalty-free access for selected stakeholders.\n\n"
-                "6. Publication, Academic Use & Confidentiality\n"
-                "   - Academic and scientific publication rights (timing, review, attribution).\n"
-                "   - Confidentiality obligations and carve-outs.\n\n"
-                "7. Governance, Decision-Making & Dispute Resolution\n"
-                "   - Governance structure (steering committee, decision rules).\n"
-                "   - Escalation and dispute resolution framework.\n\n"
-                "8. Term, Exit & Transition\n"
-                "   - Term and conditions for early termination.\n"
-                "   - Exit options (buy-out, assignment, break clauses) and treatment of Foreground IP on exit.\n"
-            )
-        else:
-            title = f"Knowledge licence (non-traditional) — {case}"
-            body = (
-                f"Knowledge Licence — {case} ({sector})\n\n"
-                + disclaimer
-                + "1. Knowledge Asset Definition\n"
-                "   - Describe the codified know-how (e.g. methods, training materials, playbooks, indices, checklists).\n\n"
-                "2. Scope of Licence & Field of Use\n"
-                "   - Specify permitted uses (internal training, consulting, product development, policy design, etc.).\n"
-                "   - Clarify any restricted uses and prohibited activities.\n\n"
-                "3. Access & Stakeholder Considerations\n"
-                "   - Define standard and, where appropriate, community or social-benefit access tiers.\n"
-                "   - Reference a FRAND-informed approach to fairness, reasonableness and non-discrimination\n"
-                "     across employees, investors, customers, partners, suppliers, communities and nature.\n\n"
-                "4. Attribution & Moral Rights\n"
-                "   - Conditions for attribution (branding, acknowledgements, citation requirements).\n\n"
-                "5. Confidentiality, Data Protection & Safeguards\n"
-                "   - Treatment of confidential information and personal data.\n"
-                "   - Safeguards where AI or automated decision-making is involved.\n\n"
-                "6. Term, Revocation & Review\n"
-                "   - Duration, renewal and review points.\n"
-                "   - Conditions for revocation or modification of the licence.\n\n"
-                "7. Governing Law & Dispute Resolution\n"
-                "   - Governing law.\n"
-                "   - Mechanism for addressing disputes.\n"
-            )
-
-        data, fname, mime = _export_bytes(title, body)
-        folder = OUT_ROOT / _safe(case)
-        path, msg = _save_bytes(folder, fname, data)
-        st.download_button(
-            "⬇️ Download Template",
-            data,
-            file_name=fname,
-            mime=mime,
-            key="dl_tpl",
-        )
-        (st.success if path else st.warning)(msg)
-
-# 6) LIP ASSISTANT (beta)
-elif page == "LIP Assistant":
-    st.header("LIP Assistant (beta)")
-    st.caption(
-        "A lightweight helper for the Licensing & Intangibles Partner. "
-        "It re-uses the IC narrative and licensing logic locally — no external AI calls are made in this demo."
-    )
-
-    if ss.get("combined_text", ""):
-        st.success("IC narrative available from Analyse Evidence / LIP Console.")
-    else:
-        st.warning("No IC narrative stored yet. Run **Analyse Evidence** first for best results.")
-
-    context_choice = st.selectbox(
-        "Which context should the LIP Assistant focus on?",
-        ["IC findings", "Licensing options", "Both"],
-        index=2,
-    )
-
-    question = st.text_area(
-        "Your question",
-        "",
-        height=120,
-        help="Example: 'Which assets look IAS 38-ready?' or 'How could we structure a royalty-free community licence?'",
-    )
-
-    if st.button("Ask LIP Assistant"):
-        if not question.strip():
-            st.error("Please enter a question.")
-        else:
-            ic_text = ss.get("combined_text", "")
-            # Short licensing explainer from the report logic
-            lic_snippet = (
-                "The tool supports revenue licences, access/community licences, co-creation/joint development, "
-                "defensive/cross-licence arrangements and data/algorithm licences, all treated through a FRAND-informed "
-                "lens across the Seven Stakeholder Model."
-            )
-
-            answer_parts: List[str] = []
-            answer_parts.append(f"**Question received:** {question.strip()}")
-
-            q_lower = question.lower()
-
-            if context_choice in ("IC findings", "Both"):
-                answer_parts.append("**IC & Structural Capital view (IAS 38):**")
-                if "structural" in q_lower or "ias 38" in q_lower:
-                    answer_parts.append(
-                        "- Structural Capital is treated as the home for explicit, documented assets "
-                        "(contracts, SOPs, registers, CRM, datasets, board packs). Where both tacit and explicit "
-                        "signals exist, Structural is deliberately weighted to dominate, reflecting IAS 38 audit-readiness."
-                    )
-                if ic_text:
-                    answer_parts.append(
-                        "- Key IC narrative extract:\n\n"
-                        + ic_text[:600]
-                        + ("..." if len(ic_text) > 600 else "")
-                    )
-                else:
-                    answer_parts.append(
-                        "- No stored IC narrative yet. Run the analysis and revisit this view to see a richer explanation."
-                    )
-
-            if context_choice in ("Licensing options", "Both"):
-                answer_parts.append("**Licensing & FRAND view:**")
-                if "frand" in q_lower:
-                    answer_parts.append(
-                        "- In this tool, FRAND is a *design principle* rather than a legal certification. "
-                        "It guides how pricing, access tiers and governance are framed across different stakeholders, "
-                        "including royalty-free and community licences."
-                    )
-                answer_parts.append("- " + lic_snippet)
-
-            answer_parts.append(
-                "_Next step: a Licensing & Intangibles Partner can tailor these insights into concrete clauses using the "
-                "reports and templates generated in the other pages._"
-            )
-
-            ss["lip_history"].append({"q": question.strip(), "a": "\n\n".join(answer_parts)})
-            st.markdown("\n\n".join(answer_parts))
-
-    if ss.get("lip_history"):
-        with st.expander("Previous LIP Assistant exchanges"):
-            for i, entry in enumerate(reversed(ss["lip_history"]), start=1):
-                st.markdown(f"**Q{i}:** {entry['q']}")
-                st.markdown(entry["a"])
-                st.markdown("---")
