@@ -1138,7 +1138,12 @@ SECTORS = [
     "Other",
 ]
 
-# -------------------- NAV ---------------------------
+# -------------------- NAV + LOGOS ---------------------------
+# Top: IMPAC3T logo on cobalt sidebar
+if IMPAC3T_LOGO is not None:
+    st.sidebar.image(IMPAC3T_LOGO, use_column_width=True)
+    st.sidebar.markdown("---")
+
 st.sidebar.markdown("### Navigate")
 page = st.sidebar.radio(
     "",
@@ -1147,6 +1152,15 @@ page = st.sidebar.radio(
     key="nav",
 )
 
+# Bottom: EU flag + funding acknowledgement
+st.sidebar.markdown("---")
+if EU_FLAG_LOGO is not None:
+    st.sidebar.image(EU_FLAG_LOGO, use_column_width=True)
+
+st.sidebar.caption(
+    "This tool has been developed within the IMPAC3T-IP project, which has received "
+    "funding from the European Union’s Horizon Europe programme under Grant Agreement No. 101135832."
+)
 # -------------------- PAGES -------------------------
 
 # 1) COMPANY (with required prompts + auto-split)
