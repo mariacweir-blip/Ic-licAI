@@ -724,14 +724,23 @@ def _analyse_weighted(
     quality = int(round(100 * (0.45 * files_factor + 0.35 * leaf_div + 0.20 * min(1.0, weight_mean))))
 
     return ic_map, leaf_scores, ten, quality
+    
     def _build_interpreted_summary(
+        case: str,
+        leaf_scores: Dict[str, float],
+        ic_map: Dict[str, Any],
+        ten: Dict[str, Any],
+        evidence_quality: int,
+        context: Dict[str, str],
+def _build_interpreted_summary(
     case: str,
     leaf_scores: Dict[str, float],
     ic_map: Dict[str, Any],
     ten: Dict[str, Any],
     evidence_quality: int,
     context: Dict[str, str],
-) -> str:
+    ) -> str:
+        
     sector = st.session_state.get("sector", "Other")
     size = st.session_state.get("company_size", "Micro (1–10)")
 
@@ -742,16 +751,19 @@ def _analyse_weighted(
     strong_steps = [s for s, sc in zip(TEN_STEPS, ts) if sc >= 7]
     weak_steps = [s for s, sc in zip(TEN_STEPS, ts) if sc <= 5]
 
+    # Detect whether ESG & Seven Stakeholder cues are present
     narrative_text = context.get("why", "") + " " + context.get("markets", "")
     seven_hit = any(c in narrative_text.lower() for c in SEVEN_STAKEHOLDER_CUES)
     esg_hit = any(c in narrative_text.lower() for c in ESG_CUES)
 
+    # 1) Context & positioning
     p1 = (
         f"{case} is a {size} in {sector}. Based on uploaded artefacts and company context, the company shows an "
         f"emerging ability to codify and scale its operating model, with measurable signals across "
         f"{', '.join(strengths) if strengths else 'selected IC dimensions'}."
     )
 
+    # 2) Four-Leaf interpretation (explicit vs tacit, IAS 38)
     if strengths:
         p2a = f"Strengths concentrate in {', '.join(strengths)}" + (f"; gaps are {', '.join(gaps)}." if gaps else ".")
     else:
@@ -765,6 +777,7 @@ def _analyse_weighted(
     )
     p2 = p2a + " " + p2b
 
+    # 3) Ten-Steps insight and readiness for licensing
     if strong_steps or weak_steps:
         p3 = (
             f"Ten-Steps patterns indicate strong {', '.join(strong_steps) if strong_steps else 'foundations'}; "
@@ -776,6 +789,7 @@ def _analyse_weighted(
             "consolidated and IA governance is embedded."
         )
 
+    # 4) Seven Stakeholder / ESG framing and value streams
     if seven_hit or esg_hit:
         p4_intro = (
             "Using the Seven Stakeholder Model (SSM) as defined by Professor Philip Sugai and Dr Maria Weir, "
@@ -809,6 +823,97 @@ def _analyse_weighted(
 
     p4 = p4_intro + "\n\n" + p4_mid + "\n\n" + p4_actions
 
+    # 5) Evidence quality and next evidence requests
+    missing = (
+        "Request additional artefacts: CRM/renewal data, NDA/licence/royalty and access terms, IA or IP registers, "
+        "board/management reports, and any ESG or stakeholder dashboards used in internal decision-making."
+    )
+    p5 = f"Evidence quality ≈ {evidence_quality}% (heuristic). {missing}"
+
+    return "\n\n".join([p1, p2, p3, p4, p5])) -> str:
+    sector = st.session_state.get("sector", "Other")
+    size = st.session_state.get("company_size", "Micro (1–10)")
+
+    strengths = [k for k, v in ic_map.items() if v.get("tick")]
+    gaps = [k for k, v in ic_map.items() if not v.get("tick")]
+
+    ts = ten.get("scores") or [5] * len(TEN_STEPS)
+    strong_steps = [s for s, sc in zip(TEN_STEPS, ts) if sc >= 7]
+    weak_steps = [s for s, sc in zip(TEN_STEPS, ts) if sc <= 5]
+
+    # Detect whether ESG & Seven Stakeholder cues are present
+    narrative_text = context.get("why", "") + " " + context.get("markets", "")
+    seven_hit = any(c in narrative_text.lower() for c in SEVEN_STAKEHOLDER_CUES)
+    esg_hit = any(c in narrative_text.lower() for c in ESG_CUES)
+
+    # 1) Context & positioning
+    p1 = (
+        f"{case} is a {size} in {sector}. Based on uploaded artefacts and company context, the company shows an "
+        f"emerging ability to codify and scale its operating model, with measurable signals across "
+        f"{', '.join(strengths) if strengths else 'selected IC dimensions'}."
+    )
+
+    # 2) Four-Leaf interpretation (explicit vs tacit, IAS 38)
+    if strengths:
+        p2a = f"Strengths concentrate in {', '.join(strengths)}" + (f"; gaps are {', '.join(gaps)}." if gaps else ".")
+    else:
+        p2a = "Strengths are not yet well-evidenced; additional artefacts are required."
+
+    p2b = (
+        "Evidence points to maturing Structural Capital where explicit artefacts — contracts, SOPs, protocols, registers, "
+        "board materials, CRM and datasets — are present. These are the primary candidates for IAS 38-compliant recognition on "
+        "the balance sheet. Human, Customer and Strategic Alliance Capital are reflected mainly through tacit know-how, "
+        "relationships and informal practice, which require codification before they become audit-ready."
+    )
+    p2 = p2a + " " + p2b
+
+    # 3) Ten-Steps insight and readiness for licensing
+    if strong_steps or weak_steps:
+        p3 = (
+            f"Ten-Steps patterns indicate strong {', '.join(strong_steps) if strong_steps else 'foundations'}; "
+            f"progress is constrained by {', '.join(weak_steps) if weak_steps else 'later-stage governance, valuation and reporting readiness'}."
+        )
+    else:
+        p3 = (
+            "Ten-Steps scores suggest a developing baseline; company-side review will refine scoring as artefacts are "
+            "consolidated and IA governance is embedded."
+        )
+
+    # 4) Seven Stakeholder / ESG framing and value streams
+    if seven_hit or esg_hit:
+        p4_intro = (
+            "Using the Seven Stakeholder Model (SSM) as defined by Professor Philip Sugai and Dr Maria Weir, "
+            "the company can frame value creation across employees, investors, customers, partners and suppliers, "
+            "communities and the natural environment. This provides a structured way to connect ESG performance "
+            "and double materiality to concrete intangible assets."
+        )
+    else:
+        p4_intro = (
+            "Applying the Seven Stakeholder Model (SSM) as defined by Professor Philip Sugai and Dr Maria Weir "
+            "would allow the company to frame value creation across employees, investors, customers, partners and "
+            "suppliers, communities and the natural environment, even if these links are not yet fully articulated "
+            "in the evidence set."
+        )
+
+    p4_mid = (
+        "From a commercialisation perspective, explicit Structural Capital (contracts, data, software, methods, indices, "
+        "protocols) can support multiple simultaneous value streams — including revenue licences, access or community "
+        "licences, co-creation arrangements and data/algorithm sharing — provided that ownership, rights and governance "
+        "are clarified."
+    )
+
+    actions = [
+        "Create a single IA Register linking all explicit artefacts (contracts, JVs, SOPs, protocols, datasets, board packs, CRM) to the 4-Leaf Model.",
+        "Map each explicit asset to at least one licensing-ready value stream (revenue, access/community, co-creation, defensive or data/algorithm sharing).",
+        "Introduce quarterly governance reporting (board pack + KPI dashboard) to strengthen Monitor and Report and to evidence ESG and stakeholder impacts.",
+        "Define valuation approach (IAS 38 fair value) and link to licensing templates so that audit-ready Structural Capital supports near-term monetisation.",
+        "Formalise competency matrices and training logs so that tacit Human Capital can be progressively codified into Structural Capital.",
+    ]
+    p4_actions = "Assumptions & Action Plan:\n" + "\n".join([f"• {a}" for a in actions])
+
+    p4 = p4_intro + "\n\n" + p4_mid + "\n\n" + p4_actions
+
+    # 5) Evidence quality and next evidence requests
     missing = (
         "Request additional artefacts: CRM/renewal data, NDA/licence/royalty and access terms, IA or IP registers, "
         "board/management reports, and any ESG or stakeholder dashboards used in internal decision-making."
