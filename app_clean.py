@@ -1272,7 +1272,108 @@ elif page == "Analyse Evidence":
         }
         ss["asset_verification"] = assets
         st.success("Saved asset & evidence verification notes for this session.")
-        # 3) LIP CONSOLE
+            st.markdown("---")
+    st.subheader("Asset & Evidence Verification (LIP review)")
+
+    # Evidence-level check
+    ev_focus = st.selectbox(
+        "Main evidence focus",
+        [
+            "Business plan / strategy pack",
+            "ESG / sustainability / impact report",
+            "Technical / R&D documentation",
+            "Contracts / JVs / MoUs",
+            "Mixed evidence set",
+            "Other / not specified",
+        ],
+        key="ev_focus",
+    )
+    ev_quality = st.slider(
+        "Overall evidence quality (1 = narrative only, 5 = near audit-ready)",
+        1,
+        5,
+        value=3,
+        key="ev_quality",
+    )
+    ev_assurance = st.radio(
+        "Independent assurance / external review present?",
+        ["Yes", "Partly", "No / Not known"],
+        horizontal=True,
+        key="ev_assurance",
+    )
+    ev_comments = st.text_area(
+        "Comments on evidence strengths / gaps (for internal LIP notes)",
+        ss.get("evidence_check", {}).get("comments", ""),
+        height=80,
+        key="ev_comments",
+    )
+
+    st.caption("Below you can record up to 5 key assets for verification status.")
+
+    assets: List[Dict[str, Any]] = []
+    for i in range(1, 6):
+        with st.expander(f"Asset {i}", expanded=False):
+            name = st.text_input(f"Asset {i} name", key=f"asset_name_{i}")
+            atype = st.selectbox(
+                f"Asset {i} type",
+                [
+                    "",
+                    "Software",
+                    "Dataset",
+                    "Methodology / Playbook",
+                    "Brand / Trademark",
+                    "Contractual right",
+                    "JV / Alliance",
+                    "Training / Content",
+                    "Other",
+                ],
+                key=f"asset_type_{i}",
+            )
+            leaf_home = st.selectbox(
+                f"Asset {i} main 4-Leaf home",
+                ["", "Human", "Structural", "Customer", "Strategic Alliance"],
+                key=f"asset_leaf_{i}",
+            )
+            status = st.selectbox(
+                f"Asset {i} verification status",
+                ["", "Unverified", "In discussion", "Verified with company"],
+                key=f"asset_status_{i}",
+            )
+            risks = st.multiselect(
+                f"Asset {i} risk flags",
+                [
+                    "Documentation weak / outdated",
+                    "Ownership / rights unclear",
+                    "Dependency on 3rd-party IP/data",
+                    "High ESG / impact claims",
+                    "Commercial use not yet proven",
+                    "Other",
+                ],
+                key=f"asset_risks_{i}",
+            )
+            if name.strip():
+                assets.append(
+                    {
+                        "name": name.strip(),
+                        "type": atype or "",
+                        "leaf": leaf_home or "",
+                        "status": status or "",
+                        "risks": risks,
+                    }
+                )
+
+    if st.button("Save verification notes"):
+        ss["evidence_check"] = {
+            "focus": ev_focus,
+            "quality": ev_quality,
+            "assurance": ev_assurance,
+            "comments": ev_comments.strip(),
+        }
+        ss["asset_verification"] = assets
+        st.success("Saved asset & evidence verification notes for this session.")
+
+
+# 3) LIP CONSOLE
 elif page == "LIP Console":
     st.header("LIP Console — Narrative, IC Map & Verification")
 
