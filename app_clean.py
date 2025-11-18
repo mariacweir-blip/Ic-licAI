@@ -889,7 +889,7 @@ SECTORS = [
     "Professional Services",
     "Mobility/Transport",
     "Energy",
-     Other",
+    "Other",
 ]
 
 # -------------------- PAGES -------------------------
