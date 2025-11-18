@@ -724,4 +724,6 @@ def _analyse_weighted(
     quality = int(round(100 * (0.45 * files_factor + 0.35 * leaf_div + 0.20 * min(1.0, weight_mean))))
 
     return ic_map, leaf_scores, ten, quality
+
+
   
