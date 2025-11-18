@@ -891,17 +891,31 @@ SECTORS = [
     "Energy",
     "Other",
 ]
-# ---------------- SIDEBAR BRANDING & NAV -------------
+# -------------- SIDEBAR BRANDING & NAV -------------
 with st.sidebar:
-    # Top: IMPAC3T logo
-    st.image(IMPACT3T_LOGO_PATH, use_column_width=True)
+    # IMPAC3T-IP logo (top) – safe load
+    try:
+        if Path(IMPACT3T_LOGO_PATH).is_file():
+            st.image(IMPACT3T_LOGO_PATH, use_column_width=True)
+        else:
+            st.markdown("**IMPAC3T-IP**")
+    except Exception:
+        st.markdown("**IMPAC3T-IP**")
 
-    # Spacer + EU flag + funding line
     st.markdown("---")
-    st.image(EU_FLAG_PATH, use_column_width=True)
+
+    # EU flag + funding line – safe load
+    try:
+        if Path(EU_FLAG_PATH).is_file():
+            st.image(EU_FLAG_PATH, use_column_width=True)
+        else:
+            st.markdown("EU-funded tool")
+    except Exception:
+        st.markdown("EU-funded tool")
+
     st.caption(
         "This tool has been developed within the IMPAC3T-IP project, which has received "
-        "funding from the European Union’s Horizon Europe programme under Grant Agreement "
+        "funding from the European Union's Horizon Europe programme under Grant Agreement "
         "No. 101135832."
     )
 
