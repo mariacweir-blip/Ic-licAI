@@ -65,7 +65,7 @@ st.markdown(
     box-shadow:0 2px 6px rgba(0,0,0,.08); }
   .stButton>button { background:#0F2F56!important; color:#fff!important; border-radius:8px!important;
     border:0!important; padding:.55rem 1rem!important; font-weight:700!important; }
-  section[data-testid="stSidebar"] { background:#0F2F56; }
+  section[data-testid="stSidebar"] { background:#0047AB; }  /* cobalt for IMPAC3T */  
   section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] p,
   section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] span { color:#E7F0FF!important; }
   .stRadio div[role="radiogroup"] label { color:#E7F0FF!important; }
