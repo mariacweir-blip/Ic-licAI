@@ -19,6 +19,20 @@ from typing import Dict, Any, List, Tuple, Optional
 
 import streamlit as st
 import plotly.graph_objects as go  # for radar charts
+from PIL import Image
+
+IMPAC3T_LOGO_PATH = "demo_assets/impac3t_logo.png"
+EU_FLAG_PATH = "demo_assets/eu_flag.png"
+
+try:
+    IMPAC3T_LOGO = Image.open(IMPAC3T_LOGO_PATH)
+except Exception:
+    IMPAC3T_LOGO = None
+
+try:
+    EU_FLAG_LOGO = Image.open(EU_FLAG_PATH)
+except Exception:
+    EU_FLAG_LOGO = None
 
 # -------------------- MODE / AUTH --------------------
 PUBLIC_MODE: bool = False       # False = internal (richer text + watermark + server save)
