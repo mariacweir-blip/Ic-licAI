@@ -1,14 +1,9 @@
-# app_clean.py — IC-LicAI Expert Console (v1.1)
-# Includes:
-# - Structural Capital dominance (IAS 38 lens)
-# - Tacit → codified → Structural transition
-# - 4-Leaf + Ten-Steps analysis
-# - Evidence extraction (TXT/DOCX/PPTX/CSV)
-# - Asset & Evidence Verification (LIP review)
-# - Translation layer (manual capture)
-# - LIP Assistant
-# - IMPAC3T + EU sidebar branding
-# - © Areopa 1987–2025 footer
+@@ -1 +1,1546 @@
+# app_clean.py — IC-LicAI Expert Console (Structural + FRAND + LIP Assistant)
+# Adds: DOCX/PPTX extraction, weighted IC signal engine, interpreted narrative,
+# radar dashboard, CSV semantic extraction, robust company-context auto-split,
+# IAS 38 Structural Capital emphasis, FRAND-aware licensing templates,
+# Seven Stakeholder / ESG narrative, LIP Console, and LIP Assistant (beta).
 
 from __future__ import annotations
 import io, os, tempfile, re, csv
@@ -17,7 +12,6 @@ from typing import Dict, Any, List, Tuple, Optional
 
 import streamlit as st
 import plotly.graph_objects as go  # for radar charts
-from PIL import Image
 
 # -------------------- MODE / AUTH --------------------
 PUBLIC_MODE: bool = False       # False = internal (richer text + watermark + server save)
@@ -50,40 +44,15 @@ st.markdown(
     box-shadow:0 2px 6px rgba(0,0,0,.08); }
   .stButton>button { background:#0F2F56!important; color:#fff!important; border-radius:8px!important;
     border:0!important; padding:.55rem 1rem!important; font-weight:700!important; }
-  section[data-testid="stSidebar"] { background:#0047AB; }  /* cobalt for IMPAC3T */
+  section[data-testid="stSidebar"] { background:#0F2F56; }
   section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] p,
   section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] span { color:#E7F0FF!important; }
   .stRadio div[role="radiogroup"] label { color:#E7F0FF!important; }
-  footer {visibility: hidden;}
-  footer:after {
-    content: "© Areopa 1987–2025. All rights reserved.";
-    visibility: visible;
-    display: block;
-    position: relative;
-    padding: 8px 0 4px 0;
-    text-align: center;
-    font-size: 11px;
-    color: #555;
-  }
 </style>
 """,
     unsafe_allow_html=True,
 )
 st.markdown('<div class="ic-title-bar">IC-LicAI Expert Console</div>', unsafe_allow_html=True)
-
-# ---------------- LOGOS ----------------------------
-IMPAC3T_LOGO_PATH = "demo_assets/impac3t_logo.png"
-EU_FLAG_PATH = "demo_assets/eu_flag.png"
-
-try:
-    IMPAC3T_LOGO = Image.open(IMPAC3T_LOGO_PATH)
-except Exception:
-    IMPAC3T_LOGO = None
-
-try:
-    EU_FLAG_LOGO = Image.open(EU_FLAG_PATH)
-except Exception:
-    EU_FLAG_LOGO = None
 
 # ------------------ AUTH GATE ------------------------
 def _auth_gate() -> None:
@@ -212,8 +181,9 @@ def _extract_text_pptx(data: bytes) -> str:
 
 def _extract_text_csv(raw: bytes, name: str) -> str:
     """
-    CSV semantic extraction: headers + first rows to expose SME / ESG terms
-    (safety, contract, emissions, etc.) to the heuristics.
+    CSV semantic extraction: surface headers + a few rows so SME/ESG words
+    like 'safety', 'policy', 'contract', 'governance', 'emissions', etc.
+    are visible to the heuristics.
     """
     try:
         decoded = raw.decode("utf-8", errors="ignore")
@@ -237,7 +207,7 @@ def _extract_text_csv(raw: bytes, name: str) -> str:
 def _read_text(files: List[Any]) -> Tuple[str, Dict[str, int], Dict[str, float]]:
     """
     Returns (combined_text, counts_by_ext, weights_used)
-    Weights depend on artefact type (contracts/JVs > SOPs > slides > culture).
+    Weights depend on artefact type (contract/JV > SOP/KMP > specs/slides > culture).
     """
     chunks: List[str] = []
     counts: Dict[str, int] = {}
@@ -385,7 +355,7 @@ FOUR_LEAF_KEYS: Dict[str, List[str]] = {
         "iso 27001",
         "knowledge base",
         "architecture",
-        "crm",
+        "crm",  # explicit system
     ],
     "Customer": [
         "client",
@@ -488,6 +458,7 @@ SECTOR_CUES = {
     ],
 }
 
+# Explicit structural cues (IAS 38-compliant artefact hints)
 EXPLICIT_STRUCTURAL_CUES: List[str] = [
     "contract",
     "agreement",
@@ -529,6 +500,7 @@ EXPLICIT_STRUCTURAL_CUES: List[str] = [
     "crm",
 ]
 
+# ESG & Seven Stakeholder cues (Sugai / Weir)
 ESG_CUES: List[str] = [
     "esg",
     "sdg",
@@ -568,13 +540,18 @@ SEVEN_STAKEHOLDER_CUES: List[str] = [
     "biodiversity",
 ]
 
+# --------------- ANALYSIS ENGINE ---------------------
 def _analyse_weighted(
     text: str,
     weights_by_file: Dict[str, float],
 ) -> Tuple[Dict[str, Any], Dict[str, float], Dict[str, Any], int]:
     """
-    Weighted 4-Leaf + Ten-Steps engine with Structural Capital dominance
-    and sector / ESG reinforcement.
+    Weighted Four-Leaf & Ten-Steps.
+    Returns:
+      ic_map (with tick/narrative/score),
+      leaf_scores (raw weighted scores for 4-leaf),
+      ten (scores+narratives),
+      quality% (heuristic)
     """
     sector = st.session_state.get("sector", "Other")
     t_all = (text or "").lower()
@@ -592,14 +569,15 @@ def _analyse_weighted(
         if any(c in t_all for c in SECTOR_CUES[sector]):
             sector_present = True
 
+    # ----- Structural vs Tacit weighting -----
     max_weight = max(weights_by_file.values() or [0.4])
 
-    # Structural base bump from explicit cues in content
+    # Base structural emphasis from explicit cues anywhere in the text (IAS 38 explicit assets)
     for cue in EXPLICIT_STRUCTURAL_CUES:
         if cue in t_all:
-            leaf_scores["Structural"] += max_weight * 1.5
+            leaf_scores["Structural"] += max_weight * 1.5  # audit-ready bump
 
-    # 4-Leaf scoring (with sector hints)
+    # Four-Leaf cues (with sector reinforcement)
     for leaf, cues in FOUR_LEAF_KEYS.items():
         eff = list(cues)
         if sector_present and leaf in ("Structural", "Customer", "Strategic Alliance"):
@@ -610,14 +588,14 @@ def _analyse_weighted(
                 base += max_weight
         leaf_scores[leaf] += base
 
-    # Ten-Steps bump helper
+    # Ten-Steps scoring (file-name based + ESG / FRAND cues)
     def bump(step: str, amt: float) -> None:
         step_scores[step] = step_scores.get(step, 0.0) + amt
 
-    # File-name driven patterns
     for fname, w in (weights_by_file or {}).items():
         n = fname.lower()
 
+        # Contracts / grants / agreements → Structural dominates, Customer/SA secondary
         if any(k in n for k in ["contract", "msa", "sow", "sla", "po", "agreement"]):
             leaf_scores["Structural"] += 2.5 * w
             leaf_scores["Customer"] += 1.0 * w
@@ -630,6 +608,7 @@ def _analyse_weighted(
             bump("Control", 2.0 * w)
             bump("Use", 2.0 * w)
 
+        # Knowledge / SOP / KMP / safety / ISO → Structural + Human
         if any(k in n for k in ["knowledge", "kmp", "sop", "process", "safety", "protocol", "risk", "qms", "iso"]):
             leaf_scores["Structural"] += 1.8 * w
             leaf_scores["Human"] += 0.8 * w
@@ -638,20 +617,23 @@ def _analyse_weighted(
             bump("Manage", 1.6 * w)
             bump("Safeguard", 1.0 * w)
 
+        # Specs/slides/canvas → Structural + Use
         if any(k in n for k in ["spec", "canvas", "deck", "slides", "pptx"]):
             leaf_scores["Structural"] += 0.8 * w
             bump("Identify", 0.8 * w)
             bump("Use", 0.6 * w)
 
+        # Pricing/licensing hints → Use/Value (multi value streams)
         if any(k in n for k in ["price", "pricing", "royalty", "subscription", "oem", "white label"]):
             bump("Use", 1.2 * w)
             bump("Value", 1.6 * w)
 
+        # Governance/reporting → Monitor/Report
         if any(k in n for k in ["board", "report", "dashboard", "audit"]):
             bump("Report", 1.4 * w)
             bump("Monitor", 1.2 * w)
 
-    # ESG + Stakeholders → double materiality signal
+    # ESG & Seven Stakeholder presence → boost Report/Value (double materiality)
     esg_hits = any(c in t_all for c in ESG_CUES)
     stakeholder_hits = any(c in t_all for c in SEVEN_STAKEHOLDER_CUES)
     if esg_hits or stakeholder_hits:
@@ -662,11 +644,12 @@ def _analyse_weighted(
         bump("Use", 0.8)
         bump("Report", 0.5)
 
-    # Structural dominance if both tacit and explicit present
+    # Make sure Structural "wins" when explicit + tacit both present:
+    # if Structural>0 and (Customer or SA also high), add a small dominance bump.
     if leaf_scores["Structural"] > 0 and (leaf_scores["Customer"] > 0 or leaf_scores["Strategic Alliance"] > 0):
-        leaf_scores["Structural"] *= 1.15
+        leaf_scores["Structural"] *= 1.15  # dominance tweak
 
-    # Convert to IC map with narratives
+    # Convert leaf_scores -> ticks & narratives
     ic_map: Dict[str, Any] = {}
     avg_leaf = (sum(leaf_scores.values()) / max(1, len(leaf_scores)))
     threshold = max(1.0, avg_leaf * 0.6)
@@ -725,10 +708,454 @@ def _analyse_weighted(
 
     return ic_map, leaf_scores, ten, quality
 
-# 3) LIP CONSOLE
-elif page == "LIP Console":
-    st.header("LIP Console — Narrative, IC Map & Verification")
+# --------------- INTERPRETIVE NARRATIVE --------------
+def _build_interpreted_summary(
+    case: str,
+    leaf_scores: Dict[str, float],
+    ic_map: Dict[str, Any],
+    ten: Dict[str, Any],
+    evidence_quality: int,
+    context: Dict[str, str],
+) -> str:
+    sector = st.session_state.get("sector", "Other")
+    size = st.session_state.get("company_size", "Micro (1–10)")
 
+    strengths = [k for k, v in ic_map.items() if v.get("tick")]
+    gaps = [k for k, v in ic_map.items() if not v.get("tick")]
+
+    ts = ten.get("scores") or [5] * len(TEN_STEPS)
+    strong_steps = [s for s, sc in zip(TEN_STEPS, ts) if sc >= 7]
+    weak_steps = [s for s, sc in zip(TEN_STEPS, ts) if sc <= 5]
+
+    # Detect whether ESG & Seven Stakeholder cues are present
+    narrative_text = context.get("why", "") + " " + context.get("markets", "")
+    seven_hit = any(c in narrative_text.lower() for c in SEVEN_STAKEHOLDER_CUES)
+    esg_hit = any(c in narrative_text.lower() for c in ESG_CUES)
+
+    # 1) Context & positioning
+    p1 = (
+        f"{case} is a {size} in {sector}. Based on uploaded artefacts and company context, the company shows an "
+        f"emerging ability to codify and scale its operating model, with measurable signals across "
+        f"{', '.join(strengths) if strengths else 'selected IC dimensions'}."
+    )
+
+    # 2) Four-Leaf interpretation (explicit vs tacit, IAS 38)
+    if strengths:
+        p2a = f"Strengths concentrate in {', '.join(strengths)}" + (f"; gaps are {', '.join(gaps)}." if gaps else ".")
+    else:
+        p2a = "Strengths are not yet well-evidenced; additional artefacts are required."
+
+    p2b = (
+        "Evidence points to maturing Structural Capital where explicit artefacts — contracts, SOPs, protocols, registers, "
+        "board materials, CRM and datasets — are present. These are the primary candidates for IAS 38-compliant recognition on "
+        "the balance sheet. Human, Customer and Strategic Alliance Capital are reflected mainly through tacit know-how, "
+        "relationships and informal practice, which require codification before they become audit-ready."
+    )
+    p2 = p2a + " " + p2b
+
+    # 3) Ten-Steps insight and readiness for licensing
+    if strong_steps or weak_steps:
+        p3 = (
+            f"Ten-Steps patterns indicate strong {', '.join(strong_steps) if strong_steps else 'foundations'}; "
+            f"progress is constrained by {', '.join(weak_steps) if weak_steps else 'later-stage governance, valuation and reporting readiness'}."
+        )
+    else:
+        p3 = (
+            "Ten-Steps scores suggest a developing baseline; company-side review will refine scoring as artefacts are "
+            "consolidated and IA governance is embedded."
+        )
+
+    # 4) Seven Stakeholder / ESG framing and value streams
+    if seven_hit or esg_hit:
+        p4_intro = (
+            "Using the Seven Stakeholder Model (SSM) as defined by Professor Philip Sugai and Dr Maria Weir, "
+            "the company can frame value creation across employees, investors, customers, partners and suppliers, "
+            "communities and the natural environment. This provides a structured way to connect ESG performance "
+            "and double materiality to concrete intangible assets."
+        )
+    else:
+        p4_intro = (
+            "Applying the Seven Stakeholder Model (SSM) as defined by Professor Philip Sugai and Dr Maria Weir "
+            "would allow the company to frame value creation across employees, investors, customers, partners and "
+            "suppliers, communities and the natural environment, even if these links are not yet fully articulated "
+            "in the evidence set."
+        )
+
+    p4_mid = (
+        "From a commercialisation perspective, explicit Structural Capital (contracts, data, software, methods, indices, "
+        "protocols) can support multiple simultaneous value streams — including revenue licences, access or community "
+        "licences, co-creation arrangements and data/algorithm sharing — provided that ownership, rights and governance "
+        "are clarified."
+    )
+
+    actions = [
+        "Create a single IA Register linking all explicit artefacts (contracts, JVs, SOPs, protocols, datasets, board packs, CRM) to the 4-Leaf Model.",
+        "Map each explicit asset to at least one licensing-ready value stream (revenue, access/community, co-creation, defensive or data/algorithm sharing).",
+        "Introduce quarterly governance reporting (board pack + KPI dashboard) to strengthen Monitor and Report and to evidence ESG and stakeholder impacts.",
+        "Define valuation approach (IAS 38 fair value) and link to licensing templates so that audit-ready Structural Capital supports near-term monetisation.",
+        "Formalise competency matrices and training logs so that tacit Human Capital can be progressively codified into Structural Capital.",
+    ]
+    p4_actions = "Assumptions & Action Plan:\n" + "\n".join([f"• {a}" for a in actions])
+
+    p4 = p4_intro + "\n\n" + p4_mid + "\n\n" + p4_actions
+
+    # 5) Evidence quality and next evidence requests
+    missing = (
+        "Request additional artefacts: CRM/renewal data, NDA/licence/royalty and access terms, IA or IP registers, "
+        "board/management reports, and any ESG or stakeholder dashboards used in internal decision-making."
+    )
+    p5 = f"Evidence quality ≈ {evidence_quality}% (heuristic). {missing}"
+
+    return "\n\n".join([p1, p2, p3, p4, p5])
+
+# --------- COMPANY CONTEXT AUTO-SPLIT HELPER ----------
+def _auto_split_expert_block(text: str) -> Dict[str, str]:
+    """
+    Take a single pasted block and try to split it across:
+    why_service, stage, plan_s, plan_m, plan_l, markets_why, sale_price_why
+    using blank lines or sentence boundaries.
+    """
+    t = (text or "").strip()
+    keys = [
+        "why_service",
+        "stage",
+        "plan_s",
+        "plan_m",
+        "plan_l",
+        "markets_why",
+        "sale_price_why",
+    ]
+    if not t:
+        return {k: "" for k in keys}
+
+    blocks = [b.strip() for b in t.replace("\r\n", "\n").split("\n\n") if b.strip()]
+
+    if len(blocks) < 5:
+        blocks = [s.strip() for s in re.split(r"(?<=[.!?])\s+", t) if s.strip()]
+
+    out: Dict[str, str] = {k: "" for k in keys}
+    for k, chunk in zip(keys, blocks):
+        out[k] = chunk
+    return out
+
+# ------------------ SESSION DEFAULTS -----------------
+ss = st.session_state
+ss.setdefault("case_name", "Untitled Company")
+ss.setdefault("company_size", "Micro (1–10)")
+ss.setdefault("sector", "Other")
+ss.setdefault("uploads", [])
+ss.setdefault("combined_text", "")
+ss.setdefault("ic_map", {})
+ss.setdefault("ten_steps", {})
+ss.setdefault("narrative", "")
+ss.setdefault("leaf_scores", {})
+ss.setdefault("evidence_quality", 0)
+ss.setdefault("file_counts", {})
+
+# Expert prompts
+ss.setdefault("why_service", "")
+ss.setdefault("stage", "")
+ss.setdefault("plan_s", "")
+ss.setdefault("plan_m", "")
+ss.setdefault("plan_l", "")
+ss.setdefault("markets_why", "")
+ss.setdefault("sale_price_why", "")
+ss.setdefault("full_context_block", "")
+ss.setdefault("auto_split_on_save", True)
+
+# LIP Assistant state
+ss.setdefault("lip_history", [])
+
+SIZES = [
+    "Micro (1–10)",
+    "Small (11–50)",
+    "Medium (51–250)",
+    "Large (250+)",
+]
+SECTORS = [
+    "Food & Beverage",
+    "MedTech",
+    "GreenTech",
+    "AgriTech",
+    "Biotech",
+    "Software/SaaS",
+    "FinTech",
+    "EdTech",
+    "Manufacturing",
+    "Creative/Digital",
+    "Professional Services",
+    "Mobility/Transport",
+    "Energy",
+    "Other",
+]
+
+# -------------------- NAV ---------------------------
+st.sidebar.markdown("### Navigate")
+page = st.sidebar.radio(
+    "",
+    ("Company", "Analyse Evidence", "LIP Console", "Reports", "Licensing Templates", "LIP Assistant"),
+    index=0,
+    key="nav",
+)
+
+# -------------------- PAGES -------------------------
+
+# 1) COMPANY (with required prompts + auto-split)
+if page == "Company":
+    st.header("Company details")
+    with st.form("company_form"):
+        c1, c2, c3 = st.columns([1.1, 1, 1])
+        with c1:
+            case_name = st.text_input("Company name *", ss.get("case_name", ""))
+        with c2:
+            size = st.selectbox(
+                "Company size",
+                SIZES,
+                index=SIZES.index(ss.get("company_size", SIZES[0])),
+            )
+        with c3:
+            current_sector = ss.get("sector", "Other")
+            sector_index = SECTORS.index(current_sector) if current_sector in SECTORS else SECTORS.index("Other")
+            sector = st.selectbox("Sector / Industry", SECTORS, index=sector_index)
+
+        st.markdown("#### Company context (required)")
+        full_block = st.text_area(
+            "Optional: paste full context here (one block, then auto-fill below)",
+            ss.get("full_context_block", ""),
+            help=(
+                "You can paste your whole narrative here once, then tick auto-split and the tool will "
+                "try to populate the individual questions for you."
+            ),
+            height=80,
+        )
+        auto_split = st.checkbox(
+            "Auto-split pasted context into fields on Save",
+            value=ss.get("auto_split_on_save", True),
+            help="If ticked, the block above will be split across the questions below when you click Save.",
+        )
+
+        why_service = st.text_area(
+            "Why is the company seeking this service? *",
+            ss.get("why_service", ""),
+            height=90,
+        )
+        stage = st.text_area(
+            "What stage are the products/services at? *",
+            ss.get("stage", ""),
+            height=90,
+        )
+        c4, c5, c6 = st.columns(3)
+        with c4:
+            plan_s = st.text_area(
+                "3a) Short-term plan (0–6m) *",
+                ss.get("plan_s", ""),
+                height=90,
+            )
+        with c5:
+            plan_m = st.text_area(
+                "3b) Medium-term plan (6–24m) *",
+                ss.get("plan_m", ""),
+                height=90,
+            )
+        with c6:
+            plan_l = st.text_area(
+                "3c) Long-term plan (24m+) *",
+                ss.get("plan_l", ""),
+                height=90,
+            )
+        markets_why = st.text_area(
+            "4) Which markets fit and why? *",
+            ss.get("markets_why", ""),
+            height=90,
+        )
+        sale_price_why = st.text_area(
+            "5) If selling tomorrow, target price & why? *",
+            ss.get("sale_price_why", ""),
+            height=90,
+        )
+
+        st.caption("Uploads are held in session until analysis. Nothing is written to server until export.")
+        uploads = st.file_uploader(
+            "Upload evidence (PDF, DOCX, TXT, CSV, XLSX, PPTX, images)",
+            type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg", "webp"],
+            accept_multiple_files=True,
+            key="uploader_main",
+        )
+
+        submitted = st.form_submit_button("Save details")
+        if submitted:
+            # Optional auto-split of a single pasted narrative into all questions
+            if auto_split and full_block.strip():
+                derived = _auto_split_expert_block(full_block)
+                if not why_service.strip() and derived["why_service"]:
+                    why_service = derived["why_service"]
+                if not stage.strip() and derived["stage"]:
+                    stage = derived["stage"]
+                if not plan_s.strip() and derived["plan_s"]:
+                    plan_s = derived["plan_s"]
+                if not plan_m.strip() and derived["plan_m"]:
+                    plan_m = derived["plan_m"]
+                if not plan_l.strip() and derived["plan_l"]:
+                    plan_l = derived["plan_l"]
+                if not markets_why.strip() and derived["markets_why"]:
+                    markets_why = derived["markets_why"]
+                if not sale_price_why.strip() and derived["sale_price_why"]:
+                    sale_price_why = derived["sale_price_why"]
+
+            missing = [
+                ("Company name", case_name),
+                ("Why service", why_service),
+                ("Stage", stage),
+                ("Short plan", plan_s),
+                ("Medium plan", plan_m),
+                ("Long plan", plan_l),
+                ("Markets & why", markets_why),
+                ("Sale price & why", sale_price_why),
+            ]
+            missing_fields = [label for (label, val) in missing if not (val or "").strip()]
+            if missing_fields:
+                st.error("Please complete required fields: " + ", ".join(missing_fields))
+            else:
+                ss["case_name"] = case_name
+                ss["company_size"] = size
+                ss["sector"] = sector
+                ss["why_service"] = why_service.strip()
+                ss["stage"] = stage.strip()
+                ss["plan_s"] = plan_s.strip()
+                ss["plan_m"] = plan_m.strip()
+                ss["plan_l"] = plan_l.strip()
+                ss["markets_why"] = markets_why.strip()
+                ss["sale_price_why"] = sale_price_why.strip()
+                ss["full_context_block"] = full_block
+                ss["auto_split_on_save"] = auto_split
+                if uploads:
+                    ss["uploads"] = uploads
+                st.success("Saved company details & context.")
+
+    if ss.get("uploads"):
+        st.info(f"{len(ss['uploads'])} file(s) stored in session. Go to **Analyse Evidence** next.")
+
+# 2) ANALYSE EVIDENCE (with radar / evidence quality)
+elif page == "Analyse Evidence":
+    st.header("Evidence Dashboard & Analysis")
+
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        st.subheader("Evidence Quality")
+        eq = int(ss.get("evidence_quality", 0))
+        st.progress(min(100, max(0, eq)) / 100.0)
+        st.caption(f"{eq}% coverage (heuristic — based on artefact mix and IC diversity).")
+
+        counts = ss.get("file_counts", {}) or {}
+        if counts:
+            st.markdown("**Files by type (session):**")
+            for ext, n in counts.items():
+                st.markdown(f"- `{ext}` → {n} file(s)")
+        else:
+            st.caption("No files analysed yet.")
+
+    with col2:
+        st.subheader("IC Radar (4-Leaf + Ten-Steps)")
+
+        ic_map: Dict[str, Any] = ss.get("ic_map", {})
+        ten = ss.get(
+            "ten_steps",
+            {"scores": [5] * len(TEN_STEPS), "narratives": [f"{s}: tbd" for s in TEN_STEPS]},
+        )
+
+        leaf_labels = ["Human", "Structural", "Customer", "Strategic Alliance"]
+        leaf_vals = [float(ic_map.get(l, {}).get("score", 0.0)) for l in leaf_labels]
+        if any(v > 0 for v in leaf_vals):
+            fig_leaf = go.Figure()
+            fig_leaf.add_trace(
+                go.Scatterpolar(
+                    r=leaf_vals + leaf_vals[:1],
+                    theta=leaf_labels + leaf_labels[:1],
+                    fill="toself",
+                    name="IC Intensity",
+                )
+            )
+            fig_leaf.update_layout(
+                polar=dict(radialaxis=dict(visible=True, range=[0, max(leaf_vals) or 1])),
+                showlegend=False,
+                margin=dict(l=20, r=20, t=20, b=20),
+            )
+            st.plotly_chart(fig_leaf, use_container_width=True)
+        else:
+            st.caption("Radar will appear once analysis has been run and IC signals are detected.")
+
+        step_scores = ten.get("scores") or [5] * len(TEN_STEPS)
+        if step_scores:
+            fig_steps = go.Figure(
+                data=[
+                    go.Bar(
+                        x=TEN_STEPS,
+                        y=step_scores,
+                    )
+                ]
+            )
+            fig_steps.update_layout(
+                yaxis=dict(range=[0, 10]),
+                margin=dict(l=20, r=20, t=20, b=40),
+            )
+            st.plotly_chart(fig_steps, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("Interpreted Analysis Summary (first 5000 chars)")
+    combined = ss.get("combined_text", "")
+    st.text_area(
+        "Summary view (read-only; editable in LIP Console)",
+        combined[:5000],
+        height=260,
+        key="combined_preview",
+    )
+
+    if st.button("Run analysis now"):
+        uploads: List[Any] = ss.get("uploads") or []
+        extracted, counts, weights = _read_text(uploads)
+
+        ss["file_counts"] = counts or {}
+
+        context = {
+            "why": ss.get("why_service", ""),
+            "stage": ss.get("stage", ""),
+            "plan_s": ss.get("plan_s", ""),
+            "plan_m": ss.get("plan_m", ""),
+            "plan_l": ss.get("plan_l", ""),
+            "markets": ss.get("markets_why", ""),
+            "sale": ss.get("sale_price_why", ""),
+        }
+
+        context_stub = (
+            f"[CTX] why={context['why'][:140]} | stage={context['stage'][:140]} | "
+            f"plans=({context['plan_s'][:60]}/{context['plan_m'][:60]}/{context['plan_l'][:60]}) | "
+            f"markets={context['markets'][:140]} | sale={context['sale'][:60]}"
+        )
+
+        combined_text_for_detection = (extracted + "\n\n" + context_stub).strip().lower()
+
+        ic_map, leaf_scores, ten, quality = _analyse_weighted(combined_text_for_detection, weights)
+
+        case = ss.get("case_name", "Untitled Company")
+        interpreted = _build_interpreted_summary(case, leaf_scores, ic_map, ten, quality, context)
+
+        ss["combined_text"] = interpreted
+        ss["ic_map"] = ic_map
+        ss["ten_steps"] = ten
+        ss["leaf_scores"] = leaf_scores
+        ss["evidence_quality"] = quality
+
+        if len(extracted.strip()) < 100:
+            st.warning(
+                "Little machine-readable text was extracted (DOCX/PPTX/CSV extraction is enabled). "
+                "If PDFs dominate, consider adding a brief TXT note or export key pages to DOCX."
+            )
+
+        st.success("Analysis complete. Open **LIP Console** to refine and export.")
+
+# 3) LIP CONSOLE (was Expert View)
+elif page == "LIP Console":
+    st.header("LIP Console — Narrative & IC Map")
     nar = st.text_area(
         "Summary (editable by Licensing & Intangibles Partner)",
         value=ss.get("combined_text", ""),
@@ -783,48 +1210,6 @@ elif page == "LIP Console":
             for s, n in zip(TEN_STEPS, ten["narratives"]):
                 st.markdown(f"**{s}** — {n}")
 
-        st.subheader("Asset & Evidence Verification (summary)")
-        ev = ss.get("evidence_check", {})
-        if ev:
-            st.markdown(f"- **Evidence focus:** {ev.get('focus', '—')}")
-            st.markdown(f"- **Evidence quality:** {ev.get('quality', '—')}/5")
-            st.markdown(f"- **Assurance:** {ev.get('assurance', '—')}")
-            if ev.get("comments"):
-                st.markdown(f"- **Comments:** {ev.get('comments')}")
-        else:
-            st.caption("No evidence-level verification notes saved yet.")
-
-        assets = ss.get("asset_verification", []) or []
-        if assets:
-            st.markdown("**Key assets logged:**")
-            for a in assets:
-                st.markdown(
-                    f"- **{a.get('name','')}** "
-                    f"({a.get('type','')}, 4-Leaf: {a.get('leaf','')}, status: {a.get('status','')})"
-                )
-                if a.get("risks"):
-                    st.caption("  • Risks: " + ", ".join(a["risks"]))
-        else:
-            st.caption("No assets have been recorded in the verification panel.")
-
-        st.subheader("Translation layer (manual capture)")
-        lang = st.selectbox(
-            "Translated summary language",
-            ["None", "French", "German", "Spanish", "Italian", "Arabic", "Other"],
-            index=["None", "French", "German", "Spanish", "Italian", "Arabic", "Other"].index(
-                ss.get("translation_lang", "None")
-            ),
-        )
-        trans_text = st.text_area(
-            "Translated version of the summary (paste human / external translation here)",
-            ss.get("translation_text", ""),
-            height=120,
-        )
-        if st.button("Save translation"):
-            ss["translation_lang"] = lang
-            ss["translation_text"] = trans_text.strip()
-            st.success("Saved translated summary in session.")
-
 # 4) REPORTS
 elif page == "Reports":
     st.header("Reports & Exports")
@@ -846,13 +1231,6 @@ elif page == "Reports":
         if not PUBLIC_MODE:
             b.append(f"Evidence Quality: ~{ss.get('evidence_quality', 0)}% coverage (heuristic)\n")
 
-        # Optional translated summary
-        if ss.get("translation_lang", "None") != "None" and ss.get("translation_text"):
-            b.append(
-                f"Translated Summary ({ss.get('translation_lang')}):\n\n"
-                f"{ss.get('translation_text')}\n"
-            )
-
         b.append("Four-Leaf Analysis")
         for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
             row = ic_map.get(leaf, {"tick": False, "narrative": "", "score": 0.0})
@@ -862,35 +1240,6 @@ elif page == "Reports":
         b.append("\nTen-Steps Readiness")
         for s, n in zip(TEN_STEPS, ten["narratives"]):
             b.append(f"- {n}")
-
-        # Asset & Evidence Verification section
-        ev = ss.get("evidence_check", {})
-        assets = ss.get("asset_verification", []) or []
-        b.append("\nAsset & Evidence Verification")
-        if ev:
-            b.append(
-                f"Main evidence focus: {ev.get('focus','n/a')}. "
-                f"Overall evidence quality was rated {ev.get('quality','-')}/5 with assurance level "
-                f"'{ev.get('assurance','n/a')}'."
-            )
-            if ev.get("comments"):
-                b.append(f"LIP comments on evidence: {ev.get('comments')}")
-        else:
-            b.append("No structured evidence-level verification notes were recorded in this run.")
-
-        if assets:
-            b.append("Key assets logged for verification:")
-            for a in assets:
-                line = (
-                    f"- {a.get('name','')} "
-                    f"(type: {a.get('type','')}, 4-Leaf home: {a.get('leaf','')}, "
-                    f"status: {a.get('status','')})"
-                )
-                b.append(line)
-                if a.get("risks"):
-                    b.append("  • Risks: " + ", ".join(a["risks"]))
-        else:
-            b.append("No specific assets were recorded in the verification panel.")
 
         b.append("\nNotes")
         b.append(
@@ -1110,7 +1459,7 @@ elif page == "Licensing Templates":
         )
         (st.success if path else st.warning)(msg)
 
-# 6) LIP ASSISTANT (local helper)
+# 6) LIP ASSISTANT (beta)
 elif page == "LIP Assistant":
     st.header("LIP Assistant (beta)")
     st.caption(
@@ -1141,6 +1490,7 @@ elif page == "LIP Assistant":
             st.error("Please enter a question.")
         else:
             ic_text = ss.get("combined_text", "")
+            # Short licensing explainer from the report logic
             lic_snippet = (
                 "The tool supports revenue licences, access/community licences, co-creation/joint development, "
                 "defensive/cross-licence arrangements and data/algorithm licences, all treated through a FRAND-informed "
@@ -1181,28 +1531,6 @@ elif page == "LIP Assistant":
                     )
                 answer_parts.append("- " + lic_snippet)
 
-            # Connect to verification layer
-            ev = ss.get("evidence_check", {})
-            assets = ss.get("asset_verification", []) or []
-            if ev or assets:
-                answer_parts.append("**Asset & Evidence Verification context:**")
-                if ev:
-                    answer_parts.append(
-                        f"- Main evidence focus: {ev.get('focus','n/a')}, quality {ev.get('quality','-')}/5, "
-                        f"assurance: {ev.get('assurance','n/a')}."
-                    )
-                if assets:
-                    verified = [a for a in assets if a.get("status") == "Verified with company"]
-                    if verified:
-                        names = ", ".join(a.get("name", "") for a in verified)
-                        answer_parts.append(f"- Verified assets: {names}.")
-                    risky = [a for a in assets if a.get("risks")]
-                    if risky:
-                        answer_parts.append(
-                            "- Some assets carry explicit risk flags; review the verification section in LIP Console "
-                            "before finalising any licensing recommendation."
-                        )
-
             answer_parts.append(
                 "_Next step: a Licensing & Intangibles Partner can tailor these insights into concrete clauses using the "
                 "reports and templates generated in the other pages._"
@@ -1217,6 +1545,3 @@ elif page == "LIP Assistant":
                 st.markdown(f"**Q{i}:** {entry['q']}")
                 st.markdown(entry["a"])
                 st.markdown("---")
-
-
-  
