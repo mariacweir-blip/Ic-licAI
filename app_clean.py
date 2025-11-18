@@ -1,4 +1,3 @@
-@@ -1 +1,1546 @@
 # app_clean.py — IC-LicAI Expert Console (Structural + FRAND + LIP Assistant)
 # Adds: DOCX/PPTX extraction, weighted IC signal engine, interpreted narrative,
 # radar dashboard, CSV semantic extraction, robust company-context auto-split,
