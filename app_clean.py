@@ -891,7 +891,34 @@ SECTORS = [
     "Energy",
     "Other",
 ]
+# ---------------- SIDEBAR BRANDING & NAV -------------
+with st.sidebar:
+    # Top: IMPAC3T logo
+    st.image(IMPACT3T_LOGO_PATH, use_column_width=True)
 
+    # Spacer + EU flag + funding line
+    st.markdown("---")
+    st.image(EU_FLAG_PATH, use_column_width=True)
+    st.caption(
+        "This tool has been developed within the IMPAC3T-IP project, which has received "
+        "funding from the European Union’s Horizon Europe programme under Grant Agreement "
+        "No. 101135832."
+    )
+
+    # Navigation
+    st.markdown("### Navigate")
+    page = st.radio(
+        "Go to:",
+        [
+            "Company",
+            "Analyse Evidence",
+            "LIP Console",
+            "Reports",
+            "Licensing Templates",
+            "LIP Assistant",
+        ],
+        index=0,
+    )
 # -------------------- PAGES -------------------------
 
 # 1) COMPANY (with required prompts + auto-split)
