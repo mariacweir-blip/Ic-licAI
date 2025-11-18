@@ -12,6 +12,10 @@ from typing import Dict, Any, List, Tuple, Optional
 import streamlit as st
 import plotly.graph_objects as go  # for radar charts
 
+# -------------------- PROJECT LOGOS -----------------
+IMPACT3T_LOGO_PATH = "demo_assets/impact3t_logo.png"
+EU_FLAG_PATH = "demo_assets/eu_flag.png"
+
 # -------------------- MODE / AUTH --------------------
 PUBLIC_MODE: bool = False       # False = internal (richer text + watermark + server save)
 REQUIRE_PASS: bool = True       # Passphrase gate if APP_KEY is set
@@ -885,17 +889,8 @@ SECTORS = [
     "Professional Services",
     "Mobility/Transport",
     "Energy",
-    "Other",
+     Other",
 ]
-
-# -------------------- NAV ---------------------------
-st.sidebar.markdown("### Navigate")
-page = st.sidebar.radio(
-    "",
-    ("Company", "Analyse Evidence", "LIP Console", "Reports", "Licensing Templates", "LIP Assistant"),
-    index=0,
-    key="nav",
-)
 
 # -------------------- PAGES -------------------------
 
