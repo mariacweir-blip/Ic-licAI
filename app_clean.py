@@ -891,12 +891,12 @@ SECTORS = [
     "Energy",
     "Other",
 ]
-# -------------- SIDEBAR BRANDING & NAV -------------
+-# --------------- SIDEBAR BRANDING & NAV ---------------
 with st.sidebar:
-    # IMPAC3T-IP logo (top) – safe load
+    # IMPAC3T-IP logo (top) – safe load, moderate width
     try:
         if Path(IMPACT3T_LOGO_PATH).is_file():
-            st.image(IMPACT3T_LOGO_PATH, use_column_width=True)
+            st.image(IMPACT3T_LOGO_PATH, width=170)
         else:
             st.markdown("**IMPAC3T-IP**")
     except Exception:
@@ -904,22 +904,7 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # EU flag + funding line – safe load
-    try:
-        if Path(EU_FLAG_PATH).is_file():
-            st.image(EU_FLAG_PATH, use_column_width=True)
-        else:
-            st.markdown("EU-funded tool")
-    except Exception:
-        st.markdown("EU-funded tool")
-
-    st.caption(
-        "This tool has been developed within the IMPAC3T-IP project, which has received "
-        "funding from the European Union's Horizon Europe programme under Grant Agreement "
-        "No. 101135832."
-    )
-
-    # Navigation
+    # Navigation (middle of sidebar)
     st.markdown("### Navigate")
     page = st.radio(
         "Go to:",
@@ -932,6 +917,23 @@ with st.sidebar:
             "LIP Assistant",
         ],
         index=0,
+    )
+
+    st.markdown("---")
+
+    # EU flag + funding line – **footer**
+    try:
+        if Path(EU_FLAG_PATH).is_file():
+            st.image(EU_FLAG_PATH, width=80)
+        else:
+            st.markdown("EU-funded tool")
+    except Exception:
+        st.markdown("EU-funded tool")
+
+    st.caption(
+        "This tool has been developed within the IMPAC3T-IP project, which has received "
+        "funding from the European Union's Horizon Europe programme under Grant Agreement "
+        "No. 101135832."
     )
 # -------------------- PAGES -------------------------
 
