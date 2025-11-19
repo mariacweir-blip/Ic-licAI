@@ -869,6 +869,9 @@ ss.setdefault("auto_split_on_save", True)
 # LIP Assistant state
 ss.setdefault("lip_history", [])
 
+# Asset verification (overall notes)
+ss.setdefault("verification_notes", "")
+
 SIZES = [
     "Micro (1–10)",
     "Small (11–50)",
