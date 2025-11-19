@@ -13,7 +13,7 @@ import streamlit as st
 import plotly.graph_objects as go  # for radar charts
 
 # -------------------- PROJECT LOGOS -----------------
-IMPACT3T_LOGO_PATH = "demo_assets/impact3t_logo.png"
+IMPACT3T_LOGO_PATH = "demo_assets/impac3t_logo.png"
 EU_FLAG_PATH = "demo_assets/eu_flag.png"
 
 # -------------------- MODE / AUTH --------------------
