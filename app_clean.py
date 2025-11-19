@@ -891,7 +891,7 @@ SECTORS = [
     "Energy",
     "Other",
 ]
--# --------------- SIDEBAR BRANDING & NAV ---------------
+# --------------- SIDEBAR BRANDING & NAV ---------------
 with st.sidebar:
     # IMPAC3T-IP logo (top) – safe load, moderate width
     try:
