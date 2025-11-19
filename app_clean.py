@@ -911,6 +911,7 @@ with st.sidebar:
         [
             "Company",
             "Analyse Evidence",
+            "Asset Verification",
             "LIP Console",
             "Reports",
             "Licensing Templates",
