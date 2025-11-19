@@ -1193,8 +1193,79 @@ elif page == "Analyse Evidence":
             )
 
         st.success("Analysis complete. Open **LIP Console** to refine and export.")
+# 3) ASSET VERIFICATION (human check of assets & ESG claims)
+elif page == "Asset Verification":
+    st.header("Asset Verification — Evidence & ESG checks")
 
-# 3) LIP CONSOLE (was Expert View)
+    uploads = ss.get("uploads") or []
+
+    if not uploads:
+        st.warning("No evidence files found in session. Go to **Company** and upload documents first.")
+    else:
+        st.markdown(
+            "This page supports a **human verification step** for the documents already uploaded. "
+            "It helps the Licensing & Intangibles Partner (LIP) or TTO to check ownership, validity "
+            "and the robustness of ESG or impact claims before moving to the LIP Console and reports."
+        )
+
+        st.info(
+            "Use this view to **challenge the evidence**: confirm who owns what, whether contracts are in force, "
+            "and whether ESG or impact language is backed by real proof (not greenwashing)."
+        )
+
+        OPTION_LABELS = ["Select…", "Yes", "No", "Unsure / needs follow-up"]
+
+        for f in uploads:
+            fname = getattr(f, "name", "(unnamed file)")
+            safe_key = _safe(fname)
+
+            st.markdown(f"### {fname}")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.selectbox(
+                    "Ownership / rights clear?",
+                    OPTION_LABELS,
+                    key=f"ver_own_{safe_key}",
+                    help="Does this document clearly show who owns or controls the asset?",
+                )
+            with col2:
+                st.selectbox(
+                    "Up to date & in force?",
+                    OPTION_LABELS,
+                    key=f"ver_date_{safe_key}",
+                    help="Is the document current (still valid, signed, dates make sense)?",
+                )
+            with col3:
+                st.selectbox(
+                    "Claims supported by evidence?",
+                    OPTION_LABELS,
+                    key=f"ver_claim_{safe_key}",
+                    help="Where the document makes bold or ESG-related claims, are they backed by real detail?",
+                )
+
+            st.text_area(
+                "Notes / follow-up for this document",
+                key=f"ver_notes_{safe_key}",
+                height=80,
+                help="Capture anything that needs clarification, extra evidence, or legal review.",
+            )
+
+            st.markdown("---")
+
+        st.subheader("Overall verification summary for this company")
+        ss["verification_notes"] = st.text_area(
+            "Overall verification notes",
+            ss.get("verification_notes", ""),
+            height=120,
+            help="High-level view: which assets look robust, which are weak, and what needs to happen next.",
+        )
+
+        st.caption(
+            "These checks do **not** replace legal review. They are a structured way for the LIP / TTO to "
+            "document how far the evidence can be trusted before licensing design and valuation."
+        )
+# 4) LIP CONSOLE (was Expert View)
 elif page == "LIP Console":
     st.header("LIP Console — Narrative & IC Map")
     nar = st.text_area(
@@ -1251,7 +1322,7 @@ elif page == "LIP Console":
             for s, n in zip(TEN_STEPS, ten["narratives"]):
                 st.markdown(f"**{s}** — {n}")
 
-# 4) REPORTS
+# 5) REPORTS
 elif page == "Reports":
     st.header("Reports & Exports")
     case_name = ss.get("case_name", "Untitled Company")
@@ -1384,7 +1455,7 @@ elif page == "Reports":
 
     st.caption("Server save root: disabled (public mode)" if PUBLIC_MODE else f"Server save root: {OUT_ROOT}")
 
-# 5) LICENSING TEMPLATES
+# 6) LICENSING TEMPLATES
 elif page == "Licensing Templates":
     st.header("Licensing Templates (editable DOCX/TXT)")
     case = ss.get("case_name", "Untitled Company")
@@ -1500,7 +1571,7 @@ elif page == "Licensing Templates":
         )
         (st.success if path else st.warning)(msg)
 
-# 6) LIP ASSISTANT (beta)
+# 7) LIP ASSISTANT (beta)
 elif page == "LIP Assistant":
     st.header("LIP Assistant (beta)")
     st.caption(
