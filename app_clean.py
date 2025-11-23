@@ -14,11 +14,16 @@ import plotly.graph_objects as go  # for radar charts
 
 # -------------------- PROJECT LOGOS -----------------
 IMPACT3T_LOGO_PATH = "demo_assets/impac3t_logo.png"
-EU_FLAG_PATH = "demo_assets/eu_flag.png"
+EU_FLAG_PATH = "demo_assets/
 
 # -------------------- MODE / AUTH --------------------
-PUBLIC_MODE: bool = False       # False = internal (richer text + watermark + server save)
-REQUIRE_PASS: bool = True       # Passphrase gate if APP_KEY is set
+# APP_MODE is controlled by an environment variable on Streamlit:
+#   "PRIVATE" = internal app (passphrase + server save)
+#   "PUBLIC"  = demo app (no passphrase, no server save)
+APP_MODE = os.environ.get("ICLICAI_MODE", "PRIVATE").upper()
+
+PUBLIC_MODE: bool = (APP_MODE == "PUBLIC")
+REQUIRE_PASS: bool = (APP_MODE == "PRIVATE")
 
 # ---------------- DOCX/PPTX optional ----------------
 HAVE_DOCX = False
