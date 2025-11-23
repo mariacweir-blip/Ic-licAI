@@ -17,10 +17,8 @@ IMPACT3T_LOGO_PATH = "demo_assets/impact3t_logo.png"
 EU_FLAG_PATH = "demo_assets/eu_flag.png"
 
 # -------------------- MODE / AUTH --------------------
-# APP_MODE is controlled by an environment variable on Streamlit:
-#   "PRIVATE" = internal app (passphrase + server save)
-#   "PUBLIC"  = demo app (no passphrase, no server save)
-APP_MODE = os.environ.get("ICLICAI_MODE", "PRIVATE").upper()
+# VM version: always PRIVATE (internal, passphrase required)
+APP_MODE = "PRIVATE"
 
 PUBLIC_MODE: bool = False
 REQUIRE_PASS: bool = True
