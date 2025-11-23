@@ -982,7 +982,7 @@ with st.sidebar:
         "No. 101135832."
     )
 # -------------------- PAGES -------------------------
-
+  
 # 1) COMPANY (with required prompts + auto-split)
 if page == "Company":
     st.header("Company details")
@@ -1117,7 +1117,6 @@ if page == "Company":
 
     if ss.get("uploads"):
         st.info(f"{len(ss['uploads'])} file(s) stored in session. Go to **Analyse Evidence** next.")
-
 # 2) ANALYSE EVIDENCE (with radar / evidence quality)
 elif page == "Analyse Evidence":
     st.header("Evidence Dashboard & Analysis")
