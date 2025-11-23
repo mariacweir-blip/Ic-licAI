@@ -12,6 +12,13 @@ from typing import Dict, Any, List, Tuple, Optional
 import streamlit as st
 import plotly.graph_objects as go  # for radar charts
 
+HAVE_PDF = False
+try:
+    from PyPDF2 import PdfReader  # type: ignore
+    HAVE_PDF = True
+except Exception:
+    HAVE_PDF = False
+
 # -------------------- PROJECT LOGOS -----------------
 IMPACT3T_LOGO_PATH = "demo_assets/impact3t_logo.png"
 EU_FLAG_PATH = "demo_assets/eu_flag.png"
@@ -26,7 +33,6 @@ REQUIRE_PASS: bool = True
 # ---------------- DOCX/PPTX/PDF optional ----------------
 HAVE_DOCX = False
 HAVE_PPTX = False
-HAVE_PDF = False
 
 try:
     from docx import Document  # type: ignore
@@ -39,7 +45,8 @@ try:
     HAVE_PPTX = True
 except Exception:
     HAVE_PPTX = False
-
+    
+HAVE_PDF = False
 try:
     from PyPDF2 import PdfReader  # type: ignore
     HAVE_PDF = True
@@ -152,7 +159,7 @@ TEXT_EXT = {".txt"}
 DOCX_EXT = {".docx"}
 PPTX_EXT = {".pptx"}
 CSV_EXT = {".csv"}
-PDF_EXT = {".pdf"}  # filename cue only (kept for future)
+PDF_EXT = {".pdf"}  
 
 
 def _extract_text_docx(data: bytes) -> str:
@@ -317,7 +324,7 @@ def _read_text(files: List[Any]) -> Tuple[str, Dict[str, int], Dict[str, float]]
             elif ext in CSV_EXT:
                 text = _extract_text_csv(raw, name)
             elif ext in PDF_EXT:
-                text = f"[[PDF:{name}]]"
+                text = _extract_text_pdf(raw)
             else:
                 text = f"[[FILE:{name}]]"
 
