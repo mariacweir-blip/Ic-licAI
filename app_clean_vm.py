@@ -1206,20 +1206,20 @@ elif page == "Analyse Evidence":
 # 3) ASSET VERIFICATION (human check of assets & ESG claims)
 elif page == "Asset Verification":
     st.header("Asset Verification — Evidence & ESG checks")
+    st.caption(
+        "This page supports a human verification step for the documents already uploaded. "
+        "It helps the Intangibles & Licensing Partner (ILP) or TTO to check ownership, "
+        "validity and the robustness of ESG or impact claims before moving to the ILP Console "
+        "and reports."
+    )
 
-    uploads = ss.get("uploads") or []
+    uploads: List[Any] = ss.get("uploads") or []
 
     if not uploads:
-        st.warning("No evidence files found in session. Go to **Company** and upload documents first.")
+        st.warning("No documents have been uploaded on the Company page yet.")
     else:
-        st.markdown(
-            "This page supports a **human verification step** for the documents already uploaded. "
-            "It helps the Licensing & Intangibles Partner (LIP) or TTO to check ownership, validity "
-            "and the robustness of ESG or impact claims before moving to the LIP Console and reports."
-        )
-
         st.info(
-            "Use this view to **challenge the evidence**: confirm who owns what, whether contracts are in force, "
+            "Use this view to challenge the evidence: confirm who owns what, whether contracts are in force, "
             "and whether ESG or impact language is backed by real proof (not greenwashing)."
         )
 
@@ -1229,7 +1229,7 @@ elif page == "Asset Verification":
             fname = getattr(f, "name", "(unnamed file)")
             safe_key = _safe(fname)
 
-            st.markdown(f"### {fname}")
+            st.markdown(f"#### {fname}")
 
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -1263,19 +1263,18 @@ elif page == "Asset Verification":
 
             st.markdown("---")
 
-      st.subheader("Overall verification summary for this company")
-      ss["verification_notes"] = st.text_area(
-          "Overall verification notes",
-          ss.get("verification_notes", ""),
-          height=120,
-          help="High-level view: which assets look robust, which are weak, and what needs to happen next.",
-      )
+        st.subheader("Overall verification summary for this company")
+        ss["verification_notes"] = st.text_area(
+            "Overall verification notes",
+            ss.get("verification_notes", ""),
+            height=120,
+            help="High-level view: which assets look robust, which are weak, and what needs to happen next.",
+        )
 
-      st.caption(
-          "These checks do **not** replace legal review. They are a structured way for the ILP / TTO to "
-          "document how far the evidence can be trusted before licensing design and valuation."
-      )
-
+        st.caption(
+            "These checks do **not** replace legal review. They are a structured way for the ILP / TTO to "
+            "document how far the evidence can be trusted before licensing design and valuation."
+        )
 # 4) LIP CONSOLE (was Expert View)
 elif page == "LIP Console":
     st.header("LIP Console — Narrative & IC Map")
