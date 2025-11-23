@@ -1261,20 +1261,21 @@ elif page == "Asset Verification":
                 help="Capture anything that needs clarification, extra evidence, or legal review.",
             )
 
-          st.markdown("---")
+      st.markdown("---")
 
-        st.subheader("Overall verification summary for this company")
-        ss["verification_notes"] = st.text_area(
-            "Overall verification notes",
-            ss.get("verification_notes", ""),
-            height=120,
-            help="High-level view: which assets look robust, which are weak, and what needs to happen next.",
-        )
+      st.subheader("Overall verification summary for this company")
+      ss["verification_notes"] = st.text_area(
+          "Overall verification notes",
+          ss.get("verification_notes", ""),
+          height=120,
+          help="High-level view: which assets look robust, which are weak, and what needs to happen next.",
+      )
 
-        st.caption(
-            "These checks do **not** replace legal review. They are a structured way for the LIP / TTO to "
-            "document how far the evidence can be trusted before licensing design and valuation."
-        )
+      st.caption(
+          "These checks do **not** replace legal review. They are a structured way for the ILP / TTO to "
+          "document how far the evidence can be trusted before licensing design and valuation."
+      )
+
 # 4) LIP CONSOLE (was Expert View)
 elif page == "LIP Console":
     st.header("LIP Console — Narrative & IC Map")
