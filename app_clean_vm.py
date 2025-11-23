@@ -1261,7 +1261,7 @@ elif page == "Asset Verification":
                 help="Capture anything that needs clarification, extra evidence, or legal review.",
             )
 
-      st.markdown("---")
+            st.markdown("---")
 
       st.subheader("Overall verification summary for this company")
       ss["verification_notes"] = st.text_area(
