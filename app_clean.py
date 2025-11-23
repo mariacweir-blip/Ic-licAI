@@ -60,7 +60,7 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-st.markdown('<div class="ic-title-bar">IC-LicAI Expert Console</div>', unsafe_allow_html=True)
+st.markdown('<div class="ic-title-bar">IC-LicAI Expert Console — Demo Only </div>', unsafe_allow_html=True)('<div class="ic-title-bar">IC-LicAI Expert Console</div>', unsafe_allow_html=True)
 
 # ------------------ AUTH GATE ------------------------
 def _auth_gate() -> None:
