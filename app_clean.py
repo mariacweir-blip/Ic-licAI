@@ -60,8 +60,13 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-st.markdown('<div class="ic-title-bar">IC-LicAI Expert Console — Demo Only </div>', unsafe_allow_html=True)('<div class="ic-title-bar">IC-LicAI Expert Console</div>', unsafe_allow_html=True)
-
+st.markdown('<div class="ic-title-bar">IC-LicAI Expert Console — Demo Only</div>', unsafe_allow_html=True)
+st.markdown(
+    "<p style='color:#FFD43B;font-weight:700;margin-top:0.2rem;'>"
+    "DEMO VERSION — FOR TRAINING & TEST EVIDENCE ONLY"
+    "</p>",
+    unsafe_allow_html=True,
+)
 # ------------------ AUTH GATE ------------------------
 def _auth_gate() -> None:
     if not REQUIRE_PASS:
