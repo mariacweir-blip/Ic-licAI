@@ -23,9 +23,11 @@ APP_MODE = "PRIVATE"
 PUBLIC_MODE: bool = False
 REQUIRE_PASS: bool = True
 
-# ---------------- DOCX/PPTX optional ----------------
+# ---------------- DOCX/PPTX/PDF optional ----------------
 HAVE_DOCX = False
 HAVE_PPTX = False
+HAVE_PDF = False
+
 try:
     from docx import Document  # type: ignore
     HAVE_DOCX = True
@@ -38,6 +40,12 @@ try:
 except Exception:
     HAVE_PPTX = False
 
+try:
+    from PyPDF2 import PdfReader  # type: ignore
+    HAVE_PDF = True
+except Exception:
+    HAVE_PDF = False
+    
 # ------------------ THEME ----------------------------
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
 st.markdown(
@@ -189,7 +197,26 @@ def _extract_text_pptx(data: bytes) -> str:
     except Exception:
         return ""
 
-
+def _extract_text_pdf(data: bytes) -> str:
+    """
+    Extract basic text from a PDF using PyPDF2.
+    (Scanned/image-only PDFs will still come back empty.)
+    """
+    if not HAVE_PDF:
+        return ""
+    try:
+        bio = io.BytesIO(data)
+        reader = PdfReader(bio)
+        parts: List[str] = []
+        for page in reader.pages:
+            txt = page.extract_text() or ""
+            txt = txt.strip()
+            if txt:
+                parts.append(txt)
+        return "\n".join(parts)
+    except Exception:
+        return ""
+        
 def _extract_text_csv(raw: bytes, name: str) -> str:
     """
     CSV semantic extraction: surface headers + a few rows so SME/ESG words
