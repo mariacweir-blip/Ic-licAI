@@ -1261,7 +1261,7 @@ elif page == "Asset Verification":
                 help="Capture anything that needs clarification, extra evidence, or legal review.",
             )
 
-            st.markdown("---")
+          st.markdown("---")
 
         st.subheader("Overall verification summary for this company")
         ss["verification_notes"] = st.text_area(
@@ -1664,4 +1664,7 @@ elif page == "LIP Assistant":
     if ss.get("lip_history"):
         with st.expander("Previous LIP Assistant exchanges"):
             for i, entry in enumerate(reversed(ss["lip_history"]), start=1):
-                st.markdown(f"**Q{i}:** {entry['q']}")
+            st.markdown(f"**Q{i}:** {entry['q']}")
+            st.markdown(entry["a"])
+            st.markdown("---")
+            
