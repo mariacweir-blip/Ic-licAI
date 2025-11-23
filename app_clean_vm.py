@@ -1581,7 +1581,7 @@ elif page == "Licensing Templates":
         )
         (st.success if path else st.warning)(msg)
 
-# 7) LIP ASSISTANT (beta)
+# 6) LIP ASSISTANT (beta)
 elif page == "LIP Assistant":
     st.header("LIP Assistant (beta)")
     st.caption(
@@ -1664,7 +1664,6 @@ elif page == "LIP Assistant":
     if ss.get("lip_history"):
         with st.expander("Previous LIP Assistant exchanges"):
             for i, entry in enumerate(reversed(ss["lip_history"]), start=1):
-            st.markdown(f"**Q{i}:** {entry['q']}")
-            st.markdown(entry["a"])
-            st.markdown("---")
-            
+                st.markdown(f"**Q{i}:** {entry['q']}")
+                st.markdown(entry["a"])
+                st.markdown("---")
