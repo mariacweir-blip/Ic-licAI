@@ -22,8 +22,8 @@ EU_FLAG_PATH = "demo_assets/eu_flag.png"
 #   "PUBLIC"  = demo app (no passphrase, no server save)
 APP_MODE = os.environ.get("ICLICAI_MODE", "PRIVATE").upper()
 
-PUBLIC_MODE: bool = (APP_MODE == "PUBLIC")
-REQUIRE_PASS: bool = (APP_MODE == "PRIVATE")
+PUBLIC_MODE: bool = False
+REQUIRE_PASS: bool = True
 
 # ---------------- DOCX/PPTX optional ----------------
 HAVE_DOCX = False
