@@ -152,15 +152,14 @@ def _save_bytes(folder: Path, name: str, data: bytes) -> Tuple[Optional[Path], s
         p.write_bytes(data)
         return p, f"Saved to {p}"
     except Exception as e:
-        return None, f"Server save skipped ({type(e).__name__}: {e}). Download still works."
+        return None, f"Server save skipped ({type(e).__name__}: {e}). Download 
 
 # --------------- EVIDENCE EXTRACTION -----------------
 TEXT_EXT = {".txt"}
 DOCX_EXT = {".docx"}
 PPTX_EXT = {".pptx"}
-CSV_EXT = {".csv"}
-PDF_EXT = {".pdf"}  
-
+CSV_EXT  = {".csv"}
+PDF_EXT  = {".pdf"}  # filename cue for PDFs
 
 def _extract_text_docx(data: bytes) -> str:
     if not HAVE_DOCX:
@@ -204,6 +203,7 @@ def _extract_text_pptx(data: bytes) -> str:
     except Exception:
         return ""
 
+
 def _extract_text_pdf(data: bytes) -> str:
     """
     Extract basic text from a PDF using PyPDF2.
@@ -224,7 +224,8 @@ def _extract_text_pdf(data: bytes) -> str:
     except Exception:
         return ""
 
- def _pdf_review_hints(data: bytes, name: str) -> List[str]:
+
+def _pdf_review_hints(data: bytes, name: str) -> List[str]:
     """
     Light-weight scan of a PDF to suggest pages a Value Manager should review.
     We look for pages that mention tables/figures, IP, contracts, KPIs, markets, etc.,
@@ -244,16 +245,49 @@ def _extract_text_pdf(data: bytes) -> str:
 
     total_pages = len(reader.pages)
 
-    # Simple keyword buckets – we can tweak wording later.
+    # Simple keyword buckets – tweakable later.
     TABLE_KEYS = ["table", "figure", "diagram", "chart", "exhibit", "kpi", "metric"]
     PROCESS_KEYS = ["process", "workflow", "procedure", "protocol", "sop", "ipr process", "governance"]
-    IP_KEYS = ["intellectual property", "ip register", "ipr", "patent", "trademark", "trade mark",
-               "copyright", "licence", "license", "licensing", "contract", "agreement", "mou"]
+    IP_KEYS = [
+        "intellectual property",
+        "ip register",
+        "ipr",
+        "patent",
+        "trademark",
+        "trade mark",
+        "copyright",
+        "licence",
+        "license",
+        "licensing",
+        "contract",
+        "agreement",
+        "mou",
+    ]
     SALES_KEYS = ["revenue", "turnover", "sales", "pipeline", "order book", "customer contract"]
-    MARKET_KEYS = ["market", "segment", "customer", "client", "region", "country",
-                   "go-to-market", "g2m", "competition", "competitor"]
-    TECH_KEYS = ["technology", "platform", "software", "saas", "ai", "algorithm",
-                 "model", "index", "indices", "data platform"]
+    MARKET_KEYS = [
+        "market",
+        "segment",
+        "customer",
+        "client",
+        "region",
+        "country",
+        "go-to-market",
+        "g2m",
+        "competition",
+        "competitor",
+    ]
+    TECH_KEYS = [
+        "technology",
+        "platform",
+        "software",
+        "saas",
+        "ai",
+        "algorithm",
+        "model",
+        "index",
+        "indices",
+        "data platform",
+    ]
 
     for idx, page in enumerate(reader.pages, start=1):
         try:
@@ -281,7 +315,9 @@ def _extract_text_pdf(data: bytes) -> str:
 
         if categories:
             cat_txt = ", ".join(categories)
-            hints.append(f"Page {idx}: check for {cat_txt} – see if this is explicit Structural Capital or still tacit.")
+            hints.append(
+                f"Page {idx}: check for {cat_txt} – see if this is explicit Structural Capital or still tacit."
+            )
 
     # If nothing specific was found, still give one generic hint.
     if not hints and total_pages > 0:
@@ -291,7 +327,8 @@ def _extract_text_pdf(data: bytes) -> str:
         )
 
     return hints
-        
+
+
 def _extract_text_csv(raw: bytes, name: str) -> str:
     """
     CSV semantic extraction: surface headers + a few rows so SME/ESG words
@@ -367,6 +404,12 @@ def _read_text(files: List[Any]) -> Tuple[str, Dict[str, int], Dict[str, float]]
         ".pdf": 0.4,
     }
 
+    # Reset PDF hints each run
+    if "pdf_hints" not in st.session_state:
+        st.session_state["pdf_hints"] = {}
+    else:
+        st.session_state["pdf_hints"] = {}
+
     for f in files or []:
         name = getattr(f, "name", "file")
         lower_name = str(name).lower()
@@ -392,7 +435,14 @@ def _read_text(files: List[Any]) -> Tuple[str, Dict[str, int], Dict[str, float]]
             elif ext in CSV_EXT:
                 text = _extract_text_csv(raw, name)
             elif ext in PDF_EXT:
+                # Extract PDF text and also store guidance hints for Value Managers
                 text = _extract_text_pdf(raw)
+                try:
+                    hints = _pdf_review_hints(raw, name)
+                except Exception:
+                    hints = []
+                if hints:
+                    st.session_state["pdf_hints"][name] = hints
             else:
                 text = f"[[FILE:{name}]]"
 
@@ -404,7 +454,7 @@ def _read_text(files: List[Any]) -> Tuple[str, Dict[str, int], Dict[str, float]]
             chunks.append(f"\n# {name}\n[[READ-ERROR]]\n")
 
     return "\n".join(chunks).strip(), counts, weights_used
-
+    
 # --------------- SME cues / analysis -----------------
 FOUR_LEAF_KEYS: Dict[str, List[str]] = {
     "Human": [
