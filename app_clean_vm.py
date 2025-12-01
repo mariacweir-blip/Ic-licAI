@@ -142,7 +142,6 @@ def _export_bytes(title: str, body: str) -> Tuple[bytes, str, str]:
         body = "CONFIDENTIAL — Internal Evaluation Draft (No Distribution)\n\n" + body
     return body.encode("utf-8"), f"{base}.txt", "text/plain"
 
-
 def _save_bytes(folder: Path, name: str, data: bytes) -> Tuple[Optional[Path], str]:
     if PUBLIC_MODE:
         return None, "Public mode: server save disabled (download only)."
@@ -152,8 +151,8 @@ def _save_bytes(folder: Path, name: str, data: bytes) -> Tuple[Optional[Path], s
         p.write_bytes(data)
         return p, f"Saved to {p}"
     except Exception as e:
-        return None, f"Server save skipped ({type(e).__name__}: {e}). Download 
-
+        return None, f"Server save skipped ({type(e).__name__}: {e}). Download only."
+        
 # --------------- EVIDENCE EXTRACTION -----------------
 TEXT_EXT = {".txt"}
 DOCX_EXT = {".docx"}
