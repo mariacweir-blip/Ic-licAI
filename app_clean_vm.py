@@ -1117,6 +1117,80 @@ if page == "Company":
 
     if ss.get("uploads"):
         st.info(f"{len(ss['uploads'])} file(s) stored in session. Go to **Analyse Evidence** next.")
+            st.markdown("---")
+    st.subheader("Value Manager toolbox (evidence preparation)")
+
+    with st.expander("1. Convert PDFs and spreadsheets before upload"):
+        st.markdown(
+            """
+Use these external tools **before** uploading evidence, especially for large reports:
+
+- **PDF → Word (DOCX)**: Convert long ESG or strategy PDFs into Word so key text can be pasted into the Company context fields and uploaded as DOCX.
+- **Excel → CSV**: Export key sheets (contracts, IP registers, ESG KPIs) as CSV so IC-LicAI can read headers and sample rows.
+
+Remember: never upload anything that breaches confidentiality or data-sharing rules agreed with the client.
+"""
+        )
+        st.markdown(
+            """
+**Suggested actions for VMs:**
+
+1. If a PDF is mostly tables/diagrams with little text, create a short DOCX summary capturing:
+   - main KPIs,
+   - key contracts / partners,
+   - any explicit IP / IA registers,
+   - ESG claims that matter for value.
+2. Save that summary as a DOCX and upload it alongside the original PDF.
+3. For complex Excel files, export the most relevant sheet as CSV and upload that CSV.
+"""
+        )
+
+    with st.expander("2. Optional AI helper for drafting the Company context"):
+        st.markdown(
+            """
+You can use an AI assistant (e.g. ChatGPT) **before** opening this tool to help draft the answers for:
+
+- Why is the company seeking this service?
+- Stage of products/services
+- Short / medium / long-term plans
+- Markets & why
+- Target sale price & why
+
+**Suggested prompt to paste into your AI tool:**
+"""
+        )
+        st.code(
+            "You are helping me prepare an intellectual capital and licensing diagnostic for a company. "
+            "Based on the attached business plan or PDF, draft:\n"
+            "1) Why the company is seeking this service (funding, growth, governance, ESG, etc.),\n"
+            "2) The stage of each key product/service,\n"
+            "3) Short (0–6m), medium (6–24m) and long-term (24m+) plans,\n"
+            "4) Which markets fit and why (sectors, partners, channels, not just countries),\n"
+            "5) If the owners wanted to sell tomorrow, a realistic target sale price and the reasons.\n\n"
+            "Write each as a clear paragraph I can paste into a diagnostic tool. Do not invent numbers; "
+            "only use figures and evidence you can see in the document."
+        )
+        st.markdown(
+            """
+After AI has drafted this, **you remain responsible** for checking accuracy against the original documents
+and adjusting anything that does not match reality.
+"""
+        )
+
+    with st.expander("3. IC System View note (complex systems lens)"):
+        st.markdown(
+            """
+Before running analysis, create a 1–2 page note (IC_SystemView_<CompanyName>.txt) with:
+
+1. **Market system & actors** – who is upstream (suppliers, data sources, funders) and downstream (customers, end-users, regulators, communities)?
+2. **Innovation loops & learning** – how products/services are improved; pilots, feedback, R&D, training.
+3. **Key intangible / data / IP assets** – contracts, protocols, datasets, algorithms, indices, software, brand, training packages.
+4. **Current & potential value streams** – who pays, who accesses for free or reduced price, who benefits indirectly.
+5. **Key tensions & risks** – ESG tensions, dependency on single partners, regulatory or reputational risks.
+
+Upload this note **as evidence** together with the other files. It gives IC-LicAI and the ILP a richer starting point.
+"""
+        )
 # 2) ANALYSE EVIDENCE (with radar / evidence quality)
 elif page == "Analyse Evidence":
     st.header("Evidence Dashboard & Analysis")
