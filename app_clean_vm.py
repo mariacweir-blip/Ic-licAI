@@ -54,31 +54,83 @@ except Exception:
     HAVE_PDF = False
     
 # ------------------ THEME ----------------------------
+PRIMARY_COLOUR = "#192A56"   # deep blue main brand
+ACCENT_COLOUR  = "#00A1E4"   # bright blue accent (no gold)
+SIDEBAR_BG     = "#0D1733"   # dark navy sidebar
+BG_COLOUR      = "#F4F6FB"   # light neutral background
+TEXT_DARK      = "#1C2333"
+
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
+
 st.markdown(
-    """
+    f"""
 <style>
-  .stApp { background:#FFF3BF; }
-  .block-container { max-width:1250px; padding-top:1.2rem; padding-bottom:2rem; }
-  .ic-title-bar{ background:#0F2F56; color:#fff; font-weight:800; font-size:34px;
-    padding:18px 22px; border-radius:10px; letter-spacing:.2px; margin:10px 0 24px 0;
-    box-shadow:0 2px 6px rgba(0,0,0,.08); }
-  .stButton>button { background:#0F2F56!important; color:#fff!important; border-radius:8px!important;
-    border:0!important; padding:.55rem 1rem!important; font-weight:700!important; }
-  section[data-testid="stSidebar"] { background:#0F2F56; }
-  section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] p,
-  section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] span { color:#E7F0FF!important; }
-  .stRadio div[role="radiogroup"] label { color:#E7F0FF!important; }
+  /* Overall app background */
+  .stApp {{
+      background:{BG_COLOUR};
+  }}
+
+  .block-container {{
+      max-width:1250px;
+      padding-top:1.2rem;
+      padding-bottom:2rem;
+  }}
+
+  /* Top title bar */
+  .ic-title-bar {{
+      background:{PRIMARY_COLOUR};
+      color:#ffffff;
+      font-weight:800;
+      font-size:34px;
+      padding:18px 22px;
+      border-radius:10px;
+      letter-spacing:.2px;
+      margin:10px 0 24px 0;
+      box-shadow:0 2px 6px rgba(0,0,0,.08);
+  }}
+
+  /* Primary buttons */
+  .stButton>button {{
+      background:{PRIMARY_COLOUR} !important;
+      color:#ffffff !important;
+      border-radius:8px !important;
+      border:0 !important;
+      padding:.55rem 1rem !important;
+      font-weight:700 !important;
+  }}
+
+  .stButton>button:hover {{
+      background:{ACCENT_COLOUR} !important;
+      color:#ffffff !important;
+  }}
+
+  /* Sidebar */
+  section[data-testid="stSidebar"] {{
+      background:{SIDEBAR_BG};
+  }}
+
+  section[data-testid="stSidebar"] * {{
+      color:#E6ECFF !important;
+  }}
+
+  section[data-testid="stSidebar"] .stButton>button {{
+      background:{ACCENT_COLOUR} !important;
+      color:{SIDEBAR_BG} !important;
+  }}
+
+  .stRadio div[role="radiogroup"] label {{
+      color:#E6ECFF !important;
+  }}
 </style>
 """,
     unsafe_allow_html=True,
 )
-st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
 
 st.markdown(
     '<div class="ic-title-bar">IC-LicAI Expert Console</div>',
     unsafe_allow_html=True,
 )
+
 st.caption("INTERNAL VERSION — FOR REAL EVIDENCE (PASS-PHRASE PROTECTED)")
 # ------------------ AUTH GATE ------------------------
 def _auth_gate() -> None:
