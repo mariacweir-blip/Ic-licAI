@@ -41,26 +41,85 @@ except Exception:
     HAVE_PPTX = False
 
 # ------------------ THEME ----------------------------
+# IMPAC3T-IP inspired palette (no yellow / gold)
+PRIMARY_NAVY   = "#003B70"  # deep blue, EU-friendly
+ACCENT_BLUE    = "#00A7E1"  # bright accent from IMPAC3T-style slides
+ACCENT_PURPLE  = "#6E4BAF"  # secondary accent if needed later
+BG_MAIN        = "#F5F7FB"  # soft neutral background
+SIDEBAR_BG     = "#0F2F56"  # dark blue sidebar
+CARD_BG        = "#FFFFFF"  # white cards / blocks
+TEXT_MAIN      = "#1F2933"  # dark grey text
+
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
+
 st.markdown(
-    """
+    f"""
 <style>
-  .stApp { background:#FFF3BF; }
-  .block-container { max-width:1250px; padding-top:1.2rem; padding-bottom:2rem; }
-  .ic-title-bar{ background:#0F2F56; color:#fff; font-weight:800; font-size:34px;
-    padding:18px 22px; border-radius:10px; letter-spacing:.2px; margin:10px 0 24px 0;
-    box-shadow:0 2px 6px rgba(0,0,0,.08); }
-  .stButton>button { background:#0F2F56!important; color:#fff!important; border-radius:8px!important;
-    border:0!important; padding:.55rem 1rem!important; font-weight:700!important; }
-  section[data-testid="stSidebar"] { background:#0F2F56; }
-  section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] p,
-  section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] span { color:#E7F0FF!important; }
-  .stRadio div[role="radiogroup"] label { color:#E7F0FF!important; }
+  /* Overall app background */
+  .stApp {{
+    background: {BG_MAIN};
+  }}
+
+  /* Main content container */
+  .block-container {{
+    max-width: 1250px;
+    padding-top: 1.2rem;
+    padding-bottom: 2rem;
+  }}
+
+  /* Title bar at the top */
+  .ic-title-bar {{
+    background: {PRIMARY_NAVY};
+    color: #FFFFFF;
+    font-weight: 800;
+    font-size: 32px;
+    padding: 16px 22px;
+    border-radius: 10px;
+    letter-spacing: 0.2px;
+    margin: 10px 0 20px 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }}
+
+  /* Primary buttons */
+  .stButton>button {{
+    background: {ACCENT_BLUE} !important;
+    color: #FFFFFF !important;
+    border-radius: 8px !important;
+    border: 0 !important;
+    padding: 0.55rem 1rem !important;
+    font-weight: 700 !important;
+  }}
+
+  .stButton>button:hover {{
+    background: {PRIMARY_NAVY} !important;
+  }}
+
+  /* Sidebar styling */
+  section[data-testid="stSidebar"] {{
+    background: {SIDEBAR_BG};
+  }}
+
+  section[data-testid="stSidebar"] h1,
+  section[data-testid="stSidebar"] h2,
+  section[data-testid="stSidebar"] h3,
+  section[data-testid="stSidebar"] p,
+  section[data-testid="stSidebar"] label,
+  section[data-testid="stSidebar"] span {{
+    color: #E7F0FF !important;
+  }}
+
+  .stRadio div[role="radiogroup"] label {{
+    color: #E7F0FF !important;
+  }}
+
+  /* Make cards / expanders look clean on light background */
+  .stExpander, .stTabs [data-baseweb="tab"] {{
+    background: {CARD_BG};
+  }}
 </style>
 """,
     unsafe_allow_html=True,
 )
-st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
 
 st.markdown(
     '<div class="ic-title-bar">IC-LicAI Expert Console</div>',
