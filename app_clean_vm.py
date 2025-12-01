@@ -223,6 +223,69 @@ def _extract_text_pdf(data: bytes) -> str:
         return "\n".join(parts)
     except Exception:
         return ""
+
+ def _pdf_review_hints(data: bytes, name: str) -> List[str]:
+    """
+    Light-weight scan of a PDF to suggest pages a Value Manager should review.
+    We look for pages that mention tables/figures, IP, contracts, KPIs, markets, etc.,
+    and return human-readable hints with page numbers.
+    This does NOT change scoring – it is just guidance.
+    """
+    hints: List[str] = []
+    if not HAVE_PDF:
+        return hints
+
+    try:
+        reader = PdfReader(io.BytesIO(data))
+    except Exception:
+        return hints
+
+    total_pages = len(reader.pages)
+
+    # Simple keyword buckets – tweak wording later if you like
+    TABLE_KEYS = ["table", "figure", "diagram", "chart", "exhibit", "kpi", "metric"]
+    PROCESS_KEYS = ["process", "workflow", "procedure", "protocol", "sop", "governance"]
+    IP_KEYS = ["intellectual property", "ip register", "ipr", "patent", "trademark", "trade mark",
+               "copyright", "licence", "license", "licensing", "contract", "agreement", "mou"]
+    SALES_KEYS = ["revenue", "turnover", "sales", "pipeline", "order book", "customer contract"]
+    MARKET_KEYS = ["market", "segment", "customer", "client", "region", "country",
+                   "go-to-market", "g2m", "competition", "competitor"]
+    TECH_KEYS = ["technology", "platform", "software", "saas", "ai", "algorithm",
+                 "model", "index", "indices", "data platform"]
+
+    for idx, page in enumerate(reader.pages, start=1):
+        try:
+            text = (page.extract_text() or "").lower()
+        except Exception:
+            continue
+
+        if not text.strip():
+            continue
+
+        categories: List[str] = []
+
+        if any(k in text for k in TABLE_KEYS):
+            categories.append("tables / figures / KPIs")
+        if any(k in text for k in PROCESS_KEYS):
+            categories.append("process / SOP / governance")
+        if any(k in text for k in IP_KEYS):
+            categories.append("IP / contracts / registers")
+        if any(k in text for k in SALES_KEYS):
+            categories.append("sales / revenue / contracts")
+        if any(k in text for k in MARKET_KEYS):
+            categories.append("markets / customers / regions")
+        if any(k in text for k in TECH_KEYS):
+            categories.append("technology / platforms / indices")
+
+        if categories:
+            cat_text = "; ".join(categories)
+            hints.append(
+                f"Page {idx} of {total_pages}: mentions {cat_text}. "
+                f"Check whether this is captured as explicit, documented assets (not just narrative)."
+            )
+
+    # Keep UI sane – don’t spam too many hints per file
+    return hints[:12]
         
 def _extract_text_csv(raw: bytes, name: str) -> str:
     """
