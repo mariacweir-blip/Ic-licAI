@@ -1406,7 +1406,43 @@ elif page == "Analyse Evidence":
                 "If PDFs dominate, consider adding a brief TXT note or export key pages to DOCX."
             )
 
-        st.success("Analysis complete. Open **LIP Console** to refine and export.")
+        st.success("Analysis complete. Open **LIP Console** to review the summary and IC map.")
+  
+    # Suggested PDF pages to review (Value Manager aid)
+    # -------------------------------------------------------------
+    uploads = ss.get("uploads", [])
+    pdf_files = [f for f in uploads or [] if getattr(f, "name", "").lower().endswith(".pdf")]
+
+    if pdf_files:
+        st.markdown("---")
+        st.subheader("Suggested PDF pages to review (beta)")
+
+        st.caption(
+            "These hints scan each PDF for pages that mention tables, KPIs, IP, contracts, "
+            "markets or technology. They are **for human review only** – they do not change "
+            "scores or assumptions. Use them to jump to the most IC-relevant pages in the PDF."
+        )
+
+        for f in pdf_files:
+            fname = getattr(f, "name", "unnamed.pdf")
+            try:
+                raw = f.getvalue() if hasattr(f, "getvalue") else f.read()
+            except Exception:
+                raw = None
+
+            if not raw:
+                continue
+
+            hints = _pdf_review_hints(raw, fname)
+
+            if hints:
+                st.markdown(f"**{fname}**")
+                for h in hints:
+                    st.write(f"- {h}")
+            else:
+                st.markdown(f"**{fname}**")
+                st.write("- No obvious IC-related pages detected – review key sections manually.")
+           
 # 3) ASSET VERIFICATION (human check of assets & ESG claims)
 elif page == "Asset Verification":
     st.header("Asset Verification — Evidence & ESG checks")
