@@ -1417,11 +1417,15 @@ elif page == "Analyse Evidence":
     st.header("Evidence Dashboard & Analysis")
 
     col1, col2 = st.columns([1, 1])
+
+    # ------------ LEFT COLUMN: EVIDENCE QUALITY ------------
     with col1:
         st.subheader("Evidence Quality")
         eq = int(ss.get("evidence_quality", 0))
         st.progress(min(100, max(0, eq)) / 100.0)
-        st.caption(f"{eq}% coverage (heuristic — based on artefact mix and IC diversity).")
+        st.caption(
+            f"{eq}% coverage (heuristic — based on artefact mix and IC diversity)."
+        )
 
         counts = ss.get("file_counts", {}) or {}
         if counts:
@@ -1431,6 +1435,7 @@ elif page == "Analyse Evidence":
         else:
             st.caption("No files analysed yet.")
 
+    # ------------ RIGHT COLUMN: RADAR + TEN-STEPS ------------
     with col2:
         st.subheader("IC Radar (4-Leaf + Ten-Steps)")
 
@@ -1442,7 +1447,16 @@ elif page == "Analyse Evidence":
 
         leaf_labels = ["Human", "Structural", "Customer", "Strategic Alliance"]
         leaf_vals = [float(ic_map.get(l, {}).get("score", 0.0)) for l in leaf_labels]
-        if any(v > 0 for v in leaf_vals):
+
+        # Gate the radar by evidence quality so we don't over-interpret tiny evidence sets
+        eq_local = int(ss.get("evidence_quality", 0))
+
+        if eq_local < 35 or not any(v > 0 for v in leaf_vals):
+            st.caption(
+                "Radar will appear once evidence coverage is above ~35% and IC signals are detected. "
+                "At low coverage the map would be misleading, so treat current results as a very early scan."
+            )
+        else:
             fig_leaf = go.Figure()
             fig_leaf.add_trace(
                 go.Scatterpolar(
@@ -1453,13 +1467,16 @@ elif page == "Analyse Evidence":
                 )
             )
             fig_leaf.update_layout(
-                polar=dict(radialaxis=dict(visible=True, range=[0, max(leaf_vals) or 1])),
+                polar=dict(
+                    radialaxis=dict(
+                        visible=True,
+                        range=[0, max(leaf_vals) or 1],
+                    )
+                ),
                 showlegend=False,
                 margin=dict(l=20, r=20, t=20, b=20),
             )
             st.plotly_chart(fig_leaf, use_container_width=True)
-        else:
-            st.caption("Radar will appear once analysis has been run and IC signals are detected.")
 
         step_scores = ten.get("scores") or [5] * len(TEN_STEPS)
         if step_scores:
@@ -1477,6 +1494,7 @@ elif page == "Analyse Evidence":
             )
             st.plotly_chart(fig_steps, use_container_width=True)
 
+    # ------------ INTERPRETED SUMMARY TEXT AREA ------------
     st.markdown("---")
     st.subheader("Interpreted Analysis Summary (first 5000 chars)")
     combined = ss.get("combined_text", "")
@@ -1487,6 +1505,7 @@ elif page == "Analyse Evidence":
         key="combined_preview",
     )
 
+    # ------------ RUN ANALYSIS BUTTON ------------
     if st.button("Run analysis now"):
         uploads: List[Any] = ss.get("uploads") or []
         extracted, counts, weights = _read_text(uploads)
@@ -1511,10 +1530,20 @@ elif page == "Analyse Evidence":
 
         combined_text_for_detection = (extracted + "\n\n" + context_stub).strip().lower()
 
-        ic_map, leaf_scores, ten, quality = _analyse_weighted(combined_text_for_detection, weights)
+        ic_map, leaf_scores, ten, quality = _analyse_weighted(
+            combined_text_for_detection,
+            weights,
+        )
 
         case = ss.get("case_name", "Untitled Company")
-        interpreted = _build_interpreted_summary(case, leaf_scores, ic_map, ten, quality, context)
+        interpreted = _build_interpreted_summary(
+            case,
+            leaf_scores,
+            ic_map,
+            ten,
+            quality,
+            context,
+        )
 
         ss["combined_text"] = interpreted
         ss["ic_map"] = ic_map
@@ -1524,14 +1553,13 @@ elif page == "Analyse Evidence":
 
         if len(extracted.strip()) < 100:
             st.warning(
-                "Little machine-readable text was extracted (DOCX/PPTX/CSV extraction is enabled). "
-                "If PDFs dominate, consider adding a brief TXT note or export key pages to DOCX."
+                "Little machine-readable text was extracted (DOCX/PPTX/CSV/CSV extraction is enabled). "
+                "If PDFs dominate, consider adding a brief TXT note or exporting key pages to DOCX."
             )
 
         st.success("Analysis complete. Open **LIP Console** to review the summary and IC map.")
-  
-    # Suggested PDF pages to review (Value Manager aid)
-    # -------------------------------------------------------------
+
+    # ------------ PDF REVIEW HINTS FOR VALUE MANAGERS ------------
     uploads = ss.get("uploads", [])
     pdf_files = [f for f in uploads or [] if getattr(f, "name", "").lower().endswith(".pdf")]
 
@@ -1557,12 +1585,11 @@ elif page == "Analyse Evidence":
 
             hints = _pdf_review_hints(raw, fname)
 
+            st.markdown(f"**{fname}**")
             if hints:
-                st.markdown(f"**{fname}**")
                 for h in hints:
                     st.write(f"- {h}")
             else:
-                st.markdown(f"**{fname}**")
                 st.write("- No obvious IC-related pages detected – review key sections manually.")
            
 # 3) ASSET VERIFICATION (human check of assets & ESG claims)
