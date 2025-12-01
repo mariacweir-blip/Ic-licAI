@@ -986,6 +986,8 @@ with st.sidebar:
 # 1) COMPANY (with required prompts + auto-split)
 if page == "Company":
     st.header("Company details")
+
+    # ---------------- COMPANY FORM ----------------
     with st.form("company_form"):
         c1, c2, c3 = st.columns([1.1, 1, 1])
         with c1:
@@ -998,7 +1000,11 @@ if page == "Company":
             )
         with c3:
             current_sector = ss.get("sector", "Other")
-            sector_index = SECTORS.index(current_sector) if current_sector in SECTORS else SECTORS.index("Other")
+            sector_index = (
+                SECTORS.index(current_sector)
+                if current_sector in SECTORS
+                else SECTORS.index("Other")
+            )
             sector = st.selectbox("Sector / Industry", SECTORS, index=sector_index)
 
         st.markdown("#### Company context (required)")
@@ -1014,7 +1020,10 @@ if page == "Company":
         auto_split = st.checkbox(
             "Auto-split pasted context into fields on Save",
             value=ss.get("auto_split_on_save", True),
-            help="If ticked, the block above will be split across the questions below when you click Save.",
+            help=(
+                "If ticked, the block above will be split across the questions below "
+                "when you click Save."
+            ),
         )
 
         why_service = st.text_area(
@@ -1027,6 +1036,7 @@ if page == "Company":
             ss.get("stage", ""),
             height=90,
         )
+
         c4, c5, c6 = st.columns(3)
         with c4:
             plan_s = st.text_area(
@@ -1046,6 +1056,7 @@ if page == "Company":
                 ss.get("plan_l", ""),
                 height=90,
             )
+
         markets_why = st.text_area(
             "4) Which markets fit and why? *",
             ss.get("markets_why", ""),
@@ -1057,15 +1068,29 @@ if page == "Company":
             height=90,
         )
 
-        st.caption("Uploads are held in session until analysis. Nothing is written to server until export.")
+        st.caption(
+            "Uploads are held in session until analysis. Nothing is written to server until export."
+        )
         uploads = st.file_uploader(
             "Upload evidence (PDF, DOCX, TXT, CSV, XLSX, PPTX, images)",
-            type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg", "webp"],
+            type=[
+                "pdf",
+                "docx",
+                "txt",
+                "csv",
+                "xlsx",
+                "pptx",
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+            ],
             accept_multiple_files=True,
             key="uploader_main",
         )
 
         submitted = st.form_submit_button("Save details")
+
         if submitted:
             # Optional auto-split of a single pasted narrative into all questions
             if auto_split and full_block.strip():
@@ -1095,9 +1120,13 @@ if page == "Company":
                 ("Markets & why", markets_why),
                 ("Sale price & why", sale_price_why),
             ]
-            missing_fields = [label for (label, val) in missing if not (val or "").strip()]
+            missing_fields = [
+                label for (label, val) in missing if not (val or "").strip()
+            ]
             if missing_fields:
-                st.error("Please complete required fields: " + ", ".join(missing_fields))
+                st.error(
+                    "Please complete required fields: " + ", ".join(missing_fields)
+                )
             else:
                 ss["case_name"] = case_name
                 ss["company_size"] = size
@@ -1115,9 +1144,15 @@ if page == "Company":
                     ss["uploads"] = uploads
                 st.success("Saved company details & context.")
 
+    # ---------------- POST-FORM INFO ----------------
     if ss.get("uploads"):
-        st.info(f"{len(ss['uploads'])} file(s) stored in session. Go to **Analyse Evidence** next.")
-            st.markdown("---")
+        st.info(
+            f"{len(ss['uploads'])} file(s) stored in session. "
+            "Go to **Analyse Evidence** next."
+        )
+
+    # ---------------- VM TOOLBOX ----------------
+    st.markdown("---")
     st.subheader("Value Manager toolbox (evidence preparation)")
 
     with st.expander("1. Convert PDFs and spreadsheets before upload"):
@@ -1191,6 +1226,7 @@ Before running analysis, create a 1–2 page note (IC_SystemView_<CompanyName>.t
 Upload this note **as evidence** together with the other files. It gives IC-LicAI and the ILP a richer starting point.
 """
         )
+        
 # 2) ANALYSE EVIDENCE (with radar / evidence quality)
 elif page == "Analyse Evidence":
     st.header("Evidence Dashboard & Analysis")
