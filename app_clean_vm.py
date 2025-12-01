@@ -894,6 +894,11 @@ def _build_interpreted_summary(
     seven_hit = any(c in narrative_text.lower() for c in SEVEN_STAKEHOLDER_CUES)
     esg_hit = any(c in narrative_text.lower() for c in ESG_CUES)
 
+    # Quick handle for Structural strength and evidence depth
+    structural_row = ic_map.get("Structural", {})
+    structural_tick = bool(structural_row.get("tick"))
+    evidence_thin = evidence_quality < 50  # tweak threshold later if needed
+
     # 1) Context & positioning
     p1 = (
         f"{case} is a {size} in {sector}. Based on uploaded artefacts and company context, the company shows an "
@@ -907,12 +912,23 @@ def _build_interpreted_summary(
     else:
         p2a = "Strengths are not yet well-evidenced; additional artefacts are required."
 
-    p2b = (
-        "Evidence points to maturing Structural Capital where explicit artefacts — contracts, SOPs, protocols, registers, "
-        "board materials, CRM and datasets — are present. These are the primary candidates for IAS 38-compliant recognition on "
-        "the balance sheet. Human, Customer and Strategic Alliance Capital are reflected mainly through tacit know-how, "
-        "relationships and informal practice, which require codification before they become audit-ready."
-    )
+    if structural_tick and not evidence_thin:
+        # Strong wording only when Structural is ticked AND evidence depth is reasonable
+        p2b = (
+            "Evidence points to maturing Structural Capital where explicit artefacts — contracts, SOPs, protocols, registers, "
+            "board materials, CRM and datasets — are present. These are the primary candidates for IAS 38-compliant recognition on "
+            "the balance sheet. Human, Customer and Strategic Alliance Capital are reflected mainly through tacit know-how, "
+            "relationships and informal practice, which require codification before they become audit-ready."
+        )
+    else:
+        # Softer wording when evidence is thin or Structural is not clearly strong
+        p2b = (
+            "At this stage Structural Capital is only weakly evidenced. There are early or fragmentary signals (for example references "
+            "to contracts, processes, governance or data), but not yet in a form that could support IAS 38 recognition. The immediate "
+            "priority is to consolidate existing documents into a simple IA Register and to separate clearly what is codified from what "
+            "still sits in people’s heads and informal practice across Human, Customer and Strategic Alliance Capital."
+        )
+
     p2 = p2a + " " + p2b
 
     # 3) Ten-Steps insight and readiness for licensing
@@ -951,7 +967,7 @@ def _build_interpreted_summary(
     )
 
     actions = [
-        "Create a single IA Register linking all explicit artefacts (contracts, JVs, SOPs, protocols, datasets, board packs, CRM) to the 4-Leaf Model.",
+        "Create a single IA Register linking all explicit artefacts (contracts, JVs, SOPs, protocols, datasets, board packs, CRM).",
         "Map each explicit asset to at least one licensing-ready value stream (revenue, access/community, co-creation, defensive or data/algorithm sharing).",
         "Introduce quarterly governance reporting (board pack + KPI dashboard) to strengthen Monitor and Report and to evidence ESG and stakeholder impacts.",
         "Define valuation approach (IAS 38 fair value) and link to licensing templates so that audit-ready Structural Capital supports near-term monetisation.",
