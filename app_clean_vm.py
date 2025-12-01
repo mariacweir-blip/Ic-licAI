@@ -1127,8 +1127,8 @@ SECTORS = [
 with st.sidebar:
     # IMPAC3T-IP logo (top) – safe load, moderate width
     try:
-        if Path(IMPACT3T_LOGO_PATH).is_file():
-            st.image(IMPACT3T_LOGO_PATH, width=170)
+        if IMPACT3T_LOGO_PATH.is_file():
+            st.image(str(IMPACT3T_LOGO_PATH), width=170)
         else:
             st.markdown("**IMPAC3T-IP**")
     except Exception:
@@ -1156,8 +1156,8 @@ with st.sidebar:
 
     # EU flag + funding line – **footer**
     try:
-        if Path(EU_FLAG_PATH).is_file():
-            st.image(EU_FLAG_PATH, width=80)
+        if EU_FLAG_PATH.is_file():
+            st.image(str(EU_FLAG_PATH), width=80)
         else:
             st.markdown("EU-funded tool")
     except Exception:
@@ -1168,6 +1168,7 @@ with st.sidebar:
         "funding from the European Union's Horizon Europe programme under Grant Agreement "
         "No. 101135832."
     )
+    
 # -------------------- PAGES -------------------------
   
 # 1) COMPANY (with required prompts + auto-split)
