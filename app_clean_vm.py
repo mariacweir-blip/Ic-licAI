@@ -20,8 +20,10 @@ except Exception:
     HAVE_PDF = False
 
 # -------------------- PROJECT LOGOS -----------------
-IMPACT3T_LOGO_PATH = "demo_assets/impact3t_logo.png"
-EU_FLAG_PATH = "demo_assets/eu_flag.png"
+BASE_DIR = Path(__file__).parent  # folder where app_clean_vm.py lives
+
+IMPACT3T_LOGO_PATH = BASE_DIR / "demo_assets" / "impact3t_logo.png"
+EU_FLAG_PATH = BASE_DIR / "demo_assets" / "eu_flag.png"
 
 # -------------------- MODE / AUTH --------------------
 # VM version: always PRIVATE (internal, passphrase required)
