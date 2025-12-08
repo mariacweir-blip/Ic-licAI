@@ -2233,19 +2233,25 @@ elif page == "Asset Verification":
             "These checks do **not** replace legal review. They are a structured way for the ILP / TTO to "
             "document how far the evidence can be trusted before licensing design and valuation."
         )
+        
 # 4) LIP CONSOLE (was Expert View)
 
-    if page == "LIP Console":
-        st.header("LIP Console — Narrative & IC Map")
-        nar = st.text_area(
+    # 4) LIP CONSOLE (was Expert View)
+if page == "LIP Console":
+    st.header("LIP Console — Narrative & IC Map")
+
+    # Main editable narrative box
+    nar = st.text_area(
         "Summary (editable by Licensing & Intangibles Partner)",
         value=ss.get("combined_text", ""),
         height=220,
         key="nar_edit",
     )
+
+    # Store in session (these MUST stay indented under the if-block)
     ss["narrative"] = nar or ss.get("narrative", "")
     ss["combined_text"] = ss["narrative"]
-
+    
     colA, colB = st.columns([1, 1])
     with colA:
         if not PUBLIC_MODE:
