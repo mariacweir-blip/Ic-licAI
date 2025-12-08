@@ -9,3 +9,4 @@ XlsxWriter>=3.2
 Pillow>=10.4
 python-pptx
 plotly
+pdfplumber
