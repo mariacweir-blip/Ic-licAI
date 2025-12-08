@@ -2459,13 +2459,18 @@ def vm_assumptions_block(
         accepted_suggested: List[VMAssumption] = []
 
         st.caption("Review and accept the suggested working assumptions:")
-        for a in suggested:
+                accepted_suggested: List[VMAssumption] = []
+
+        st.caption("Review and accept the suggested working assumptions:")
+        for idx, a in enumerate(suggested):
             include = st.checkbox(
                 a.label,
                 value=True,
-                key=f"assumption_suggested_{a.key}",
+                key=f"assumption_suggested_{idx}_{a.key}",
                 help=f"Signals: {', '.join(a.source_signals)} | Confidence: {a.confidence}",
             )
+            a.include = bool(include)
+            
             if include:
                 a.include = True
                 accepted_suggested.append(a)
