@@ -8,6 +8,7 @@ from __future__ import annotations
 import io, os, tempfile, re, csv
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
+from dataclasses import dataclass
 
 import streamlit as st
 import plotly.graph_objects as go  # for radar charts
