@@ -2241,6 +2241,46 @@ elif page == "Asset Verification":
 
     except Exception as e:
         st.warning(f"Could not derive assumptions automatically: {e}")
+       # ---- VM assumptions sidebar workspace --------------------------------
+    try:
+        # Sector label for the assumptions engine
+        sector = ss.get("sector", ss.get("company_sector", "Unknown"))
+
+        # Build a minimal ic_summary from the IC map held in session
+        ic_map_state = ss.get("ic_map", {}) or {}
+        ic_summary: Dict[str, Dict[str, List[Any]]] = {}
+
+        capital_mapping = [
+            ("Human", "Human"),
+            ("Structural", "Structural"),
+            ("Customer", "Customer"),
+            ("Strategic Alliance", "Strategic"),  # map label -> Strategic
+        ]
+
+        for label, cap_key in capital_mapping:
+            row = ic_map_state.get(label, {})
+            # crude proxy: one explicit item if the tick is True, else none
+            explicit_items: List[Any] = ["asset"] if row.get("tick") else []
+            ic_summary[cap_key] = {
+                "explicit": explicit_items,
+                "tacit": [],  # we are not splitting tacit/explicit here yet
+            }
+
+        # Build Ten-Steps scores dict from the stored list
+        raw_ten = ss.get("ten_steps") or {}
+        step_scores_list = raw_ten.get("scores") or [5] * len(TEN_STEPS)
+        ten_steps_scores = {
+            step: int(score) for step, score in zip(TEN_STEPS, step_scores_list)
+        }
+
+        vm_assumptions_block(
+            sector=sector,
+            ic_summary=ic_summary,
+            ten_steps_scores=ten_steps_scores,
+        )
+
+    except Exception as e:
+        st.warning(f"Could not derive assumptions automatically: {e}")
         
 # 5) REPORTS
 elif page == "Reports":
