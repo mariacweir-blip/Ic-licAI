@@ -2378,7 +2378,7 @@ def vm_assumptions_block(
     st.caption("Server save root: disabled (public mode)" if PUBLIC_MODE else f"Server save root: {OUT_ROOT}")
 
 # 6) LICENSING TEMPLATES
-elif page == "Licensing Templates":
+if page == "Licensing Templates":
     st.header("Licensing Templates (editable DOCX/TXT)")
     case = ss.get("case_name", "Untitled Company")
     sector = ss.get("sector", "Other")
