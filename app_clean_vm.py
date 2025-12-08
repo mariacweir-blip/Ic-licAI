@@ -2200,7 +2200,7 @@ elif page == "Asset Verification":
                 st.selectbox(
                     "Ownership / rights clear?",
                     OPTION_LABELS,
-                    key=f"ver_own_{safe_key}",
+                    key=f"ver_ownership_{safe_key}",
                     help="Does this document clearly show who owns or controls the asset?",
                 )
             with col2:
