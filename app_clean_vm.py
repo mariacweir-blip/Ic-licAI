@@ -12,6 +12,10 @@ from dataclasses import dataclass
 
 import streamlit as st
 import plotly.graph_objects as go  # for radar charts
+import requests
+
+import streamlit as st
+import plotly.graph_objects as go  # for radar charts
 
 HAVE_PDF = False
 try:
