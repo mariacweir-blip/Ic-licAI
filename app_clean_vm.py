@@ -1142,6 +1142,103 @@ def vm_assumptions_block(
             st.success("Assumptions confirmed. They will be used in the IC report.")
         elif confirm and not accepted_all:
             st.warning("No assumptions are defined yet. Add or accept at least one.")
+
+# ---- VM assumptions sidebar workspace helper -----------------------------
+def vm_assumptions_block(
+    sector: str,
+    ic_summary: Dict[str, Dict[str, List[Any]]],
+    ten_steps_scores: Dict[str, int],
+) -> None:
+    """
+    Sidebar workspace: VM reviews suggested assumptions, adds any missing ones,
+    and confirms what should flow into the IC report.
+
+    Stores in session_state:
+        "vm_assumptions_accepted"  -> List[VMAssumption]
+        "vm_assumptions_confirmed" -> bool
+        "vm_manual_assumptions"    -> List[VMAssumption]
+    """
+    with st.sidebar:
+        st.markdown("### Working assumptions")
+
+        # ---- Suggested assumptions from the engine ------------------------
+        suggested = derive_vm_assumptions(sector, ic_summary, ten_steps_scores)
+
+        manual_list: List[VMAssumption] = st.session_state.get(
+            "vm_manual_assumptions", []
+        )
+
+        accepted_suggested: List[VMAssumption] = []
+
+        st.caption("Review and accept the suggested working assumptions:")
+        for a in suggested:
+            include = st.checkbox(
+                a.label,
+                value=True,
+                key=f"assumption_suggested_{a.key}",
+                help=f"Signals: {', '.join(a.source_signals)} | Confidence: {a.confidence}",
+            )
+            a.include = bool(include)
+            if include:
+                accepted_suggested.append(a)
+
+        # ---- Add custom assumptions ---------------------------------------
+        st.markdown("---")
+        st.caption("Add any missing assumptions:")
+
+        custom_label = st.text_input(
+            "Custom assumption title",
+            key="custom_assumption_label",
+            placeholder="e.g. Early-mover advantage in local market",
+        )
+        custom_text = st.text_area(
+            "Custom assumption narrative",
+            key="custom_assumption_text",
+            placeholder="Write the assumption in full sentence form.",
+        )
+        custom_category = st.selectbox(
+            "Category",
+            ["market", "innovation", "ic-structure", "ten-steps", "other"],
+            key="custom_assumption_category",
+        )
+
+        if st.button("Add custom assumption"):
+            if custom_label.strip() and custom_text.strip():
+                new_key = f"manual_{len(manual_list) + 1}"
+                manual = VMAssumption(
+                    key=new_key,
+                    label=custom_label.strip(),
+                    narrative=custom_text.strip(),
+                    rationale="Added manually by the VM.",
+                    category=custom_category,
+                    source_signals=["manual_entry"],
+                    confidence="high",
+                    include=True,
+                )
+                manual_list.append(manual)
+                st.session_state["vm_manual_assumptions"] = manual_list
+                st.success("Custom assumption added.")
+            else:
+                st.warning("Please provide both a title and a narrative.")
+
+        if manual_list:
+            st.caption("Custom assumptions added:")
+            for m in manual_list:
+                st.markdown(f"- ✏️ **{m.label}**")
+
+        # ---- Combine & confirm --------------------------------------------
+        accepted_all: List[VMAssumption] = accepted_suggested + manual_list
+        st.session_state["vm_assumptions_accepted"] = accepted_all
+
+        confirm = st.checkbox(
+            "Confirm these assumptions for the IC report",
+            key="vm_assumptions_confirmed",
+        )
+
+        if confirm and accepted_all:
+            st.success("Assumptions confirmed. They will be used in the IC report.")
+        elif confirm and not accepted_all:
+            st.warning("No assumptions are defined yet. Add or accept at least one.")
     
 # Explicit structural cues (IAS 38-compliant artefact hints)
 EXPLICIT_STRUCTURAL_CUES: List[str] = [
