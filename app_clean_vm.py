@@ -688,6 +688,24 @@ SECTOR_CUES = {
 
 # Qualitative market-growth and driver hints by sector.
 # NOTE: Keys must match the sector labels used on page 1.
+
+SECTOR_CUES = {
+    ...
+}
+
+CAGR_API_BASE_URL = os.getenv("ICLICAI_CAGR_API_URL", "").strip()
+
+def fetch_sector_cagr(sector: str) -> Optional[float]:
+    ...
+    # (block I gave you)
+    ...
+
+# Qualitative market-growth and driver hints by sector.
+# NOTE: Keys must match the sector labels used on page 1.
+SECTOR_CAGR_HINTS: Dict[str, str] = {
+    ...
+}
+
 SECTOR_CAGR_HINTS: Dict[str, str] = {
     "GreenTech": (
         "GreenTech markets are expanding faster than the wider economy, driven by "
