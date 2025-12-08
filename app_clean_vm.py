@@ -14,8 +14,17 @@ import streamlit as st
 import plotly.graph_objects as go  # for radar charts
 import requests
 
-import streamlit as st
-import plotly.graph_objects as go  # for radar charts
+
+@dataclass
+class VMAssumption:
+    key: str
+    label: str
+    narrative: str
+    rationale: str
+    category: str
+    source_signals: List[str]
+    confidence: str
+    include: bool = True
 
 HAVE_PDF = False
 try:
