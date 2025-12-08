@@ -2340,14 +2340,21 @@ elif page == "LIP Console":
 
         accepted_suggested: List[VMAssumption] = []
 
-        st.caption("Review and accept the suggested working assumptions:")
+                st.caption("Review and accept the suggested working assumptions:")
         for a in suggested:
             include = st.checkbox(
                 a.label,
                 value=True,
                 key=f"vm_assumption_{a.key}",
-                help=f"Signals: {', '.join(a.source_signals)} | Confidence: {a.confidence}",
             )
+
+            # Always show the assumption text under the checkbox
+            st.caption(a.narrative)
+            st.caption(
+                f"Rationale: {a.rationale} "
+                f"(Signals: {', '.join(a.source_signals)} | Confidence: {a.confidence})"
+            )
+
             if include:
                 a.include = True
                 accepted_suggested.append(a)
