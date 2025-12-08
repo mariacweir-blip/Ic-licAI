@@ -794,6 +794,31 @@ def get_sector_market_context(sector: str) -> str:
         f"around {pct}% per year for this sector. "
         f"{narrative}"
     )
+
+def _strength_level(explicit_count: int, tacit_count: int) -> str:
+    """
+    Rough heuristic for capital strength based on artefact counts.
+    """
+    total = explicit_count + tacit_count
+    if total >= 8:
+        return "strong"
+    if total >= 4:
+        return "emerging"
+    if total > 0:
+        return "minimal"
+    return "none"
+
+def _step_band(score: int) -> str:
+    """
+    Map a Ten-Steps numeric score to a band for easier narrative.
+    """
+    if score >= 3:
+        return "strong"
+    if score == 2:
+        return "developing"
+    if score == 1:
+        return "weak"
+    return "gap"
     
 # Explicit structural cues (IAS 38-compliant artefact hints)
 EXPLICIT_STRUCTURAL_CUES: List[str] = [
