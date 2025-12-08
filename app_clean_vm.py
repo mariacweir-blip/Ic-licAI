@@ -2040,9 +2040,10 @@ elif page == "Asset Verification":
             "document how far the evidence can be trusted before licensing design and valuation."
         )
 # 4) LIP CONSOLE (was Expert View)
-elif page == "LIP Console":
-    st.header("LIP Console — Narrative & IC Map")
-    nar = st.text_area(
+
+    if page == "LIP Console":
+        st.header("LIP Console — Narrative & IC Map")
+        nar = st.text_area(
         "Summary (editable by Licensing & Intangibles Partner)",
         value=ss.get("combined_text", ""),
         height=220,
