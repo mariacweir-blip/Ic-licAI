@@ -1170,7 +1170,7 @@ def vm_assumptions_block(
 
         accepted_suggested: List[VMAssumption] = []
 
-                st.caption("Review and accept the suggested working assumptions:")
+        st.caption("Review and accept the suggested working assumptions:")
         for a in suggested:
             with st.expander(a.label, expanded=False):
                 st.markdown(f"**Narrative**: {a.narrative}")
