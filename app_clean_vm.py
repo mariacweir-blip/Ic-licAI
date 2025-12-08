@@ -4,7 +4,6 @@
 # IAS 38 Structural Capital emphasis, FRAND-aware licensing templates,
 # Seven Stakeholder / ESG narrative, LIP Console, and LIP Assistant (beta).
 
-from __future__ import annotations
 import io, os, tempfile, re, csv
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
@@ -13,7 +12,7 @@ from dataclasses import dataclass
 import streamlit as st
 import plotly.graph_objects as go  # for radar charts
 import requests
-
+import pdfplumber
 
 @dataclass
 class VMAssumption:
