@@ -757,6 +757,34 @@ def get_sector_cagr_hint(sector: str) -> str:
     Falls back to '_default' if no exact match is found.
     """
     return SECTOR_CAGR_HINTS.get(sector, SECTOR_CAGR_HINTS["_default"])
+
+
+def get_sector_market_context(sector: str) -> str:
+    """
+    Return a combined market-growth narrative for the chosen sector, using:
+      - live CAGR from an external API (if available), and
+      - qualitative drivers from SECTOR_CAGR_HINTS.
+    """
+    # Qualitative drivers
+    narrative = SECTOR_CAGR_HINTS.get(sector, SECTOR_CAGR_HINTS["_default"])
+
+    # Try to fetch a numeric CAGR from the external API
+    cagr = fetch_sector_cagr(sector)
+    if cagr is None:
+        # No live data or API not configured: fall back to narrative only
+        return narrative
+
+    try:
+        pct = round(float(cagr) * 100, 1)
+    except Exception:
+        # In case the API returns something odd
+        return narrative
+
+    return (
+        f"Current external estimates suggest a compound annual growth rate of "
+        f"around {pct}% per year for this sector. "
+        f"{narrative}"
+    )
     
 # Explicit structural cues (IAS 38-compliant artefact hints)
 EXPLICIT_STRUCTURAL_CUES: List[str] = [
