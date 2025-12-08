@@ -1170,17 +1170,23 @@ def vm_assumptions_block(
 
         accepted_suggested: List[VMAssumption] = []
 
-        st.caption("Review and accept the suggested working assumptions:")
+                st.caption("Review and accept the suggested working assumptions:")
         for a in suggested:
-            include = st.checkbox(
-                a.label,
-                value=True,
-                key=f"assumption_suggested_{a.key}",
-                help=f"Signals: {', '.join(a.source_signals)} | Confidence: {a.confidence}",
-            )
-            a.include = bool(include)
+            with st.expander(a.label, expanded=False):
+                st.markdown(f"**Narrative**: {a.narrative}")
+                st.caption(f"_Rationale_: {a.rationale}")
+                include = st.checkbox(
+                    "Include this assumption",
+                    value=True,
+                    key=f"assumption_suggested_{a.key}",
+                    help=f"Signals: {', '.join(a.source_signals)} | Confidence: {a.confidence}",
+                )
+
             if include:
+                a.include = True
                 accepted_suggested.append(a)
+            else:
+                a.include = False
 
         # ---- Add custom assumptions ---------------------------------------
         st.markdown("---")
