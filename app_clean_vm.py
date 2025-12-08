@@ -2102,6 +2102,38 @@ elif page == "Reports":
     case_name = ss.get("case_name", "Untitled Company")
     case_folder = OUT_ROOT / _safe(case_name)
 
+    def vm_assumptions_block(
+    sector: str,
+    ic_summary: Dict[str, Dict[str, List[Any]]],
+    ten_steps_scores: Dict[str, int],
+) -> None:
+    """
+    Streamlit block: show derived assumptions and let the VM accept / reject each one.
+    Accepted assumptions are stored in st.session_state["vm_assumptions_accepted"].
+    """
+    st.subheader("Proposed working assumptions")
+
+    proposed = derive_vm_assumptions(sector, ic_summary, ten_steps_scores)
+
+    accepted: List[VMAssumption] = []
+    for a in proposed:
+        with st.expander(a.label, expanded=True):
+            st.markdown(a.narrative)
+            st.caption(f"Rationale: {a.rationale}")
+            include = st.checkbox(
+                "Accept this assumption",
+                value=True,
+                key=f"assumption_{a.key}",
+                help=f"Signals: {', '.join(a.source_signals)} | Confidence: {a.confidence}",
+            )
+            if include:
+                a.include = True
+                accepted.append(a)
+            else:
+                a.include = False
+
+    st.session_state["vm_assumptions_accepted"] = accepted
+
     def _compose_ic() -> Tuple[str, str]:
         title = f"IC Report — {case_name}"
         ic_map = ss.get("ic_map", {})
