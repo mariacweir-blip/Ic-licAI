@@ -681,6 +681,60 @@ SECTOR_CUES = {
     ],
 }
 
+# Qualitative market-growth and driver hints by sector.
+# NOTE: Keys must match the sector labels used on page 1.
+SECTOR_CAGR_HINTS: Dict[str, str] = {
+    "GreenTech": (
+        "GreenTech markets are expanding faster than the wider economy, driven by "
+        "decarbonisation policies, energy-efficiency regulations, and demand for lower-cost, "
+        "low-carbon solutions. Buyers are looking for technologies that reduce emissions, cut "
+        "operating costs, and help them comply with ESG and climate-reporting requirements."
+    ),
+    "MedTech": (
+        "MedTech demand is supported by ageing populations, pressure on healthcare budgets, "
+        "and a shift toward outpatient and home-based care. Regulators are tightening quality "
+        "and safety expectations, which favours solutions that demonstrate clinical evidence, "
+        "regulatory compliance, and clear cost–benefit for hospitals and insurers."
+    ),
+    "AgriTech": (
+        "AgriTech markets are growing as food-security concerns, climate change, and labour "
+        "shortages push farmers toward data-driven and resource-efficient solutions. Adoption "
+        "is strongest where tools can boost yields, reduce inputs like water and fertiliser, "
+        "and provide traceability for export and premium markets."
+    ),
+    "Software / SaaS": (
+        "Software and SaaS are benefiting from ongoing digitalisation, with organisations "
+        "shifting from on-premise systems to cloud-based, subscription models. Buyers focus "
+        "on time-to-value, ease of integration via APIs, cybersecurity, and predictable "
+        "operating costs rather than large capital investments."
+    ),
+    "Professional & KIBS": (
+        "Knowledge-intensive business services are growing as companies outsource specialised "
+        "capabilities in analytics, compliance, digital transformation, and ESG. The market "
+        "rewards firms that combine deep domain expertise with technology-enabled delivery and "
+        "can demonstrate measurable impact on client performance and risk reduction."
+    ),
+    "Public / Gov / Non-profit": (
+        "Public-sector and non-profit demand is shaped by long budget cycles, procurement "
+        "rules, and policy priorities such as digital inclusion, resilience, and sustainability. "
+        "Solutions that align with national strategies, offer strong value-for-money, and can be "
+        "scaled across multiple agencies have a clear advantage."
+    ),
+    "_default": (
+        "The company operates in a market that is expanding steadily as customers respond to "
+        "regulatory change, digitalisation, and pressure to improve efficiency and resilience. "
+        "Growth is strongest where providers can solve mission-critical problems, integrate with "
+        "existing systems, and demonstrate clear economic and ESG benefits."
+    ),
+}
+
+def get_sector_cagr_hint(sector: str) -> str:
+    """
+    Return a qualitative market-growth and driver narrative for the chosen sector.
+    Falls back to '_default' if no exact match is found.
+    """
+    return SECTOR_CAGR_HINTS.get(sector, SECTOR_CAGR_HINTS["_default"])
+    
 # Explicit structural cues (IAS 38-compliant artefact hints)
 EXPLICIT_STRUCTURAL_CUES: List[str] = [
     "contract",
