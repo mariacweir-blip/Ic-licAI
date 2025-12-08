@@ -819,6 +819,232 @@ def _step_band(score: int) -> str:
     if score == 1:
         return "weak"
     return "gap"
+
+def derive_vm_assumptions(
+    sector: str,
+    ic_summary: Dict[str, Dict[str, List[Any]]],
+    ten_steps_scores: Dict[str, int],
+) -> List[VMAssumption]:
+    """
+    Produce a list of narrative assumptions for the VM, derived from the analysis.
+    The VM can accept or reject each assumption before it is written into the report.
+
+    Expected ic_summary shape (per capital):
+        ic_summary = {
+            "Structural": {"explicit": [...], "tacit": [...]},
+            "Human": {"explicit": [...], "tacit": [...]},
+            "Customer": {"explicit": [...], "tacit": [...]},
+            "Strategic": {"explicit": [...], "tacit": [...]},
+        }
+
+    Expected ten_steps_scores shape:
+        ten_steps_scores = { "Identify": 2, "Separate": 1, ... }
+    """
+
+    assumptions: List[VMAssumption] = []
+
+    # --- Capital strength diagnostics ---------------------------------------
+    def _counts(cap: str) -> tuple[int, int]:
+        cap_data = ic_summary.get(cap, {})
+        return (
+            len(cap_data.get("explicit", [])),
+            len(cap_data.get("tacit", [])),
+        )
+
+    struct_exp, struct_tac = _counts("Structural")
+    human_exp, human_tac = _counts("Human")
+    cust_exp, cust_tac = _counts("Customer")
+    strat_exp, strat_tac = _counts("Strategic")
+
+    structural_level = _strength_level(struct_exp, struct_tac)
+    human_level = _strength_level(human_exp, human_tac)
+    customer_level = _strength_level(cust_exp, cust_tac)
+    strategic_level = _strength_level(strat_exp, strat_tac)
+
+    # --- Ten-Steps bands -----------------------------------------------------
+    step_bands: Dict[str, str] = {
+        step: _step_band(ten_steps_scores.get(step, 0))
+        for step in TEN_STEPS
+    }
+
+    # --- 1. Market-growth / demand assumption -------------------------------
+    market_context_text = get_sector_market_context(sector)
+    assumptions.append(
+        VMAssumption(
+            key="market_pull",
+            label="Market pull and growth context",
+            narrative=(
+                "We assume there is sustained market pull for this type of solution in the "
+                f"chosen sector ({sector}). {market_context_text}"
+            ),
+            rationale=(
+                "Based on the sector selected on page 1, external CAGR estimates (if "
+                "available), and the qualitative SECTOR_CAGR_HINTS narrative."
+            ),
+            category="market",
+            source_signals=[f"sector={sector}", "SECTOR_CAGR_HINTS", "CAGR_API"],
+            confidence="medium",
+        )
+    )
+
+    # --- 2. Innovation capacity assumption ----------------------------------
+    innovative_capitals = sum(
+        level in ("emerging", "strong")
+        for level in (structural_level, human_level, strategic_level)
+    )
+
+    if innovative_capitals >= 2:
+        innovation_narrative = (
+            "The company appears to have a meaningful innovation base, with core know-how, "
+            "people, and partnering assets that can support repeatable development of new "
+            "solutions and service improvements."
+        )
+        innovation_conf = "high"
+    else:
+        innovation_narrative = (
+            "The company seems to be at an earlier stage in building its innovation base, "
+            "with some promising assets but still limited depth in documented processes, "
+            "skills, or strategic partnerships."
+        )
+        innovation_conf = "medium"
+
+    assumptions.append(
+        VMAssumption(
+            key="innovation_capacity",
+            label="Innovation capacity",
+            narrative=innovation_narrative,
+            rationale=(
+                "Derived from the relative strength of Structural, Human, and Strategic "
+                "capitals (tacit + explicit artefact counts)."
+            ),
+            category="innovation",
+            source_signals=[
+                f"Structural={structural_level}",
+                f"Human={human_level}",
+                f"Strategic={strategic_level}",
+            ],
+            confidence=innovation_conf,
+        )
+    )
+
+    # --- 3. Commercial readiness assumption ---------------------------------
+    use_band = step_bands.get("Use", "gap")
+    monitor_band = step_bands.get("Monitor", "gap")
+    value_band = step_bands.get("Value", "gap")
+
+    if customer_level in ("emerging", "strong") and use_band in ("developing", "strong"):
+        comm_narrative = (
+            "We assume the company is beyond initial proof-of-concept and is already "
+            "testing or deploying its solution with real customers, with a pathway toward "
+            "repeatable commercial delivery."
+        )
+        comm_conf = "high" if value_band in ("developing", "strong") else "medium"
+    else:
+        comm_narrative = (
+            "We assume the company is still in earlier commercial-validation stages and "
+            "needs to strengthen its customer base and repeatable commercial model before "
+            "scaling."
+        )
+        comm_conf = "medium"
+
+    assumptions.append(
+        VMAssumption(
+            key="commercial_readiness",
+            label="Commercial readiness",
+            narrative=comm_narrative,
+            rationale=(
+                "Based on Customer Capital strength and the Use / Monitor / Value steps in "
+                "the Ten-Steps analysis."
+            ),
+            category="market",
+            source_signals=[
+                f"Customer={customer_level}",
+                f"Use_step={use_band}",
+                f"Monitor_step={monitor_band}",
+                f"Value_step={value_band}",
+            ],
+            confidence=comm_conf,
+        )
+    )
+
+    # --- 4. IP & governance maturity assumption -----------------------------
+    identify_band = step_bands.get("Identify", "gap")
+    protect_band = step_bands.get("Protect", "gap")
+    safeguard_band = step_bands.get("Safeguard", "gap")
+    manage_band = step_bands.get("Manage", "gap")
+    control_band = step_bands.get("Control", "gap")
+
+    ip_bands = [identify_band, protect_band, safeguard_band, manage_band, control_band]
+    strong_ip = sum(b in ("developing", "strong") for b in ip_bands)
+
+    if strong_ip >= 3:
+        ip_narrative = (
+            "We assume the company has at least basic IP and knowledge-governance processes "
+            "in place, with identified core assets and some level of protection, "
+            "management, and access control."
+        )
+        ip_conf = "high"
+    else:
+        ip_narrative = (
+            "We assume core IP and knowledge-governance processes are still emerging, with "
+            "gaps in how assets are identified, protected, and controlled across the "
+            "organisation."
+        )
+        ip_conf = "medium"
+
+    assumptions.append(
+        VMAssumption(
+            key="ip_governance_maturity",
+            label="IP and governance maturity",
+            narrative=ip_narrative,
+            rationale=(
+                "Derived from the Identify / Protect / Safeguard / Manage / Control steps "
+                "in the Ten-Steps analysis."
+            ),
+            category="ten-steps",
+            source_signals=[
+                f"Identify={identify_band}",
+                f"Protect={protect_band}",
+                f"Safeguard={safeguard_band}",
+                f"Manage={manage_band}",
+                f"Control={control_band}",
+            ],
+            confidence=ip_conf,
+        )
+    )
+
+    # --- 5. Execution risk assumption ---------------------------------------
+    weak_or_gap = sum(b in ("weak", "gap") for b in step_bands.values())
+    if weak_or_gap >= 5:
+        risk_narrative = (
+            "We assume there is a material execution risk: several foundational activities "
+            "in the asset lifecycle are weak or missing, which could slow delivery, weaken "
+            "negotiating power, or block investment until addressed."
+        )
+        risk_conf = "medium"
+    else:
+        risk_narrative = (
+            "We assume execution risk is manageable: there are still gaps, but the company "
+            "has enough structure in place to support growth if the most critical steps are "
+            "prioritised in the next 12–24 months."
+        )
+        risk_conf = "medium"
+
+    assumptions.append(
+        VMAssumption(
+            key="execution_risk",
+            label="Execution risk profile",
+            narrative=risk_narrative,
+            rationale=(
+                "Based on the distribution of strong vs. weak/gap scores across all Ten Steps."
+            ),
+            category="ten-steps",
+            source_signals=[f"weak_or_gap_steps={weak_or_gap}"],
+            confidence=risk_conf,
+        )
+    )
+
+    return assumptions
     
 # Explicit structural cues (IAS 38-compliant artefact hints)
 EXPLICIT_STRUCTURAL_CUES: List[str] = [
