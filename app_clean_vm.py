@@ -2095,7 +2095,44 @@ elif page == "LIP Console":
         with st.expander("Narrative per step"):
             for s, n in zip(TEN_STEPS, ten["narratives"]):
                 st.markdown(f"**{s}** — {n}")
+    # ---- VM assumptions sidebar workspace --------------------------------
+    try:
+        # Sector – adjust key name if you store it differently
+        sector = ss.get("sector", ss.get("company_sector", "Unknown"))
 
+        # Build a minimal ic_summary from the ic_map held in session
+        ic_map: Dict[str, Any] = ss.get("ic_map", {})
+        ic_summary: Dict[str, Dict[str, List[Any]]] = {}
+
+        for cap_label, cap_key in [
+            ("Human", "Human"),
+            ("Structural", "Structural"),
+            ("Customer", "Customer"),
+            ("Strategic Alliance", "Strategic"),  # map to Strategic
+        ]:
+            row = ic_map.get(cap_label, {})
+            # crude proxy: 1 explicit item if the tick is True, else none
+            explicit_items: List[Any] = ["asset"] if row.get("tick") else []
+            ic_summary[cap_key] = {
+                "explicit": explicit_items,
+                "tacit": [],   # we’re not splitting tacit/explicit here yet
+            }
+
+        # Build Ten-Steps scores dict from the stored table
+        ten_raw = ss.get("ten_steps", {})
+        ten_rows = ten_raw.get("scores") or []
+        ten_steps_scores: Dict[str, int] = {
+            str(r.get("step")): int(r.get("score", 0)) for r in ten_rows
+        }
+
+        vm_assumptions_block(
+            sector=sector,
+            ic_summary=ic_summary,
+            ten_steps_scores=ten_steps_scores,
+        )
+    except Exception as e:
+        st.warning(f"Could not derive assumptions automatically: {e}")
+        
 # 5) REPORTS
 elif page == "Reports":
     st.header("Reports & Exports")
