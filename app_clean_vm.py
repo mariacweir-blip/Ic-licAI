@@ -2235,24 +2235,22 @@ elif page == "Asset Verification":
         )
         
 # 4) LIP CONSOLE (was Expert View)
-
-    # 4) LIP CONSOLE (was Expert View)
-if page == "LIP Console":
+elif page == "LIP Console":
     st.header("LIP Console — Narrative & IC Map")
 
-    # Main editable narrative box
+    # ---- Main editable narrative (centre of the page) --------------------
     nar = st.text_area(
         "Summary (editable by Licensing & Intangibles Partner)",
-        value=ss.get("combined_text", ""),
+        value=ss.get("combined_text", ss.get("narrative", "")),
         height=220,
         key="nar_edit",
     )
-
-    # Store in session (these MUST stay indented under the if-block)
     ss["narrative"] = nar or ss.get("narrative", "")
     ss["combined_text"] = ss["narrative"]
-    
+
     colA, colB = st.columns([1, 1])
+
+    # ------------ LEFT: Evidence + 4-Leaf map -----------------------------
     with colA:
         if not PUBLIC_MODE:
             st.subheader("Evidence Quality")
@@ -2281,8 +2279,10 @@ if page == "LIP Console":
         st.markdown(f"- **Markets & why:** {ss.get('markets_why', '') or '—'}")
         st.markdown(f"- **Target sale & why:** {ss.get('sale_price_why', '') or '—'}")
 
+    # ------------ RIGHT: Ten-Steps table ---------------------------------
     with colB:
         st.subheader("Ten-Steps Readiness")
+
         raw_ten = ss.get("ten_steps") or {}
         scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
         narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
@@ -2296,188 +2296,58 @@ if page == "LIP Console":
         with st.expander("Narrative per step"):
             for s, n in zip(TEN_STEPS, ten["narratives"]):
                 st.markdown(f"**{s}** — {n}")
-                
-    # ---- VM assumptions sidebar workspace --------------------------------
-    try:
-        # Sector – adjust key name if you store it differently
-        sector = ss.get("sector", ss.get("company_sector", "Unknown"))
 
-        # Build a minimal ic_summary from the ic_map held in session
-        ic_map = ss.get("ic_map", {})
-        ic_summary = {}
-
-        capital_mapping = [
-            ("Human", "Human"),
-            ("Structural", "Structural"),
-            ("Customer", "Customer"),
-            ("Strategic Alliance", "Strategic"),  # map to Strategic
-        ]
-
-        for label, cap_key in capital_mapping:
-            row = ic_map.get(label, {})
-            # crude proxy: one explicit item if the tick is True, else none
-            explicit_items = ["asset"] if row.get("tick") else []
-            ic_summary[cap_key] = {
-                "explicit": explicit_items,
-                "tacit": [],   # we’re not splitting tacit/explicit here yet
-            }
-
-        # Build Ten-Steps scores dict from the stored table
-        ten_raw = ss.get("ten_steps") or {}
-        ten_rows = ten_raw.get("scores") or []
-        ten_steps_scores = {}
-        for r in ten_rows:
-            step_name = str(r.get("step") or "").strip()
-            if not step_name:
-                continue
-            try:
-                score_val = int(r.get("score", 0))
-            except Exception:
-                score_val = 0
-            ten_steps_scores[step_name] = score_val
-
-        vm_assumptions_block(
-            sector=sector,
-            ic_summary=ic_summary,
-            ten_steps_scores=ten_steps_scores,
-        )
-
-    except Exception as e:
-        st.warning(f"Could not derive assumptions automatically: {e}")
-       # ---- VM assumptions sidebar workspace --------------------------------
-    try:
-        # Sector label for the assumptions engine
-        sector = ss.get("sector", ss.get("company_sector", "Unknown"))
-
-        # Build a minimal ic_summary from the IC map held in session
-        ic_map_state = ss.get("ic_map", {}) or {}
-        ic_summary: Dict[str, Dict[str, List[Any]]] = {}
-
-        capital_mapping = [
-            ("Human", "Human"),
-            ("Structural", "Structural"),
-            ("Customer", "Customer"),
-            ("Strategic Alliance", "Strategic"),  # map label -> Strategic
-        ]
-
-        for label, cap_key in capital_mapping:
-            row = ic_map_state.get(label, {})
-            # crude proxy: one explicit item if the tick is True, else none
-            explicit_items: List[Any] = ["asset"] if row.get("tick") else []
-            ic_summary[cap_key] = {
-                "explicit": explicit_items,
-                "tacit": [],  # we are not splitting tacit/explicit here yet
-            }
-
-        # Build Ten-Steps scores dict from the stored list
-        raw_ten = ss.get("ten_steps") or {}
-        step_scores_list = raw_ten.get("scores") or [5] * len(TEN_STEPS)
-        ten_steps_scores = {
-            step: int(score) for step, score in zip(TEN_STEPS, step_scores_list)
-        }
-
-        vm_assumptions_block(
-            sector=sector,
-            ic_summary=ic_summary,
-            ten_steps_scores=ten_steps_scores,
-        )
-
-    except Exception as e:
-        st.warning(f"Could not derive assumptions automatically: {e}")
-        # ---- VM assumptions sidebar workspace -------------------------------
-    try:
-        # Sector – fall back to 'Unknown' if not set
-        sector = ss.get("sector", ss.get("company_sector", "Unknown"))
-
-        # Build a minimal ic_summary from the ic_map held in session
-        ic_map_session = ss.get("ic_map", {}) or {}
-        ic_summary: Dict[str, Dict[str, List[Any]]] = {}
-
-        capital_mapping = [
-            ("Human", "Human"),
-            ("Structural", "Structural"),
-            ("Customer", "Customer"),
-            ("Strategic Alliance", "Strategic"),  # map to Strategic
-        ]
-
-        for label, cap_key in capital_mapping:
-            row = ic_map_session.get(label, {})
-            # crude proxy: one explicit item if the tick is True, else none
-            explicit_items: List[Any] = ["asset"] if row.get("tick") else []
-            ic_summary[cap_key] = {
-                "explicit": explicit_items,
-                "tacit": [],  # not splitting tacit/explicit yet
-            }
-
-        # Build Ten-Steps scores dict from the stored list
-        ten_raw = ss.get("ten_steps") or {}
-        scores_list = ten_raw.get("scores") or [0] * len(TEN_STEPS)
-        ten_steps_scores: Dict[str, int] = {
-            step: int(score) for step, score in zip(TEN_STEPS, scores_list)
-        }
-
-        # Render the sidebar assumptions workspace
-        vm_assumptions_block(
-            sector=sector,
-            ic_summary=ic_summary,
-            ten_steps_scores=ten_steps_scores,
-        )
-
-    except Exception as e:
-        st.warning(f"Could not derive assumptions automatically: {e}")    
-        
-# 5) REPORTS
-elif page == "Reports":
-    st.header("Reports & Exports")
-    case_name = ss.get("case_name", "Untitled Company")
-    case_folder = OUT_ROOT / _safe(case_name)
-
-def vm_assumptions_block(
-    sector: str,
-    ic_summary: Dict[str, Dict[str, List[Any]]],
-    ten_steps_scores: Dict[str, int],
-) -> None:
-    """
-    Sidebar workspace: VM reviews suggested assumptions, adds any missing ones,
-    and confirms what should flow into the IC report.
-
-    Stores:
-        st.session_state["vm_assumptions_accepted"]  -> List[VMAssumption]
-        st.session_state["vm_assumptions_confirmed"] -> bool
-    """
+    # ------------ SIDEBAR: VM assumptions workspace ----------------------
     with st.sidebar:
         st.markdown("### Working assumptions")
 
-        # ---- Suggested assumptions from the engine ------------------------
-        suggested = derive_vm_assumptions(sector, ic_summary, ten_steps_scores)
+        # Build small ic_summary from current 4-Leaf map
+        ic_map = ss.get("ic_map", {})
+        ic_summary: Dict[str, Dict[str, List[Any]]] = {}
+        capital_mapping = [
+            ("Human", "Human"),
+            ("Structural", "Structural"),
+            ("Customer", "Customer"),
+            ("Strategic Alliance", "Strategic"),  # map to Strategic
+        ]
+        for label, cap_key in capital_mapping:
+            row = ic_map.get(label, {})
+            explicit_items = ["asset"] if row.get("tick") else []
+            ic_summary[cap_key] = {"explicit": explicit_items, "tacit": []}
 
-        # Keep any existing manual assumptions in state
-        manual_list: List[VMAssumption] = st.session_state.get(
-            "vm_manual_assumptions", []
-        )
+        # Ten-Steps scores as a dict
+        ten_scores_list = ten["scores"]
+        ten_steps_scores: Dict[str, int] = {
+            step: int(ten_scores_list[i]) if i < len(ten_scores_list) else 0
+            for i, step in enumerate(TEN_STEPS)
+        }
+
+        sector = ss.get("sector", ss.get("company_sector", "Unknown"))
+
+        suggested: List[VMAssumption] = []
+        try:
+            suggested = derive_vm_assumptions(sector, ic_summary, ten_steps_scores)
+        except Exception as e:
+            st.warning(f"Could not derive assumptions automatically: {e}")
+
+        manual_list: List[VMAssumption] = ss.get("vm_manual_assumptions", [])
 
         accepted_suggested: List[VMAssumption] = []
 
         st.caption("Review and accept the suggested working assumptions:")
-                accepted_suggested: List[VMAssumption] = []
-
-        st.caption("Review and accept the suggested working assumptions:")
-        for idx, a in enumerate(suggested):
+        for a in suggested:
             include = st.checkbox(
                 a.label,
                 value=True,
-                key=f"assumption_suggested_{idx}_{a.key}",
+                key=f"vm_assumption_{a.key}",
                 help=f"Signals: {', '.join(a.source_signals)} | Confidence: {a.confidence}",
             )
-            a.include = bool(include)
-            
             if include:
                 a.include = True
                 accepted_suggested.append(a)
             else:
                 a.include = False
 
-        # ---- Add custom assumptions ---------------------------------------
         st.markdown("---")
         st.caption("Add any missing assumptions:")
 
@@ -2511,21 +2381,18 @@ def vm_assumptions_block(
                     include=True,
                 )
                 manual_list.append(manual)
-                st.session_state["vm_manual_assumptions"] = manual_list
+                ss["vm_manual_assumptions"] = manual_list
                 st.success("Custom assumption added.")
             else:
                 st.warning("Please provide both a title and a narrative.")
 
-        # Show current custom assumptions (read-only list)
         if manual_list:
             st.caption("Custom assumptions added:")
             for m in manual_list:
                 st.markdown(f"- ✏️ **{m.label}**")
 
-        # ---- Combine & confirm --------------------------------------------
-        # Everything that is either (a) ticked suggested, or (b) custom.
         accepted_all: List[VMAssumption] = accepted_suggested + manual_list
-        st.session_state["vm_assumptions_accepted"] = accepted_all
+        ss["vm_assumptions_accepted"] = accepted_all
 
         confirm = st.checkbox(
             "Confirm these assumptions for the IC report",
@@ -2537,38 +2404,195 @@ def vm_assumptions_block(
         elif confirm and not accepted_all:
             st.warning("No assumptions are defined yet. Add or accept at least one.")
 
+# 5) REPORTS
+elif page == "Reports":
+    st.header("Reports & Exports")
+    case_name = ss.get("case_name", "Untitled Company")
+    case_folder = OUT_ROOT / _safe(case_name)
+
     def _compose_ic() -> Tuple[str, str]:
+        """
+        8-section IC report, including VM assumptions.
+        """
         title = f"IC Report — {case_name}"
+
         ic_map = ss.get("ic_map", {})
+        leaf_scores = ss.get("leaf_scores", {})
+        evidence_quality = ss.get("evidence_quality", 0)
 
         raw_ten = ss.get("ten_steps") or {}
         scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
         narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
         ten = {"scores": scores, "narratives": narrs}
 
-        b: List[str] = []
-        interpreted = ss.get("combined_text", "").strip() or ss.get("narrative", "(no summary)")
-        b.append(f"Executive Summary\n\n{interpreted}\n")
-        if not PUBLIC_MODE:
-            b.append(f"Evidence Quality: ~{ss.get('evidence_quality', 0)}% coverage (heuristic)\n")
+        # Context
+        size = ss.get("company_size", "Micro (1–10)")
+        sector = ss.get("sector", "Other")
+        why = ss.get("why_service", "")
+        stage = ss.get("stage", "")
+        plan_s = ss.get("plan_s", "")
+        plan_m = ss.get("plan_m", "")
+        plan_l = ss.get("plan_l", "")
+        markets = ss.get("markets_why", "")
+        sale = ss.get("sale_price_why", "")
+        interpreted = ss.get("combined_text", "").strip() or ss.get(
+            "narrative", "(no summary)"
+        )
 
-        b.append("Four-Leaf Analysis")
+        # VM assumptions
+        vm_assumptions: List[VMAssumption] = ss.get("vm_assumptions_accepted", [])
+        assumptions_confirmed = ss.get("vm_assumptions_confirmed", False)
+
+        # Section 1 – Executive summary
+        sec1 = [
+            "1. Executive Summary",
+            "",
+            interpreted,
+        ]
+
+        # Section 2 – Introduction to company
+        sec2_lines = [
+            "2. Introduction to the Company",
+            "",
+            f"{case_name} is a {size} operating in the {sector} sector.",
+        ]
+        if why:
+            sec2_lines.append(f"- Reason for IC & licensing support: {why}")
+        if stage:
+            sec2_lines.append(f"- Product / service stage: {stage}")
+        if plan_s or plan_m or plan_l:
+            sec2_lines.append(
+                "- Growth plans:"
+            )
+            if plan_s:
+                sec2_lines.append(f"  • Short term (0–6m): {plan_s}")
+            if plan_m:
+                sec2_lines.append(f"  • Medium term (6–24m): {plan_m}")
+            if plan_l:
+                sec2_lines.append(f"  • Long term (24m+): {plan_l}")
+        if markets:
+            sec2_lines.append(f"- Priority markets and channels: {markets}")
+        if sale:
+            sec2_lines.append(f"- Target sale price narrative: {sale}")
+        sec2 = "\n".join(sec2_lines)
+
+        # Section 3 – Tacit to explicit
+        structural = ic_map.get("Structural", {})
+        struct_tick = bool(structural.get("tick"))
+        struct_score = leaf_scores.get("Structural", structural.get("score", 0.0))
+
+        sec3_lines = [
+            "3. Tacit to Explicit (Codification)",
+            "",
+        ]
+        if struct_tick and evidence_quality >= 40:
+            sec3_lines.append(
+                "Structural Capital shows signs of being codified into explicit, IAS 38-ready assets. "
+                "Contracts, SOPs, protocols, registers, datasets and CRM records appear in the evidence. "
+                "These should be consolidated into an auditable IA Register and linked to ownership and licensing terms."
+            )
+        else:
+            sec3_lines.append(
+                "At this stage, most value still sits in tacit know-how, relationships and informal practices. "
+                "Structural Capital is only partially visible. The immediate priority is to capture existing contracts, "
+                "processes, datasets and governance artefacts into a basic IA Register that separates tacit from explicit assets."
+            )
+        sec3_lines.append(f"Approximate Structural Capital intensity score: {struct_score}.")
+        sec3 = "\n".join(sec3_lines)
+
+        # Section 4 – Intangible asset map (4-Leaf)
+        sec4_lines = [
+            "4. Intangible Asset Map (4-Leaf Model)",
+            "",
+        ]
         for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
             row = ic_map.get(leaf, {"tick": False, "narrative": "", "score": 0.0})
-            tail = "" if PUBLIC_MODE else f" (score: {row.get('score', 0.0)})"
-            b.append(f"- {leaf}: {'✓' if row.get('tick') else '•'} — {row.get('narrative', '')}{tail}")
-
-        b.append("\nTen-Steps Readiness")
-        for s, n in zip(TEN_STEPS, ten["narratives"]):
-            b.append(f"- {n}")
-
-        b.append("\nNotes")
-        b.append(
-            "This document is provided for high-level evaluation only."
-            if PUBLIC_MODE
-            else "CONFIDENTIAL. Advisory-first; company and LIP review required for final scoring, licensing design and accounting treatment."
+            status = "evidenced" if row.get("tick") else "emerging/gap"
+            score = row.get("score", 0.0)
+            sec4_lines.append(
+                f"- {leaf} Capital — status: {status}, score: {score}. {row.get('narrative','')}"
+            )
+        sec4_lines.append("")
+        sec4_lines.append(
+            "Together these capitals describe how the company creates, captures and protects value. "
+            "Structural Capital is treated as the home for explicit, auditable assets; Human, Customer "
+            "and Strategic Alliance Capital show where tacit value still needs codification."
         )
-        return title, "\n".join(b)
+        sec4 = "\n".join(sec4_lines)
+
+        # Section 5 – Ten-Steps gaps and strengths
+        sec5_lines = [
+            "5. Ten-Steps Readiness — Gaps and Strengths",
+            "",
+        ]
+        for n in ten["narratives"]:
+            sec5_lines.append(f"- {n}")
+        sec5_lines.append("")
+        sec5_lines.append(
+            "Scores at or below 5/10 indicate gaps that may slow execution, weaken negotiating power, "
+            "or complicate audit and valuation. Prioritise steps with the lowest scores in the next "
+            "12–24 months."
+        )
+        sec5 = "\n".join(sec5_lines)
+
+        # Section 6 – Market context, CAGR and value streams
+        market_context = get_sector_market_context(sector)
+        sec6_lines = [
+            "6. Market Context, CAGR & Value Streams",
+            "",
+            market_context,
+            "",
+            "From an IC and licensing perspective, the company can unlock multiple simultaneous value streams by:",
+            "- Licensing explicit Structural Capital (software, methods, indices, datasets, training content).",
+            "- Combining revenue licences with access/community licences for priority stakeholders.",
+            "- Using co-creation and data/algorithm licences to deepen Strategic Alliance Capital.",
+        ]
+        sec6 = "\n".join(sec6_lines)
+
+        # Section 7 – Working assumptions & valuation hook
+        sec7_lines = [
+            "7. Working Assumptions & Valuation Hook",
+            "",
+        ]
+        if assumptions_confirmed and vm_assumptions:
+            sec7_lines.append("The following working assumptions have been confirmed by the Value Manager:")
+            for a in vm_assumptions:
+                if not a.include:
+                    continue
+                sec7_lines.append(f"- **{a.label}** — {a.narrative}")
+            sec7_lines.append("")
+        else:
+            sec7_lines.append(
+                "Working assumptions are still in draft. The LIP/VM team should review and confirm the key "
+                "market, innovation, IP governance and execution-risk assumptions before final valuation."
+            )
+        sec7_lines.append(
+            "A separate valuation workbook (IAS 38-aligned) will translate these assumptions and the IA Register "
+            "into monetary values, including scenario and risk adjustments."
+        )
+        sec7 = "\n".join(sec7_lines)
+
+        # Section 8 – Summary & Action Plan
+        sec8_lines = [
+            "8. Summary & Action Plan",
+            "",
+            "Priority actions over the next 12–24 months are likely to include:",
+            "- Build and maintain a simple IA Register (linking assets to owners, contracts and value streams).",
+            "- Close the most material Ten-Steps gaps (especially Identify, Separate, Protect, Safeguard and Control).",
+            "- Strengthen Structural Capital by codifying tacit know-how and formalising customer and partner data.",
+            "- Choose 2–3 concrete licensing model families to pilot (e.g. revenue licences + one community licence).",
+            "- Align governance and reporting so that ESG and stakeholder outcomes are visibly linked to IC assets.",
+        ]
+        if not PUBLIC_MODE:
+            sec8_lines.append("")
+            sec8_lines.append(
+                "CONFIDENTIAL: This report is an internal advisory draft. It must be reviewed with company leadership "
+                "and auditors before any final accounting, licensing or investment decisions are taken."
+            )
+        sec8 = "\n".join(sec8_lines)
+
+        body = "\n\n".join([ "\n".join(sec1), sec2, sec3, sec4, sec5, sec6, sec7, sec8 ])
+        return title, body
 
     def _compose_lic() -> Tuple[str, str]:
         title = f"Licensing Report — {case_name}"
@@ -2662,10 +2686,14 @@ def vm_assumptions_block(
             )
             (st.success if path else st.warning)(msg)
 
-    st.caption("Server save root: disabled (public mode)" if PUBLIC_MODE else f"Server save root: {OUT_ROOT}")
+    st.caption(
+        "Server save root: disabled (public mode)"
+        if PUBLIC_MODE
+        else f"Server save root: {OUT_ROOT}"
+    )
 
 # 6) LICENSING TEMPLATES
-if page == "Licensing Templates":
+elif page == "Licensing Templates":
     st.header("Licensing Templates (editable DOCX/TXT)")
     case = ss.get("case_name", "Untitled Company")
     sector = ss.get("sector", "Other")
@@ -2780,7 +2808,7 @@ if page == "Licensing Templates":
         )
         (st.success if path else st.warning)(msg)
 
-# 6) LIP ASSISTANT (beta)
+# 7) LIP ASSISTANT (beta)
 elif page == "LIP Assistant":
     st.header("LIP Assistant (beta)")
     st.caption(
@@ -2811,7 +2839,6 @@ elif page == "LIP Assistant":
             st.error("Please enter a question.")
         else:
             ic_text = ss.get("combined_text", "")
-            # Short licensing explainer from the report logic
             lic_snippet = (
                 "The tool supports revenue licences, access/community licences, co-creation/joint development, "
                 "defensive/cross-licence arrangements and data/algorithm licences, all treated through a FRAND-informed "
@@ -2857,7 +2884,10 @@ elif page == "LIP Assistant":
                 "reports and templates generated in the other pages._"
             )
 
-            ss["lip_history"].append({"q": question.strip(), "a": "\n\n".join(answer_parts)})
+            ss.setdefault("lip_history", [])
+            ss["lip_history"].append(
+                {"q": question.strip(), "a": "\n\n".join(answer_parts)}
+            )
             st.markdown("\n\n".join(answer_parts))
 
     if ss.get("lip_history"):
