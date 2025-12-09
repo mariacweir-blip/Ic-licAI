@@ -279,21 +279,44 @@ def _extract_text_pptx(data: bytes) -> str:
 
 def _extract_text_pdf(data: bytes) -> str:
     """
-    Extract basic text from a PDF using PyPDF2.
-    (Scanned/image-only PDFs will still come back empty.)
+    Extract text from PDF bytes.
+
+    1. Try pdfplumber (better layout/table handling).
+    2. Fall back to PyPDF2 if pdfplumber is unavailable or fails.
     """
     if not HAVE_PDF:
         return ""
+
+    # ---- First try: pdfplumber -----------------------------------------
+    try:
+        import pdfplumber  # type: ignore
+
+        text_chunks: list[str] = []
+        bio = io.BytesIO(data)
+        with pdfplumber.open(bio) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text() or ""
+                if page_text.strip():
+                    text_chunks.append(page_text)
+
+        text = "\n\n".join(text_chunks).strip()
+        if text:
+            return text
+    except Exception:
+        # Either pdfplumber not installed or extraction failed – we fall back.
+        pass
+
+    # ---- Fallback: existing PyPDF2 logic -------------------------------
     try:
         bio = io.BytesIO(data)
         reader = PdfReader(bio)
-        parts: List[str] = []
+        parts: list[str] = []
         for page in reader.pages:
             txt = page.extract_text() or ""
             txt = txt.strip()
             if txt:
                 parts.append(txt)
-        return "\n".join(parts)
+        return "\n\n".join(parts)
     except Exception:
         return ""
 
