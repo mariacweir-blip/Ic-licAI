@@ -2446,296 +2446,267 @@ elif page == "Reports":
     case_name = ss.get("case_name", "Untitled Company")
     case_folder = OUT_ROOT / _safe(case_name)
 
-    def _compose_ic() -> Tuple[str, str]:
-    """
-    Build the 8-section IC report body from session state.
+        def _compose_ic() -> Tuple[str, str]:
+        """
+        8-section IC report, including VM assumptions, richer 4-Leaf / Ten-Steps,
+        PDF hint tags and the new company context fields.
+        """
+        title = f"IC Report — {case_name}"
 
-    Uses:
-      - ss['combined_text'] / ss['narrative']      -> Executive summary
-      - ss['case_name'], ss['company_size'], ss['sector']
-      - Company context fields (why, stage, plans, markets, sale)
-      - Optional headline numbers: funding_ask, target_ev, market_headline, flagship_projects
-      - ic_map (4-Leaf map), ten_steps (scores + narratives)
-      - vm_assumptions_accepted (from sidebar)
-      - pdf_hint_tags (keywords from PDF review hints)
-    """
-    case_name = ss.get("case_name", "Untitled Company")
-    sector = ss.get("sector", "Other")
-    size = ss.get("company_size", "Unknown")
-    evidence_quality = int(ss.get("evidence_quality", 0))
+        # --- Core data pulled from session -----------------------------------
+        ic_map = ss.get("ic_map", {})
+        leaf_scores = ss.get("leaf_scores", {})
+        evidence_quality = ss.get("evidence_quality", 0)
 
-    # --- Title --------------------------------------------------------------
-    title = f"IC Report — {case_name}"
+        raw_ten = ss.get("ten_steps") or {}
+        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
+        narrs = raw_ten.get("narratives") or [f"{step}: tbd" for step in TEN_STEPS]
+        ten = {"scores": scores, "narratives": narrs}
 
-    # --- Core narrative (executive summary seed) ----------------------------
-    narrative = (
-        (ss.get("combined_text", "") or "").strip()
-        or (ss.get("narrative", "") or "").strip()
-    )
-    if not narrative:
-        narrative = (
-            "No interpreted IC narrative is stored yet. Run the **Analyse Evidence** page "
-            "to generate an initial summary, then refine it in the LIP Console."
+        # Company context (page 1 fields)
+        size = ss.get("company_size", "Micro (1–10)")
+        sector = ss.get("sector", "Other")
+        why = ss.get("why_service", "")
+        stage = ss.get("stage", "")
+        plan_s = ss.get("plan_s", "")
+        plan_m = ss.get("plan_m", "")
+        plan_l = ss.get("plan_l", "")
+        markets = ss.get("markets_why", "")
+        sale = ss.get("sale_price_why", "")
+        interpreted = (
+            ss.get("combined_text", "").strip()
+            or ss.get("narrative", "(no summary)")
         )
 
-    # --- Company context fields ---------------------------------------------
-    why = (ss.get("why_service", "") or "").strip()
-    stage = (ss.get("stage", "") or "").strip()
-    plan_s = (ss.get("plan_s", "") or "").strip()
-    plan_m = (ss.get("plan_m", "") or "").strip()
-    plan_l = (ss.get("plan_l", "") or "").strip()
-    markets = (ss.get("markets_why", "") or "").strip()
-    sale = (ss.get("sale_price_why", "") or "").strip()
+        # VM assumptions from LIP Console
+        vm_assumptions: List[VMAssumption] = ss.get(
+            "vm_assumptions_accepted", []
+        ) or []
+        vm_confirmed = bool(ss.get("vm_assumptions_confirmed", False))
 
-    # Optional headline numeric / strategic fields (you may or may not use these yet in the UI)
-    funding_ask = (ss.get("funding_ask", "") or "").strip()
-    target_ev = (ss.get("target_ev", "") or "").strip()
-    market_headline = (ss.get("market_headline", "") or "").strip()
-    flagship_projects = (ss.get("flagship_projects", "") or "").strip()
+        # PDF hint tags from evidence review
+        pdf_tags: List[str] = ss.get("pdf_hint_tags", []) or []
 
-    # --- IC map & Ten-Steps -------------------------------------------------
-    ic_map: Dict[str, Any] = ss.get("ic_map", {}) or {}
+        lines: List[str] = []
 
-    ten_raw = ss.get("ten_steps") or {}
-    ten_scores = ten_raw.get("scores") or [5] * len(TEN_STEPS)
-    ten_narrs = ten_raw.get("narratives") or [f"{s}: readiness tbd" for s in TEN_STEPS]
+        # ---------------------------------------------------------------------
+        # 1. Executive Summary
+        # ---------------------------------------------------------------------
+        lines.append("1. Executive Summary\n")
+        lines.append(interpreted + "\n")
 
-    # --- PDF hint tags (from PDF review helper, if wired) -------------------
-    pdf_tags: List[str] = ss.get("pdf_hint_tags", []) or []
-
-    # --- VM / LIP assumptions -----------------------------------------------
-    raw_assumptions = ss.get("vm_assumptions_accepted", []) or []
-
-    def _as_label(a: Any) -> str:
-        return getattr(a, "label", None) or getattr(a, "title", None) or a.get("label", "Assumption")
-
-    def _as_narr(a: Any) -> str:
-        return getattr(a, "narrative", None) or a.get("narrative", "")
-
-    def _as_cat(a: Any) -> str:
-        return getattr(a, "category", None) or a.get("category", "")
-
-    def _as_signals(a: Any) -> List[str]:
-        v = getattr(a, "source_signals", None) or a.get("source_signals", []) or []
-        return list(v) if isinstance(v, (list, tuple)) else [str(v)]
-
-    def _as_conf(a: Any) -> str:
-        return getattr(a, "confidence", None) or a.get("confidence", "")
-
-    def _as_include(a: Any) -> bool:
-        if hasattr(a, "include"):
-            return bool(getattr(a, "include"))
-        return bool(a.get("include", True))
-
-    accepted_assumptions = [a for a in raw_assumptions if _as_include(a)]
-
-    # --- Helper: 4-Leaf line with simple status -----------------------------
-    def _leaf_status_line(label: str) -> str:
-        row = ic_map.get(label, {}) or {}
-        score = float(row.get("score", 0.0) or 0.0)
-        tick = bool(row.get("tick", False))
-        narrative_leaf = (row.get("narrative", "") or "").strip()
-
-        if tick:
-            status = "evidenced"
-        elif score > 0:
-            status = "emerging"
-        else:
-            status = "gap"
-
-        return f"- {label} — status: {status}, score: {score:.1f}. {narrative_leaf}"
-
-    # --- Helper: market context using sector + optional live CAGR -----------
-    try:
-        market_context = get_sector_market_context(sector)
-    except Exception:
-        # Fallback if anything goes wrong in the CAGR helper
-        market_context = (
-            "The company operates in a market that appears to be growing steadily, with demand "
-            "shaped by regulation, digitalisation and the need for more resilient business models."
-        )
-
-    # ========================================================================
-    #   BUILD BODY (8 SECTIONS)
-    # ========================================================================
-    b: List[str] = []
-
-    # 1) Executive summary ----------------------------------------------------
-    b.append("1. Executive summary\n")
-    b.append(narrative + "\n")
-    if not PUBLIC_MODE:
-        b.append(f"Evidence coverage (heuristic): ~{evidence_quality}%\n")
-    b.append("")
-
-    # 2) Company context & headline numbers ----------------------------------
-    b.append("2. Company context & headline metrics\n")
-    b.append(f"- Company: {case_name}")
-    b.append(f"- Size: {size}")
-    b.append(f"- Sector: {sector}")
-    if why:
-        b.append(f"- Why this IC/licensing diagnostic is being requested: {why}")
-    if stage:
-        b.append(f"- Product/service stage: {stage}")
-    if plan_s or plan_m or plan_l:
-        b.append("- Growth plans:")
-        if plan_s:
-            b.append(f"  • Short term (0–6m): {plan_s}")
-        if plan_m:
-            b.append(f"  • Medium term (6–24m): {plan_m}")
-        if plan_l:
-            b.append(f"  • Long term (24m+): {plan_l}")
-    if markets:
-        b.append(f"- Priority markets & why they fit: {markets}")
-    if sale:
-        b.append(f"- Indicative target sale price & rationale (if selling tomorrow): {sale}")
-    if funding_ask:
-        b.append(f"- Near-term funding ask: {funding_ask}")
-    if target_ev:
-        b.append(f"- Target enterprise value (range): {target_ev}")
-    if market_headline:
-        b.append(f"- Headline market size / CAGR context: {market_headline}")
-    if flagship_projects:
-        b.append("Flagship projects / programmes:")
-        b.append(flagship_projects)
-
-    if pdf_tags:
-        b.append("")
-        b.append(
-            "Evidence highlights from uploaded PDFs (keywords only, for VM review — "
-            "does not replace full reading):"
-        )
-        for tag in sorted(set(pdf_tags)):
-            b.append(f"- {tag}")
-    b.append("")
-
-    # 3) Tacit vs explicit & evidence base -----------------------------------
-    b.append("3. Tacit vs explicit knowledge and evidence base\n")
-    struct_row = ic_map.get("Structural", {}) or {}
-    struct_tick = bool(struct_row.get("tick", False))
-    struct_score = float(struct_row.get("score", 0.0) or 0.0)
-
-    if struct_tick and evidence_quality >= 40:
-        b.append(
-            "Evidence suggests that a meaningful share of the company’s critical know-how has been codified into "
-            "explicit Structural Capital (contracts, SOPs, registers, datasets, CRM, board packs, etc.). These "
-            "assets form the backbone of an IAS 38-ready IA Register and can support a fair-value approach to "
-            "intangible asset recognition and future licensing."
-        )
-    elif struct_score > 0:
-        b.append(
-            "There are emerging signals of Structural Capital (references to contracts, processes, governance or data), "
-            "but they are fragmentary. The immediate priority is to consolidate these into a simple IA Register, "
-            "and to make the distinction between tacit (in people and relationships) and explicit (documents, code, "
-            "data, protocols) much clearer."
-        )
-    else:
-        b.append(
-            "At present, most of the value appears to be held in tacit Human, Customer and Strategic Alliance Capital. "
-            "The company should prioritise codifying key processes, contracts, datasets and governance structures so "
-            "that they can be managed as Structural Capital and become IA-register ready."
-        )
-
-    if not PUBLIC_MODE:
-        b.append(
-            f"Internal heuristic: evidence coverage ≈ {evidence_quality}%. This is for advisory use only and "
-            "must be interpreted by the VM/LIP in context."
-        )
-    b.append("")
-
-    # 4) Intangible Asset Map (4-Leaf) ---------------------------------------
-    b.append("4. Intangible asset map (4-Leaf view)\n")
-    for lbl in ["Human", "Structural", "Customer", "Strategic Alliance"]:
-        b.append(_leaf_status_line(lbl))
-    b.append("")
-
-    # 5) Ten-Steps readiness — strengths and gaps ----------------------------
-    b.append("5. Ten-Steps readiness — strengths and gaps\n")
-    if ten_scores and len(ten_scores) == len(TEN_STEPS):
-        for step_name, score_val, nar in zip(TEN_STEPS, ten_scores, ten_narrs):
-            nar_txt = (nar or "").strip()
-            if not nar_txt:
-                nar_txt = f"{step_name}: readiness ≈ {score_val}/10."
-            b.append(f"- {step_name}: readiness ≈ {score_val}/10. {nar_txt}")
-    else:
-        b.append(
-            "Ten-Steps scoring has not yet been fully populated in the tool. Run the analysis and/or update the "
-            "Ten-Steps table in the LIP Console, then regenerate this report."
-        )
-    b.append("")
-
-    # 6) Market context & demand (incl. CAGR narrative) ----------------------
-    b.append("6. Market context and demand\n")
-    b.append(
-        f"For the chosen sector ({sector}), the current working view of market growth and demand is:\n"
-        f"{market_context}\n"
-    )
-    if markets:
-        b.append(
-            "This should be read together with the company’s own view of priority markets and channels "
-            "as captured on page 1 of the tool."
-        )
-    b.append("")
-
-    # 7) Working assumptions & valuation hook (from VM sidebar) --------------
-    b.append("7. Working assumptions & valuation hook\n")
-    if accepted_assumptions:
-        b.append(
-            "The Value Manager / Licensing & Intangibles Partner has agreed the following working assumptions, "
-            "which will be used to shape the valuation narrative and next-step modelling. These are advisory and "
-            "must be checked with the company before being treated as final.\n"
-        )
-        for a in accepted_assumptions:
-            label = _as_label(a)
-            nar = _as_narr(a)
-            cat = _as_cat(a)
-            signals = _as_signals(a)
-            conf = _as_conf(a)
-
-            sig_txt = f"Signals: {', '.join(signals)}." if signals else ""
-            conf_txt = f"Confidence: {conf}." if conf else ""
-            cat_txt = f"(Category: {cat}) " if cat else ""
-
-            b.append(
-                f"- {label} {cat_txt}– {nar} {sig_txt} {conf_txt}".strip()
+        if not PUBLIC_MODE:
+            lines.append(
+                "Evidence quality (heuristic): approx. "
+                f"{evidence_quality:.0f}% coverage based on uploaded files and "
+                "document checks.\n"
             )
-    else:
-        b.append(
-            "No working assumptions have been confirmed in the LIP Console yet. The VM/LIP should review the "
-            "auto-derived assumptions in the sidebar, add any missing ones, and tick ‘Confirm’ before using this "
-            "section as part of a valuation or investor pack."
-        )
-    b.append("")
 
-    # 8) Summary & next-step action plan -------------------------------------
-    b.append("8. Summary and next-step action plan\n")
-    b.append(
-        "From an IC and licensing perspective, the immediate priorities are to:\n"
-        "- Consolidate a single IA Register covering explicit assets (software, datasets, indices, contracts, SOPs, "
-        "protocols, brand/IPR, training content, CRM and board materials).\n"
-        "- Clarify ownership, rights and governance for each asset family so that licensing options (revenue licences, "
-        "access/community licences, co-creation, defensive and data/algorithm licences) can be designed safely.\n"
-        "- Strengthen weak or gap Ten-Steps (especially Identify, Separate, Safeguard, Manage, Control, Monitor and "
-        "Report) so that the company can support fair-value recognition under IAS 38 and withstand investor or audit "
-        "scrutiny.\n"
-        "- Link the confirmed working assumptions to a simple valuation model (e.g. scenario-based fair-value range) "
-        "and to a small number of licensing templates suitable for the company’s core markets.\n"
-    )
+        if vm_assumptions:
+            lines.append(
+                "This executive summary integrates draft working assumptions reviewed "
+                "in the LIP Console. They should be checked and refined with the "
+                "company before any final valuation or licensing decisions.\n"
+            )
 
-    if not PUBLIC_MODE:
-        b.append(
-            "CONFIDENTIAL. This report is an advisory-first output from IC-LicAI. It must be reviewed and adapted by "
-            "the VM/LIP and the company before being used in investor, audit or regulatory contexts."
-        )
-    else:
-        b.append(
-            "This is a high-level, non-confidential view generated in public mode. It should not be used as a "
-            "substitute for professional advisory or audit work."
+        # ---------------------------------------------------------------------
+        # 2. Introduction to the Company
+        # ---------------------------------------------------------------------
+        lines.append("\n2. Introduction to the Company\n")
+        lines.append(
+            f"Size & type: {size} company operating in the {sector} sector.\n"
         )
 
-    return title, "\n".join(b)
-        body = "\n\n".join([ "\n".join(sec1), sec2, sec3, sec4, sec5, sec6, sec7, sec8 ])
-        return title, body
+        if why:
+            lines.append(f"- Reason for IC & licensing support: {why}\n")
+        if stage:
+            lines.append(f"- Product / service stage: {stage}\n")
 
+        if plan_s or plan_m or plan_l:
+            lines.append("- Growth plans:\n")
+            if plan_s:
+                lines.append(f"  • Short term (0–6m): {plan_s}\n")
+            if plan_m:
+                lines.append(f"  • Medium term (6–24m): {plan_m}\n")
+            if plan_l:
+                lines.append(f"  • Long term (24m+): {plan_l}\n")
+
+        if markets:
+            lines.append(f"- Priority markets & channels: {markets}\n")
+        if sale:
+            lines.append(f"- Target sale price narrative: {sale}\n")
+
+        # ---------------------------------------------------------------------
+        # 3. Tacit to Explicit (Codification)
+        # ---------------------------------------------------------------------
+        lines.append("\n3. Tacit to Explicit (Codification)\n")
+
+        struct_row = ic_map.get("Structural", {"tick": False, "narrative": ""})
+        human_row = ic_map.get("Human", {"tick": False, "narrative": ""})
+        cust_row = ic_map.get("Customer", {"tick": False, "narrative": ""})
+        strat_row = ic_map.get("Strategic Alliance", {"tick": False, "narrative": ""})
+
+        struct_score = leaf_scores.get("Structural", struct_row.get("score", 0.0))
+        human_score = leaf_scores.get("Human", human_row.get("score", 0.0))
+        cust_score = leaf_scores.get("Customer", cust_row.get("score", 0.0))
+        strat_score = leaf_scores.get(
+            "Strategic Alliance", strat_row.get("score", 0.0)
+        )
+
+        lines.append(
+            "Structural Capital shows how far the company has shifted from tacit "
+            "know-how into explicit, audit-ready assets (contracts, SOPs, protocols, "
+            "registers, datasets, CRM, board materials, etc.). Higher structural scores "
+            "indicate better codification and readiness for IAS 38 recognition.\n"
+        )
+        lines.append(
+            "Approximate Structural Capital intensity score: "
+            f"{struct_score:.1f} "
+            "(scale indicative only; see 4-Leaf section for detail).\n"
+        )
+
+        # ---------------------------------------------------------------------
+        # 4. Intangible Asset Map (4-Leaf Model)
+        # ---------------------------------------------------------------------
+        lines.append("\n4. Intangible Asset Map (4-Leaf Model)\n")
+
+        def _leaf_line(label: str, row: Dict[str, Any], score: float) -> None:
+            status = "evidenced" if row.get("tick") else "emerging/gap"
+            lines.append(
+                f"- {label} — status: {status}, score: {score:.1f}. "
+                f"{row.get('narrative', '').strip()}\n"
+            )
+
+        _leaf_line("Human Capital", human_row, human_score)
+        _leaf_line("Structural Capital", struct_row, struct_score)
+        _leaf_line("Customer Capital", cust_row, cust_score)
+        _leaf_line("Strategic Alliance Capital", strat_row, strat_score)
+
+        lines.append(
+            "\nTogether these capitals describe how the company creates, captures and "
+            "protects value. Structural Capital is treated as the primary home for "
+            "explicit, auditable assets; Human, Customer and Strategic Alliance "
+            "Capital show where tacit value still needs codification.\n"
+        )
+
+        # ---------------------------------------------------------------------
+        # 5. Ten-Steps Readiness — Gaps and Strengths
+        # ---------------------------------------------------------------------
+        lines.append("\n5. Ten-Steps Readiness — Gaps and Strengths\n")
+
+        for idx, step_name in enumerate(TEN_STEPS):
+            score_val = scores[idx] if idx < len(scores) else 0
+            narrative = ten["narratives"][idx] if idx < len(ten["narratives"]) else ""
+            lines.append(
+                f"- {step_name}: readiness ≈ {score_val}/10. {narrative}\n"
+            )
+
+        lines.append(
+            "\nScores at or below 5/10 signal gaps that may slow execution, weaken "
+            "negotiating power or complicate audit and valuation. Steps with the "
+            "lowest readiness scores should be prioritised over the next 12–24 months.\n"
+        )
+
+        # ---------------------------------------------------------------------
+        # 6. Market Context, CAGR & Value Streams
+        # ---------------------------------------------------------------------
+        lines.append("\n6. Market Context, CAGR & Value Streams\n")
+        sector_context = get_sector_market_context(sector)
+        lines.append(sector_context + "\n")
+        lines.append(
+            "From an IC and licensing perspective, the company can unlock multiple "
+            "simultaneous value streams by:\n"
+            "- Licensing explicit Structural Capital (software, methods, indices, "
+            "datasets, training content).\n"
+            "- Combining revenue licences with access/community licences for priority "
+            "stakeholders.\n"
+            "- Using co-creation and data/algorithm licences to deepen Strategic "
+            "Alliance Capital.\n"
+        )
+
+        if pdf_tags:
+            lines.append(
+                "\nPDF evidence tags detected (for follow-up and IA Register scoping): "
+                + ", ".join(sorted(set(pdf_tags)))
+                + ".\n"
+            )
+
+        # ---------------------------------------------------------------------
+        # 7. Working Assumptions & Valuation Hook
+        # ---------------------------------------------------------------------
+        lines.append("\n7. Working Assumptions & Valuation Hook\n")
+
+        if vm_assumptions:
+            if vm_confirmed:
+                lines.append(
+                    "The following working assumptions were reviewed and confirmed in "
+                    "the LIP Console. They should still be checked with company "
+                    "leadership before numbers are fixed:\n"
+                )
+            else:
+                lines.append(
+                    "The following working assumptions are draft only. They were "
+                    "generated from the evidence and Ten-Steps scores and have not yet "
+                    "been fully confirmed in the LIP Console:\n"
+                )
+
+            for a in vm_assumptions:
+                if not getattr(a, "include", True):
+                    continue
+                lines.append(f"- {a.label} — {a.narrative} ")
+                if a.rationale:
+                    lines.append(f"(Rationale: {a.rationale}) ")
+                if a.source_signals:
+                    lines.append(f"[Signals: {', '.join(a.source_signals)}] ")
+                if a.confidence:
+                    lines.append(f"(Confidence: {a.confidence})")
+                lines.append("\n")
+        else:
+            lines.append(
+                "No working assumptions have been captured yet. Before valuation, the "
+                "VM and LIP should agree a short list of market, innovation, "
+                "IP/governance and execution-risk assumptions.\n"
+            )
+
+        lines.append(
+            "\nA separate valuation workbook (IAS 38-aligned) will translate these "
+            "assumptions and the IA Register into monetary values, including scenario "
+            "and risk adjustments.\n"
+        )
+
+        # ---------------------------------------------------------------------
+        # 8. Summary & Action Plan
+        # ---------------------------------------------------------------------
+        lines.append("\n8. Summary & Action Plan\n")
+        lines.append(
+            "Priority actions over the next 12–24 months are likely to include:\n"
+            "- Building and maintaining a simple IA Register linking assets to owners, "
+            "contracts and value streams.\n"
+            "- Closing the most material Ten-Steps gaps (especially Identify, Separate, "
+            "Protect, Safeguard and Control).\n"
+            "- Strengthening Structural Capital by codifying tacit know-how and "
+            "formalising customer and partner data.\n"
+            "- Choosing 2–3 concrete licensing model families to pilot (e.g. revenue "
+            "licences plus one community licence).\n"
+            "- Aligning governance and reporting so that ESG and stakeholder outcomes "
+            "are visibly linked to IC assets.\n"
+        )
+
+        if PUBLIC_MODE:
+            lines.append(
+                "\nPUBLIC MODE: This report is a high-level, non-confidential summary "
+                "generated from limited evidence. It is not suitable for audit, "
+                "valuation, or transaction decisions.\n"
+            )
+        else:
+            lines.append(
+                "\nCONFIDENTIAL: This report is an internal advisory draft. It must be "
+                "reviewed with company leadership, auditors and legal counsel before "
+                "any final accounting, licensing or investment decisions are taken.\n"
+            )
+
+        return title, "\n".join(lines)
+            
     def _compose_lic() -> Tuple[str, str]:
         title = f"Licensing Report — {case_name}"
         b: List[str] = []
