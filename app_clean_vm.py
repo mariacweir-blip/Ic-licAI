@@ -279,53 +279,105 @@ def _extract_text_pptx(data: bytes) -> str:
 
 def _extract_text_pdf(data: bytes) -> str:
     """
-    Extract text from PDF bytes.
+    Extract text from a PDF, with an emphasis on:
+    - normal page text
+    - table headers and first few rows (revenues, customers, contracts, etc.)
 
-    1. Try pdfplumber (better layout/table handling).
-    2. Fall back to PyPDF2 if pdfplumber is unavailable or fails.
+    Tries pdfplumber first (if available), then falls back to PyPDF2.
     """
     if not HAVE_PDF:
         return ""
 
-    # ---- First try: pdfplumber -----------------------------------------
+    # ---- Try pdfplumber first (better with tables) -------------------------
     try:
         import pdfplumber  # type: ignore
 
-        text_chunks: list[str] = []
+        text_parts: List[str] = []
         bio = io.BytesIO(data)
-        with pdfplumber.open(bio) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text() or ""
-                if page_text.strip():
-                    text_chunks.append(page_text)
 
-        text = "\n\n".join(text_chunks).strip()
-        if text:
-            return text
+        with pdfplumber.open(bio) as pdf:
+            for page_idx, page in enumerate(pdf.pages, start=1):
+                page_bits: List[str] = []
+
+                # Normal text from the page
+                try:
+                    page_text = page.extract_text() or ""
+                except Exception:
+                    page_text = ""
+                page_text = page_text.strip()
+                if page_text:
+                    page_bits.append(page_text)
+
+                # Tables: pull headers + first few rows to surface key words
+                try:
+                    tables = page.extract_tables() or []
+                except Exception:
+                    tables = []
+
+                for t_i, table in enumerate(tables, start=1):
+                    if not table:
+                        continue
+
+                    header = table[0]
+                    rows = table[1:4]  # first 3 data rows, if present
+
+                    header_txt = " | ".join(
+                        str(c).strip() for c in header if c not in (None, "")
+                    )
+                    row_lines: List[str] = []
+                    for r in rows:
+                        row_lines.append(
+                            " | ".join(str(c).strip() for c in r if c not in (None, ""))
+                        )
+
+                    # Line includes words like "TABLE", "revenue", "customers", etc.
+                    table_txt = f"TABLE p{page_idx} t{t_i}: {header_txt}"
+                    if row_lines:
+                        table_txt += " || " + " || ".join(row_lines)
+
+                    page_bits.append(table_txt)
+
+                if page_bits:
+                    text_parts.append(f"[PAGE {page_idx}]\n" + "\n".join(page_bits))
+
+        if text_parts:
+            return "\n\n".join(text_parts)
+
     except Exception:
-        # Either pdfplumber not installed or extraction failed – we fall back.
+        # If pdfplumber fails, fall back to PyPDF2 below.
         pass
 
-    # ---- Fallback: existing PyPDF2 logic -------------------------------
+    # ---- Fallback: PyPDF2 only --------------------------------------------
     try:
-        bio = io.BytesIO(data)
-        reader = PdfReader(bio)
-        parts: list[str] = []
+        from PyPDF2 import PdfReader  # type: ignore
+
+        reader = PdfReader(io.BytesIO(data))
+        parts: List[str] = []
         for page in reader.pages:
-            txt = page.extract_text() or ""
+            try:
+                txt = page.extract_text() or ""
+            except Exception:
+                txt = ""
             txt = txt.strip()
             if txt:
                 parts.append(txt)
-        return "\n\n".join(parts)
+        return "\n".join(parts)
     except Exception:
         return ""
 
 
 def _pdf_review_hints(data: bytes, name: str) -> List[str]:
     """
-    Light-weight scan of a PDF to suggest pages a Value Manager should review.
-    We look for pages that mention tables/figures, IP, contracts, KPIs, markets, etc.,
-    and return human-readable hints with page numbers.
+    Scan a PDF to suggest pages a Value Manager should review.
+
+    We look for pages that mention:
+    - tables / KPIs / figures
+    - processes / SOPs / governance
+    - IP / contracts / licensing / JV / MoU
+    - revenue / financial tables
+    - customers / pipeline
+    - ESG / SDG / impact language
+    - technology / platform / indices
 
     This does NOT change scoring – it is just guidance.
     """
@@ -334,14 +386,37 @@ def _pdf_review_hints(data: bytes, name: str) -> List[str]:
     if not HAVE_PDF:
         return hints
 
+    # Try pdfplumber first; fall back to PyPDF2
+    pages_text: List[Tuple[int, str]] = []
+    total_pages = 0
+
     try:
-        reader = PdfReader(io.BytesIO(data))
+        try:
+            import pdfplumber  # type: ignore
+
+            with pdfplumber.open(io.BytesIO(data)) as pdf:
+                total_pages = len(pdf.pages)
+                for idx, page in enumerate(pdf.pages, start=1):
+                    try:
+                        txt = page.extract_text() or ""
+                    except Exception:
+                        txt = ""
+                    pages_text.append((idx, txt.lower()))
+        except Exception:
+            from PyPDF2 import PdfReader  # type: ignore
+
+            reader = PdfReader(io.BytesIO(data))
+            total_pages = len(reader.pages)
+            for idx, page in enumerate(reader.pages, start=1):
+                try:
+                    txt = page.extract_text() or ""
+                except Exception:
+                    txt = ""
+                pages_text.append((idx, txt.lower()))
     except Exception:
         return hints
 
-    total_pages = len(reader.pages)
-
-    # Simple keyword buckets – tweakable later.
+    # Keyword buckets (extended)
     TABLE_KEYS = ["table", "figure", "diagram", "chart", "exhibit", "kpi", "metric"]
     PROCESS_KEYS = ["process", "workflow", "procedure", "protocol", "sop", "ipr process", "governance"]
     IP_KEYS = [
@@ -359,7 +434,7 @@ def _pdf_review_hints(data: bytes, name: str) -> List[str]:
         "agreement",
         "mou",
     ]
-    SALES_KEYS = ["revenue", "turnover", "sales", "pipeline", "order book", "customer contract"]
+    SALES_KEYS = ["revenue", "turnover", "sales", "pipeline", "order book", "customer contract", "invoice"]
     MARKET_KEYS = [
         "market",
         "segment",
@@ -371,6 +446,7 @@ def _pdf_review_hints(data: bytes, name: str) -> List[str]:
         "g2m",
         "competition",
         "competitor",
+        "offtaker",
     ]
     TECH_KEYS = [
         "technology",
@@ -385,12 +461,55 @@ def _pdf_review_hints(data: bytes, name: str) -> List[str]:
         "data platform",
     ]
 
-    for idx, page in enumerate(reader.pages, start=1):
-        try:
-            text = (page.extract_text() or "").lower()
-        except Exception:
-            continue
+    REVENUE_TABLE_KEYS = [
+        "revenue",
+        "turnover",
+        "income",
+        "sales",
+        "forecast",
+        "ebitda",
+        "income statement",
+    ]
+    CUSTOMER_TABLE_KEYS = [
+        "customer",
+        "client",
+        "key customer",
+        "key clients",
+        "subscriber",
+        "offtaker",
+        "sales funnel",
+    ]
+    CONTRACT_TABLE_KEYS = [
+        "contract",
+        "agreement",
+        "msa",
+        "sow",
+        "sla",
+        "licence",
+        "license",
+        "mou",
+        "memorandum of understanding",
+        "joint venture",
+        "jv",
+    ]
+    ESG_SDG_KEYS = [
+        "esg",
+        "sdg",
+        "sustainable development goal",
+        "sustainable development goals",
+        "net zero",
+        "net-zero",
+        "scope 1",
+        "scope 2",
+        "scope 3",
+        "carbon",
+        "emissions",
+        "decarbonisation",
+        "decarbonization",
+        "impact",
+    ]
 
+    for idx, text in pages_text:
         if not text.strip():
             continue
 
@@ -409,21 +528,29 @@ def _pdf_review_hints(data: bytes, name: str) -> List[str]:
         if any(k in text for k in TECH_KEYS):
             categories.append("technology / platform / indices")
 
+        if any(k in text for k in REVENUE_TABLE_KEYS):
+            categories.append("revenue / financial tables")
+        if any(k in text for k in CUSTOMER_TABLE_KEYS):
+            categories.append("customers / pipeline / key accounts")
+        if any(k in text for k in CONTRACT_TABLE_KEYS):
+            categories.append("contracts / JV / MoU / licensing")
+        if any(k in text for k in ESG_SDG_KEYS):
+            categories.append("ESG / SDG / impact language")
+
         if categories:
-            cat_txt = ", ".join(categories)
+            cat_txt = ", ".join(sorted(set(categories)))
             hints.append(
-                f"Page {idx}: check for {cat_txt} – see if this is explicit Structural Capital or still tacit."
+                f"Page {idx}: check for {cat_txt} – see if this is explicit Structural Capital, "
+                "customer value, or ESG/SDG evidence."
             )
 
-    # If nothing specific was found, still give one generic hint.
     if not hints and total_pages > 0:
         hints.append(
-            "No specific keyword pages detected – skim the PDF for any contracts, KPIs, registers, "
+            "No specific keyword pages detected – skim the PDF for any contracts, KPIs, IA/IP registers, "
             "or process diagrams that might indicate Structural Capital."
         )
 
     return hints
-
 
 def _extract_text_csv(raw: bytes, name: str) -> str:
     """
