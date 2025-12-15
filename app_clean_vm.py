@@ -1990,23 +1990,14 @@ with st.sidebar:
 if page == "Company":
     st.header("Company details")
 
-    # NEW: pre-fill from any saved context for this case
-    cached_ctx = load_company_context_for_current_case()
-    if cached_ctx:
-        for k, v in cached_ctx.items():
-            if not ss.get(k):
-                ss[k] = v
-
-    # COMPANY FORM
-    with st.form("company_form"):
-        c1, c2, c3 = st.columns([1, 1, 1])
-        with c1:
-            case_name = st.text_input("Company name *", ss.get("case_name", ""))
-        ...
+    # Load any saved context for this case into session_state
+    load_company_context_for_current_case()
 
     # ---------------- COMPANY FORM ----------------
     with st.form("company_form"):
         c1, c2, c3 = st.columns([1.1, 1, 1])
+
+        # Basic identifiers
         with c1:
             case_name = st.text_input("Company name *", ss.get("case_name", ""))
         with c2:
@@ -2024,13 +2015,14 @@ if page == "Company":
             )
             sector = st.selectbox("Sector / Industry", SECTORS, index=sector_index)
 
+        # Narrative context
         st.markdown("#### Company context (required)")
         full_block = st.text_area(
             "Optional: paste full context here (one block, then auto-fill below)",
             ss.get("full_context_block", ""),
             help=(
-                "You can paste your whole narrative here once, then tick auto-split and the tool will "
-                "try to populate the individual questions for you."
+                "You can paste your whole narrative here once, then tick auto-split and "
+                "the tool will try to populate the individual questions for you."
             ),
             height=80,
         )
@@ -2106,10 +2098,11 @@ if page == "Company":
             key="uploader_main",
         )
 
+        # SINGLE submit button for the whole form
         submitted = st.form_submit_button("Save details")
 
         if submitted:
-            # Optional auto-split of a single pasted narrative into all questions
+            # Optional auto-split from the big narrative block
             if auto_split and full_block.strip():
                 derived = _auto_split_expert_block(full_block)
                 if not why_service.strip() and derived["why_service"]:
@@ -2127,6 +2120,7 @@ if page == "Company":
                 if not sale_price_why.strip() and derived["sale_price_why"]:
                     sale_price_why = derived["sale_price_why"]
 
+            # Required field check
             missing = [
                 ("Company name", case_name),
                 ("Why service", why_service),
@@ -2137,14 +2131,12 @@ if page == "Company":
                 ("Markets & why", markets_why),
                 ("Sale price & why", sale_price_why),
             ]
-            missing_fields = [
-                label for (label, val) in missing if not (val or "").strip()
-            ]
+            missing_fields = [label for (label, val) in missing if not (val or "").strip()]
+
             if missing_fields:
-                st.error(
-                    "Please complete required fields: " + ", ".join(missing_fields)
-                )
+                st.error("Please complete required fields: " + ", ".join(missing_fields))
             else:
+                # Persist in session
                 ss["case_name"] = case_name
                 ss["company_size"] = size
                 ss["sector"] = sector
@@ -2159,7 +2151,11 @@ if page == "Company":
                 ss["auto_split_on_save"] = auto_split
                 if uploads:
                     ss["uploads"] = uploads
-                st.success("Saved company details & context.")
+
+                # Save per-company context to disk so it’s there next time
+                save_company_context(case_name)
+
+                st.success("Saved company details, context and uploads for this case.")
 
     # ---------------- POST-FORM INFO ----------------
     if ss.get("uploads"):
@@ -2168,7 +2164,7 @@ if page == "Company":
             "Go to **Analyse Evidence** next."
         )
 
-    # ---------------- VM TOOLBOX ----------------
+    # ---------------- VM TOOLBOX (unchanged) ----------------
     st.markdown("---")
     st.subheader("Value Manager toolbox (evidence preparation)")
 
