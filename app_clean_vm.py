@@ -2681,55 +2681,61 @@ elif page == "Reports":
     case_name = ss.get("case_name", "Untitled Company")
     case_folder = OUT_ROOT / _safe(case_name)
 
-    def _compose_ic() -> Tuple[str, str]:
+        def _compose_ic() -> Tuple[str, str]:
         """
         8-section IC report, including VM assumptions, richer 4-Leaf / Ten-Steps,
-        PDF hint tags and the new company context fields.
+        PDF hint tags and the full company context.
         """
+        case_name = ss.get("case_name", "Untitled Company")
         title = f"IC Report — {case_name}"
 
-        # --- Core data pulled from session -----------------------------------
-        ic_map = ss.get("ic_map", {})
-        leaf_scores = ss.get("leaf_scores", {})
-        evidence_quality = ss.get("evidence_quality", 0)
+        # --- Core analysis outputs -----------------------------------------
+        ic_map = ss.get("ic_map", {}) or {}
+        leaf_scores = ss.get("leaf_scores", {}) or {}
+        evidence_quality = int(ss.get("evidence_quality", 0))
 
         raw_ten = ss.get("ten_steps") or {}
         scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
         narrs = raw_ten.get("narratives") or [f"{step}: tbd" for step in TEN_STEPS]
         ten = {"scores": scores, "narratives": narrs}
 
-           # Company context (page 1 fields) – and persist per case
-    ctx = {
-        "company_size": ss.get("company_size", "Micro (1–10)"),
-        "sector": ss.get("sector", "Other"),
-        "why_service": ss.get("why_service", ""),
-        "stage": ss.get("stage", ""),
-        "plan_s": ss.get("plan_s", ""),
-        "plan_m": ss.get("plan_m", ""),
-        "plan_l": ss.get("plan_l", ""),
-        "markets_why": ss.get("markets_why", ""),
-        "sale_price_why": ss.get("sale_price_why", ""),
-    }
+        # --- Company context (page 1 fields) -------------------------------
+        size = ss.get("company_size", "Micro (1–10)")
+        sector = ss.get("sector", "Other")
+        why = ss.get("why_service", "")
+        stage = ss.get("stage", "")
+        plan_s = ss.get("plan_s", "")
+        plan_m = ss.get("plan_m", "")
+        plan_l = ss.get("plan_l", "")
+        markets = ss.get("markets_why", "")
+        sale = ss.get("sale_price_why", "")
 
-    # Save latest answers into the per-case cache
-    save_company_context_for_current_case(ctx)
+        interpreted = ss.get("combined_text", "").strip() or ss.get(
+            "narrative", "(no summary)"
+        )
 
-    size = ctx["company_size"]
-    sector = ctx["sector"]
-    why = ctx["why_service"]
-    stage = ctx["stage"]
-    plan_s = ctx["plan_s"]
-    plan_m = ctx["plan_m"]
-    plan_l = ctx["plan_l"]
-    markets = ctx["markets_why"]
-    sale = ctx["sale_price_why"]
-    interpreted = ss.get("combined_text", "").strip() or ss.get(
-        "narrative", "(no summary)"
-    )
+        # Persist latest company context for this case (best-effort)
+        try:
+            save_company_context(case_name)
+        except Exception:
+            pass
 
-        # ---------------------------------------------------------------------
+        # --- VM assumptions pulled from sidebar ----------------------------
+        vm_assumptions: List[VMAssumption] = ss.get(
+            "vm_assumptions_accepted", []
+        ) or []
+        vm_confirmed = bool(ss.get("vm_assumptions_confirmed", False))
+
+        # --- PDF hint tags (file names only for now) -----------------------
+        pdf_hints_map = ss.get("pdf_hints", {}) or {}
+        pdf_tags: List[str] = list(pdf_hints_map.keys())
+
+        # --- Start building the 8-section report ---------------------------
+        lines: List[str] = []
+
+        # -------------------------------------------------------------------
         # 1. Executive Summary
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         lines.append("1. Executive Summary\n")
         lines.append(interpreted + "\n")
 
@@ -2747,9 +2753,9 @@ elif page == "Reports":
                 "company before any final valuation or licensing decisions.\n"
             )
 
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # 2. Introduction to the Company
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         lines.append("\n2. Introduction to the Company\n")
         lines.append(
             f"Size & type: {size} company operating in the {sector} sector.\n"
@@ -2774,9 +2780,9 @@ elif page == "Reports":
         if sale:
             lines.append(f"- Target sale price narrative: {sale}\n")
 
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # 3. Tacit to Explicit (Codification)
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         lines.append("\n3. Tacit to Explicit (Codification)\n")
 
         struct_row = ic_map.get("Structural", {"tick": False, "narrative": ""})
@@ -2803,9 +2809,9 @@ elif page == "Reports":
             "(scale indicative only; see 4-Leaf section for detail).\n"
         )
 
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # 4. Intangible Asset Map (4-Leaf Model)
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         lines.append("\n4. Intangible Asset Map (4-Leaf Model)\n")
 
         def _leaf_line(label: str, row: Dict[str, Any], score: float) -> None:
@@ -2827,9 +2833,9 @@ elif page == "Reports":
             "Capital show where tacit value still needs codification.\n"
         )
 
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # 5. Ten-Steps Readiness — Gaps and Strengths
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         lines.append("\n5. Ten-Steps Readiness — Gaps and Strengths\n")
 
         for idx, step_name in enumerate(TEN_STEPS):
@@ -2845,9 +2851,9 @@ elif page == "Reports":
             "lowest readiness scores should be prioritised over the next 12–24 months.\n"
         )
 
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # 6. Market Context, CAGR & Value Streams
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         lines.append("\n6. Market Context, CAGR & Value Streams\n")
         sector_context = get_sector_market_context(sector)
         lines.append(sector_context + "\n")
@@ -2869,9 +2875,9 @@ elif page == "Reports":
                 + ".\n"
             )
 
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # 7. Working Assumptions & Valuation Hook
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         lines.append("\n7. Working Assumptions & Valuation Hook\n")
 
         if vm_assumptions:
@@ -2912,9 +2918,9 @@ elif page == "Reports":
             "and risk adjustments.\n"
         )
 
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         # 8. Summary & Action Plan
-        # ---------------------------------------------------------------------
+        # -------------------------------------------------------------------
         lines.append("\n8. Summary & Action Plan\n")
         lines.append(
             "Priority actions over the next 12–24 months are likely to include:\n"
