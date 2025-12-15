@@ -2683,31 +2683,34 @@ elif page == "Reports":
         narrs = raw_ten.get("narratives") or [f"{step}: tbd" for step in TEN_STEPS]
         ten = {"scores": scores, "narratives": narrs}
 
-        # Company context (page 1 fields)
-        size = ss.get("company_size", "Micro (1–10)")
-        sector = ss.get("sector", "Other")
-        why = ss.get("why_service", "")
-        stage = ss.get("stage", "")
-        plan_s = ss.get("plan_s", "")
-        plan_m = ss.get("plan_m", "")
-        plan_l = ss.get("plan_l", "")
-        markets = ss.get("markets_why", "")
-        sale = ss.get("sale_price_why", "")
-        interpreted = (
-            ss.get("combined_text", "").strip()
-            or ss.get("narrative", "(no summary)")
-        )
+           # Company context (page 1 fields) – and persist per case
+    ctx = {
+        "company_size": ss.get("company_size", "Micro (1–10)"),
+        "sector": ss.get("sector", "Other"),
+        "why_service": ss.get("why_service", ""),
+        "stage": ss.get("stage", ""),
+        "plan_s": ss.get("plan_s", ""),
+        "plan_m": ss.get("plan_m", ""),
+        "plan_l": ss.get("plan_l", ""),
+        "markets_why": ss.get("markets_why", ""),
+        "sale_price_why": ss.get("sale_price_why", ""),
+    }
 
-        # VM assumptions from LIP Console
-        vm_assumptions: List[VMAssumption] = ss.get(
-            "vm_assumptions_accepted", []
-        ) or []
-        vm_confirmed = bool(ss.get("vm_assumptions_confirmed", False))
+    # Save latest answers into the per-case cache
+    save_company_context_for_current_case(ctx)
 
-        # PDF hint tags from evidence review
-        pdf_tags: List[str] = ss.get("pdf_hint_tags", []) or []
-
-        lines: List[str] = []
+    size = ctx["company_size"]
+    sector = ctx["sector"]
+    why = ctx["why_service"]
+    stage = ctx["stage"]
+    plan_s = ctx["plan_s"]
+    plan_m = ctx["plan_m"]
+    plan_l = ctx["plan_l"]
+    markets = ctx["markets_why"]
+    sale = ctx["sale_price_why"]
+    interpreted = ss.get("combined_text", "").strip() or ss.get(
+        "narrative", "(no summary)"
+    )
 
         # ---------------------------------------------------------------------
         # 1. Executive Summary
