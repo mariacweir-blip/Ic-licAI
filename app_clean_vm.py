@@ -1793,6 +1793,99 @@ def _auto_split_expert_block(text: str) -> Dict[str, str]:
 
 # ------------------ SESSION DEFAULTS -----------------
 ss = st.session_state
+
+# --- Company context persistence helpers (new) ----------------------------
+
+# These helpers let the app remember the Company page answers for each case
+# name by storing a small JSON file under OUT_ROOT / <case_name>.
+
+COMPANY_CONTEXT_KEYS = [
+    "case_name",
+    "company_size",
+    "sector",
+    "company_sector",
+    "why_service",
+    "stage",
+    "plan_s",
+    "plan_m",
+    "plan_l",
+    "markets_why",
+    "sale_price_why",
+    "company_block",
+    "auto_split_context",
+    "combined_text",
+    "narrative",
+]
+
+
+def _company_context_path(case_name: str):
+    safe_name = _safe(case_name or "Untitled Company")
+    folder = OUT_ROOT / safe_name
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    return folder / "company_context.json"
+
+
+def _load_company_context(case_name: str, overwrite: bool = False) -> None:
+    import json
+
+    if not case_name:
+        return
+    path = _company_context_path(case_name)
+    if not path.exists():
+        return
+
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return
+
+    for key, value in data.items():
+        if overwrite or key not in ss:
+            ss[key] = value
+
+
+def load_company_context_for_current_case() -> None:
+    """
+    If we have a saved JSON context for this case name, load it into
+    st.session_state so the Company page fields are pre-filled.
+    """
+    current = ss.get("case_name", "")
+    last = ss.get("_last_loaded_case", "")
+
+    if not current or current == last:
+        return
+
+    _load_company_context(current, overwrite=True)
+    ss["_last_loaded_case"] = current
+
+
+def save_company_context(case_name: str) -> None:
+    """
+    Save key Company page answers for this case name so they can be
+    re-used on later runs.
+    """
+    import json
+
+    if not case_name:
+        return
+
+    path = _company_context_path(case_name)
+    payload = {key: ss.get(key) for key in COMPANY_CONTEXT_KEYS}
+
+    try:
+        with path.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+    except Exception:
+        # Persistence is best-effort only – never break the app.
+        pass
+
+
+# Try to load any stored context at the start of each run.
+load_company_context_for_current_case()
 ss.setdefault("case_name", "Untitled Company")
 ss.setdefault("company_size", "Micro (1–10)")
 ss.setdefault("sector", "Other")
