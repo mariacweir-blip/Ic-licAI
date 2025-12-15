@@ -1984,10 +1984,25 @@ with st.sidebar:
     )
     
 # -------------------- PAGES -------------------------
-  
+
+
 # 1) COMPANY (with required prompts + auto-split)
 if page == "Company":
     st.header("Company details")
+
+    # NEW: pre-fill from any saved context for this case
+    cached_ctx = load_company_context_for_current_case()
+    if cached_ctx:
+        for k, v in cached_ctx.items():
+            if not ss.get(k):
+                ss[k] = v
+
+    # COMPANY FORM
+    with st.form("company_form"):
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c1:
+            case_name = st.text_input("Company name *", ss.get("case_name", ""))
+        ...
 
     # ---------------- COMPANY FORM ----------------
     with st.form("company_form"):
