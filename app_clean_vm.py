@@ -2681,7 +2681,7 @@ elif page == "Reports":
     case_name = ss.get("case_name", "Untitled Company")
     case_folder = OUT_ROOT / _safe(case_name)
 
-        def _compose_ic() -> Tuple[str, str]:
+    def _compose_ic() -> Tuple[str, str]:
         """
         8-section IC report, including VM assumptions, richer 4-Leaf / Ten-Steps,
         PDF hint tags and the full company context.
