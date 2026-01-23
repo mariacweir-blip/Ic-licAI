@@ -963,8 +963,7 @@ SECTORS = [
     "Mobility/Transport",
     "Energy",
     "Other",
-]
-# --------------- SIDEBAR BRANDING & NAV ---------------
+]# --------------- SIDEBAR BRANDING & NAV ---------------
 with st.sidebar:
     # IMPAC3T-IP logo (top) – safe load, moderate width
     try:
@@ -989,13 +988,14 @@ with st.sidebar:
             "Reports",
             "Licensing Templates",
             "LIP Assistant",
+            "Glossary",
         ],
         index=0,
     )
 
     st.markdown("---")
 
-    # EU flag + funding line – **footer**
+    # EU flag + funding line – footer
     try:
         if Path(EU_FLAG_PATH).is_file():
             st.image(EU_FLAG_PATH, width=80)
