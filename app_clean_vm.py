@@ -122,39 +122,37 @@ st.markdown(
     background: {PRIMARY_NAVY} !important;
   }}
 
-  /* Sidebar styling */
-  section[data-testid="stSidebar"] {{
+    /* Sidebar styling */
+  section[data-testid="stSidebar"] {
     background: {SIDEBAR_BG};
-  }}
+  }
 
   section[data-testid="stSidebar"] h1,
   section[data-testid="stSidebar"] h2,
   section[data-testid="stSidebar"] h3,
   section[data-testid="stSidebar"] p,
   section[data-testid="stSidebar"] label,
-  section[data-testid="stSidebar"] span {{
+  section[data-testid="stSidebar"] span {
     color: #E7F0FF !important;
-  }}
+  }
 
-  .stRadio div[role="radiogroup"] label {{
+  .stRadio div[role="radiogroup"] label {
     color: #E7F0FF !important;
-  }}
+  }
 
-  /* Glossary button (sidebar) – white button, dark text */
-  .ic-glossary-btn button {{
-    background: #FFFFFF !important;
-    color: {PRIMARY_NAVY} !important;
-    border-radius: 8px !important;
-    border: 0 !important;
-    padding: 0.4rem 0.8rem !important;
-    font-weight: 600 !important;
-  }}
+  /* Make cards / expanders look clean on light background */
+  .stExpander, .stTabs [data-baseweb="tab"] {
+    background: {CARD_BG};
+  }
 
-  .ic-glossary-btn button:hover {{
-    background: {ACCENT_BLUE} !important;
-    color: #FFFFFF !important;
-  }}
+  /* Sidebar expander (Glossary) – same colour as sidebar, light text */
+  section[data-testid="stSidebar"] [data-testid="stExpander"] {
+    background: {SIDEBAR_BG} !important;
+  }
 
+  section[data-testid="stSidebar"] [data-testid="stExpander"] div[role="button"] p {
+    color: #E7F0FF !important;
+  }
   /* Make cards / expanders look clean on light background */
   .stExpander, .stTabs [data-baseweb="tab"] {{
     background: {CARD_BG};
