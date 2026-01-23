@@ -108,43 +108,58 @@ st.markdown(
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   }}
 
-  /* Primary buttons */
-  .stButton>button {{
+    /* Primary buttons (main app) */
+  .stButton>button {
     background: {ACCENT_BLUE} !important;
     color: #FFFFFF !important;
     border-radius: 8px !important;
     border: 0 !important;
     padding: 0.55rem 1rem !important;
     font-weight: 700 !important;
-  }}
+  }
 
-  .stButton>button:hover {{
+  .stButton>button:hover {
     background: {PRIMARY_NAVY} !important;
-  }}
+  }
 
   /* Sidebar styling */
-  section[data-testid="stSidebar"] {{
+  section[data-testid="stSidebar"] {
     background: {SIDEBAR_BG};
-  }}
+  }
 
   section[data-testid="stSidebar"] h1,
   section[data-testid="stSidebar"] h2,
   section[data-testid="stSidebar"] h3,
   section[data-testid="stSidebar"] p,
   section[data-testid="stSidebar"] label,
-  section[data-testid="stSidebar"] span {{
+  section[data-testid="stSidebar"] span {
     color: #E7F0FF !important;
-  }}
+  }
 
-  .stRadio div[role="radiogroup"] label {{
+  .stRadio div[role="radiogroup"] label {
     color: #E7F0FF !important;
-  }}
+  }
+
+  /* Glossary button (sidebar) – white button, dark text */
+  .ic-glossary-btn button {
+    background: #FFFFFF !important;
+    color: {PRIMARY_NAVY} !important;
+    border-radius: 8px !important;
+    border: 0 !important;
+    padding: 0.4rem 0.8rem !important;
+    font-weight: 600 !important;
+  }
+
+  .ic-glossary-btn button:hover {
+    background: {ACCENT_BLUE} !important;
+    color: #FFFFFF !important;
+  }
 
   /* Make cards / expanders look clean on light background */
-  .stExpander, .stTabs [data-baseweb="tab"] {{
+  .stExpander, .stTabs [data-baseweb="tab"] {
     background: {CARD_BG};
-  }}
-</style>
+  }
+  </style>
 """,
     unsafe_allow_html=True,
 )
