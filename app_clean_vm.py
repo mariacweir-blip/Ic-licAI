@@ -68,105 +68,97 @@ try:
 except Exception:
     HAVE_PDF = False
     
-# ------------------ THEME ----------------------------
-# IMPAC3T-IP inspired palette (no yellow / gold)
-PRIMARY_NAVY   = "#003B70"  # deep blue, EU-friendly
-ACCENT_BLUE    = "#00A7E1"  # bright accent from IMPAC3T-style slides
-ACCENT_PURPLE  = "#6E4BAF"  # secondary accent if needed later
-BG_MAIN        = "#F5F7FB"  # soft neutral background
-SIDEBAR_BG     = "#0F2F56"  # dark blue sidebar
-CARD_BG        = "#FFFFFF"  # white cards / blocks
-TEXT_MAIN      = "#1F2933"  # dark grey text
+# ---------- THEME & LAYOUT ----------
 
 st.set_page_config(page_title="IC-LicAI Expert Console", layout="wide")
 
 st.markdown(
     f"""
 <style>
-  /* Overall app background */
-  .stApp {{
+/* Overall app background */
+.stApp {{
     background: {BG_MAIN};
-  }}
+}}
 
-  /* Main content container */
-  .block-container {{
+/* Main content container */
+.block-container {{
     max-width: 1250px;
     padding-top: 1.2rem;
     padding-bottom: 2rem;
-  }}
+}}
 
-  /* Title bar at the top */
-  .ic-title-bar {{
+/* Title bar at the top */
+.ic-title-bar {{
     background: {PRIMARY_NAVY};
     color: #FFFFFF;
     font-weight: 800;
     font-size: 32px;
     padding: 16px 22px;
-    border-radius: 10px;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.02em;
     margin: 10px 0 20px 0;
+    border-radius: 8px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  }}
+}}
 
-  /* Primary buttons (main app) */
-  .stButton>button {{
+/* Primary buttons (main app) */
+.stButton>button {{
     background: {ACCENT_BLUE} !important;
     color: #FFFFFF !important;
     border-radius: 8px !important;
     border: 0 !important;
     padding: 0.55rem 1rem !important;
     font-weight: 700 !important;
-  }}
+}}
 
-  .stButton>button:hover {{
+.stButton>button:hover {{
     background: {PRIMARY_NAVY} !important;
-  }}
+}}
 
-  /* Sidebar styling */
-  section[data-testid="stSidebar"] {{
+/* Sidebar background */
+section[data-testid="stSidebar"] {{
     background: {SIDEBAR_BG};
-  }}
+}}
 
-  section[data-testid="stSidebar"] h1,
-  section[data-testid="stSidebar"] h2,
-  section[data-testid="stSidebar"] h3,
-  section[data-testid="stSidebar"] p,
-  section[data-testid="stSidebar"] label,
-  section[data-testid="stSidebar"] span {{
+/* Sidebar text colour (nav items, glossary content, etc.) */
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] span {{
     color: #E7F0FF !important;
-  }}
-  /* Make glossary list text match other sidebar text */
-  section[data-testid="stSidebar"] ul,
-  section[data-testid="stSidebar"] li {
-    color: #E7F0FF !important;
-   }
-  .stRadio div[role="radiogroup"] label {{
-    color: #E7F0FF !important;
-  }}
+}}
 
-  /* Make cards / expanders look clean on light background */
-  .stExpander, .stTabs [data-baseweb="tab"] {{
-    background: {CARD_BG};
-  }}
+.stRadio div[role="radiogroup"] label {{
+    color: #E7F0FF !important;
+}}
 
-  /* Sidebar expander (Glossary) – match sidebar colour, light text */
-  section[data-testid="stSidebar"] [data-testid="stExpander"] {{
+/* Sidebar expander (Glossary) – same background as sidebar */
+section[data-testid="stSidebar"] [data-testid="stExpander"] {{
     background: {SIDEBAR_BG} !important;
-  }}
+}}
 
-  section[data-testid="stSidebar"] [data-testid="stExpander"] div[role="button"] p {{
-    color: #E7F0FF !important;
-  }}
+/* Glossary header button (the bar with “Glossary (key terms & acronyms)”) */
+section[data-testid="stSidebar"] [data-testid="stExpander"] div[role="button"] {{
+    color: #E7F0FF !important;   /* make the word “Glossary” visible */
+    font-weight: 600;
+}}
+
+/* Cards / tabs on light background in main area */
+.stExpander, .stTabs [data-baseweb="tab"] {{
+    background: {CARD_BG};
+}}
 </style>
 """,
     unsafe_allow_html=True,
 )
+
 st.markdown(
     '<div class="ic-title-bar">IC-LicAI Expert Console</div>',
     unsafe_allow_html=True,
 )
-st.caption("INTERNAL VERSION — FOR REAL EVIDENCE (PASS-PHRASE PROTECTED)")
 
+st.caption("INTERNAL VERSION — FOR REAL EVIDENCE (PASS-PHRASE PROTECTED)")
 # ------------------ AUTH GATE ------------------------
 def _auth_gate() -> None:
     if not REQUIRE_PASS:
