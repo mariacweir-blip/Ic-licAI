@@ -1011,7 +1011,7 @@ with st.sidebar:
     )
 # -------------------- PAGES -------------------------
 
-## 1) COMPANY (licensing-focused SME questions + optional auto-split)
+# 1) COMPANY (licensing-focused SME questions with dropdowns)
 if page == "Company":
     st.header("Company / project details")
 
@@ -1040,68 +1040,180 @@ if page == "Company":
 
         st.markdown("#### Simple questions to set the scene (for licensing)")
 
-        full_block = st.text_area(
-            "Optional: paste your full story here in one block",
-            ss.get("full_context_block", ""),
-            help=(
-                "You can paste your whole narrative here once (e.g. from an email or concept note). "
-                "If auto-split is ticked, the tool will try to fill in the six questions below for you."
-            ),
-            height=80,
-        )
-
-        auto_split = st.checkbox(
-            "Auto-split pasted story into the six questions on Save",
-            value=ss.get("auto_split_on_save", True),
-            help="If ticked, the block above will be split across the questions below when you click Save.",
-        )
-
-        # Q1 – What are you working on?
-        q1_what = st.text_area(
+        # --- Q1: What are you working on? ---
+        q1_type_options = [
+            "New product",
+            "New service",
+            "Software / app",
+            "Online platform or portal",
+            "Training or learning content",
+            "Data or analytics",
+            "Method / process or toolkit",
+            "Brand / marketing concept",
+            "Other idea",
+        ]
+        q1_type = st.multiselect(
             "1) What are you working on? *",
+            q1_type_options,
+            help="Tick all that apply. This can be a company, project, spin-out, or early idea.",
+        )
+        q1_desc = st.text_area(
+            "Short description (one or two sentences)",
             ss.get("why_service", ""),
-            height=90,
-            help="Briefly describe your product, service or idea (even if it’s still a project or spin-out in preparation).",
+            height=70,
         )
 
-        # Q2 – Where are you on the journey?
-        q2_stage = st.text_area(
+        # --- Q2: Where are you on the journey? ---
+        q2_stage_options = [
+            "Idea only / early concept",
+            "Prototype or proof-of-concept",
+            "Pilot with first users",
+            "First paying customers",
+            "Growing / scaling",
+            "Established product or service",
+        ]
+        q2_stage_choice = st.selectbox(
             "2) Where are you on the journey right now? *",
+            q2_stage_options,
+            index=0,
+            help="Roughly where you are today — this doesn’t need to be perfect.",
+        )
+        q2_notes = st.text_area(
+            "Anything important about your current stage (optional)",
             ss.get("stage", ""),
-            height=90,
-            help="For example: idea only / prototype or pilot / first users or customers / growing business.",
+            height=60,
         )
 
-        # Q3 – Who should use this, and where?
-        q3_users = st.text_area(
-            "3) Who do you want to use this, and where? *",
+        # --- Q3: Who should use this, and where? ---
+        q3_user_options = [
+            "Households / general public",
+            "Small businesses / SMEs",
+            "Large companies",
+            "Government / public bodies",
+            "Hospitals / clinics",
+            "Schools / universities",
+            "Farmers or producers",
+            "NGOs / community groups",
+            "Other (not listed)",
+        ]
+        q3_region_options = [
+            "Local only",
+            "National",
+            "Regional (e.g. EU, East Africa)",
+            "Across Africa",
+            "Across Europe",
+            "Global",
+        ]
+        q3_users = st.multiselect(
+            "3) Who do you want to use this? *",
+            q3_user_options,
+            help="Tick all that apply.",
+        )
+        q3_regions = st.multiselect(
+            "Where do you mainly want to use or sell it? *",
+            q3_region_options,
+        )
+        q3_notes = st.text_area(
+            "Key countries or regions (optional)",
             ss.get("plan_s", ""),
-            height=90,
-            help="Types of users or customers (e.g. farmers, clinics, SMEs, students) and any key countries or regions.",
+            height=60,
         )
 
-        # Q4 – What do you already have written down or built?
-        q4_assets = st.text_area(
+        # --- Q4: What do you already have written down or built? ---
+        q4_asset_options = [
+            "Nothing written down yet",
+            "Notes or concept document",
+            "Slides / pitch deck",
+            "Business plan or canvas",
+            "Prototype / demo",
+            "Working software / app",
+            "Datasets or analytics",
+            "Training or learning materials",
+            "Brand assets (name, logo, style)",
+            "Website or landing page",
+            "Policies, SOPs or manuals",
+            "Contracts or agreements",
+        ]
+        q4_assets = st.multiselect(
             "4) What do you already have written down or built? *",
+            q4_asset_options,
+            help="Tick everything you already have. The documents themselves can be uploaded below.",
+        )
+        q4_notes = st.text_area(
+            "Anything else you have already created (optional)",
             ss.get("plan_m", ""),
-            height=90,
-            help="For example: documents, designs, software, data, training materials, brand, website, contracts, trial results.",
+            height=60,
         )
 
-        # Q5 – Who else is involved, and what’s agreed?
-        q5_partners = st.text_area(
-            "5) Who else is involved, and what have you already agreed with them? *",
+        # --- Q5: Who else is involved, and what’s agreed? ---
+        q5_who_options = [
+            "Just me / us (founder team)",
+            "Co-founders",
+            "University or research institute",
+            "Current employer",
+            "Investor or funder",
+            "Customer / client",
+            "Supplier or tech partner",
+            "Government or public body",
+            "NGO / community group",
+            "Other partner",
+        ]
+        q5_agree_options = [
+            "Nothing formal yet",
+            "Informal discussions only",
+            "Emails that talk about roles or rights",
+            "NDA / confidentiality agreement",
+            "Grant agreement",
+            "Commercial contract",
+            "IP or licence agreement",
+            "Don’t know / need to check",
+        ]
+        q5_who = st.multiselect(
+            "5) Who else is involved? *",
+            q5_who_options,
+        )
+        q5_agreed = st.multiselect(
+            "What (if anything) has already been agreed in writing? *",
+            q5_agree_options,
+        )
+        q5_notes = st.text_area(
+            "Anything sensitive or important about these relationships (optional)",
             ss.get("plan_l", ""),
-            height=90,
-            help="Co-founders, universities, employers, funders, partners or clients — and any emails or contracts that talk about ownership or rights.",
+            height=60,
         )
 
-        # Q6 – How do you hope to earn from this, and what are you happy to share?
-        q6_earn = st.text_area(
-            "6) How do you hope to earn from this, and what are you happy to share? *",
+        # --- Q6: How do you hope to earn from this, and what are you happy to share? ---
+        q6_earn_options = [
+            "One-off sales",
+            "Subscription (monthly or yearly)",
+            "Pay-per-use",
+            "Revenue share",
+            "Licence fees / royalties",
+            "Consulting or services",
+            "Advertising / sponsorship",
+            "Not sure yet",
+        ]
+        q6_share_options = [
+            "Keep fully private / closed",
+            "Only for paying customers",
+            "Lower-cost access for SMEs / start-ups",
+            "Free or low-cost for community / public sector",
+            "Open for non-commercial use",
+            "Open source (code or content)",
+            "Not sure yet",
+        ]
+        q6_earn_sel = st.multiselect(
+            "6) How do you hope to earn from this? *",
+            q6_earn_options,
+        )
+        q6_share_sel = st.multiselect(
+            "What are you happy to share or make easier to access? *",
+            q6_share_options,
+        )
+        q6_notes = st.text_area(
+            "Anything else about pricing, access or fairness (optional)",
             ss.get("markets_why", ""),
-            height=90,
-            help="One-off sales, subscriptions, pay-per-use, revenue share, free access for some groups, exclusive vs non-exclusive, etc.",
+            height=60,
         )
 
         st.caption("Uploads are held in session until analysis. Nothing is written to server until export.")
@@ -1115,32 +1227,68 @@ if page == "Company":
         submitted = st.form_submit_button("Save details")
 
         if submitted:
-            # Optional auto-split of a single pasted narrative into all questions
-            if auto_split and full_block.strip():
-                derived = _auto_split_expert_block(full_block)
-                # Map auto-split chunks into our six questions where fields are still empty
-                if not q1_what.strip() and derived.get("why_service"):
-                    q1_what = derived["why_service"]
-                if not q2_stage.strip() and derived.get("stage"):
-                    q2_stage = derived["stage"]
-                if not q3_users.strip() and derived.get("plan_s"):
-                    q3_users = derived["plan_s"]
-                if not q4_assets.strip() and derived.get("plan_m"):
-                    q4_assets = derived["plan_m"]
-                if not q5_partners.strip() and derived.get("plan_l"):
-                    q5_partners = derived["plan_l"]
-                if not q6_earn.strip() and derived.get("markets_why"):
-                    q6_earn = derived["markets_why"]
+            # Build simple text answers from dropdowns + notes
+            # Q1
+            q1_parts = []
+            if q1_type:
+                q1_parts.append("Types: " + ", ".join(q1_type))
+            if q1_desc.strip():
+                q1_parts.append("Description: " + q1_desc.strip())
+            q1_what = " ".join(q1_parts).strip()
+
+            # Q2
+            q2_parts = [q2_stage_choice]
+            if q2_notes.strip():
+                q2_parts.append(q2_notes.strip())
+            q2_text = " ".join(q2_parts).strip()
+
+            # Q3
+            q3_parts = []
+            if q3_users:
+                q3_parts.append("Users: " + ", ".join(q3_users))
+            if q3_regions:
+                q3_parts.append("Regions: " + ", ".join(q3_regions))
+            if q3_notes.strip():
+                q3_parts.append("Notes: " + q3_notes.strip())
+            q3_text = " ".join(q3_parts).strip()
+
+            # Q4
+            q4_parts = []
+            if q4_assets:
+                q4_parts.append("Assets already in place: " + ", ".join(q4_assets))
+            if q4_notes.strip():
+                q4_parts.append("Other: " + q4_notes.strip())
+            q4_text = " ".join(q4_parts).strip()
+
+            # Q5
+            q5_parts = []
+            if q5_who:
+                q5_parts.append("People / organisations involved: " + ", ".join(q5_who))
+            if q5_agreed:
+                q5_parts.append("What’s agreed: " + ", ".join(q5_agreed))
+            if q5_notes.strip():
+                q5_parts.append("Notes: " + q5_notes.strip())
+            q5_text = " ".join(q5_parts).strip()
+
+            # Q6
+            q6_parts = []
+            if q6_earn_sel:
+                q6_parts.append("Revenue ideas: " + ", ".join(q6_earn_sel))
+            if q6_share_sel:
+                q6_parts.append("Sharing / access: " + ", ".join(q6_share_sel))
+            if q6_notes.strip():
+                q6_parts.append("Notes: " + q6_notes.strip())
+            q6_text = " ".join(q6_parts).strip()
 
             # Required fields check (six questions + name)
             missing = [
                 ("Company or project name", case_name),
                 ("What are you working on?", q1_what),
-                ("Where are you on the journey?", q2_stage),
-                ("Who do you want to use this, and where?", q3_users),
-                ("What do you already have written down or built?", q4_assets),
-                ("Who else is involved, and what’s agreed?", q5_partners),
-                ("How do you hope to earn from this, and what are you happy to share?", q6_earn),
+                ("Where are you on the journey?", q2_text),
+                ("Who should use this, and where?", q3_text),
+                ("What you already have written down or built", q4_text),
+                ("Who else is involved, and what’s agreed", q5_text),
+                ("How you hope to earn from this, and what you’re happy to share", q6_text),
             ]
             missing_fields = [label for (label, val) in missing if not (val or "").strip()]
 
@@ -1152,16 +1300,19 @@ if page == "Company":
                 ss["company_size"] = size
                 ss["sector"] = sector
 
-                ss["why_service"] = q1_what.strip()
-                ss["stage"] = q2_stage.strip()
-                ss["plan_s"] = q3_users.strip()
-                ss["plan_m"] = q4_assets.strip()
-                ss["plan_l"] = q5_partners.strip()
-                ss["markets_why"] = q6_earn.strip()
-                # sale_price_why key remains in session defaults but isn’t asked for here
+                # Map to existing keys used by the analysis engine
+                ss["why_service"] = q1_what
+                ss["stage"] = q2_text
+                ss["plan_s"] = q3_text
+                ss["plan_m"] = q4_text
+                ss["plan_l"] = q5_text
+                ss["markets_why"] = q6_text
+                # sale_price_why stays as-is / unused in this simplified licensing view
 
-                ss["full_context_block"] = full_block
-                ss["auto_split_on_save"] = auto_split
+                # Clear legacy “full story” field (no longer used)
+                ss["full_context_block"] = ""
+                ss["auto_split_on_save"] = False
+
                 if uploads:
                     ss["uploads"] = uploads
 
