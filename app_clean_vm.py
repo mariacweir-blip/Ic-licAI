@@ -1937,6 +1937,31 @@ SECTORS = [
     "Energy",
     "Other",
 ]
+
+# ------------------ GLOSSARY HELPER ----------------------------
+def render_glossary() -> None:
+    """
+    Show a simple glossary so acronyms are always explained in the tool.
+    Re-use this in both the demo and VM versions.
+    """
+    with st.expander("Glossary (key terms & acronyms)", expanded=False):
+        st.markdown(
+            """
+- **IC** – *Intellectual Capital*: the combined value of Human, Structural, Customer and Strategic Alliance Capital.
+- **IA** – *Intangible Assets*: the explicit parts of IC that can potentially be recognised on the balance sheet (subject to IAS 38).
+- **4-Leaf Model** – Areopa’s IC model: **Human**, **Structural**, **Customer**, **Strategic Alliance** Capital.
+- **Ten-Steps** – Areopa’s 10-step lifecycle for IC: *Identify, Separate, Protect, Safeguard, Manage, Control, Use, Monitor, Value, Report*.
+- **LIP** – *Licensing & Intangibles Partner*: the senior person using the LIP Console to interpret results and design licensing.
+- **VM** – *Value Manager*: the person preparing evidence, running diagnostics, and curating assumptions in the tool.
+- **FRAND** – *Fair, Reasonable and Non-Discriminatory*: used here as a design principle for pricing, access tiers and governance,
+  especially in licensing templates.
+- **IAS 38** – *International Accounting Standard 38 (Intangible Assets)*: IFRS standard governing recognition and measurement of
+  intangible assets on the balance sheet.
+- **IFRS** – *International Financial Reporting Standards*: global accounting standards that include IAS 38 and related guidance.
+- **ESG** – *Environmental, Social and Governance*: non-financial performance dimensions used in investment and regulatory contexts.
+- **SDGs** – *UN Sustainable Development Goals*: global goals that many ESG and impact claims are mapped to.
+"""
+        )
 # --------------- SIDEBAR BRANDING & NAV ---------------
 with st.sidebar:
     # IMPAC3T-IP logo (top) – safe load, moderate width
@@ -1965,6 +1990,11 @@ with st.sidebar:
         ],
         index=0,
     )
+
+    st.markdown("---")
+
+    # Glossary (acronyms explained)
+    render_glossary()
 
     st.markdown("---")
 
