@@ -1011,78 +1011,97 @@ with st.sidebar:
     )
 # -------------------- PAGES -------------------------
 
-# 1) COMPANY (with required prompts + auto-split)
+## 1) COMPANY (licensing-focused SME questions + optional auto-split)
 if page == "Company":
-    st.header("Company details")
+    st.header("Company / project details")
+
     with st.form("company_form"):
         c1, c2, c3 = st.columns([1.1, 1, 1])
         with c1:
-            case_name = st.text_input("Company name *", ss.get("case_name", ""))
+            case_name = st.text_input(
+                "Company or project name *",
+                ss.get("case_name", ""),
+                help="If you don’t have a registered company yet, use your project or working title."
+            )
         with c2:
             size = st.selectbox(
-                "Company size",
+                "Size (now or planned)",
                 SIZES,
                 index=SIZES.index(ss.get("company_size", SIZES[0])),
             )
         with c3:
             current_sector = ss.get("sector", "Other")
             sector_index = SECTORS.index(current_sector) if current_sector in SECTORS else SECTORS.index("Other")
-            sector = st.selectbox("Sector / Industry", SECTORS, index=sector_index)
+            sector = st.selectbox(
+                "Sector / Industry",
+                SECTORS,
+                index=sector_index,
+            )
 
-        st.markdown("#### Company context (required)")
+        st.markdown("#### Simple questions to set the scene (for licensing)")
+
         full_block = st.text_area(
-            "Optional: paste full context here (one block, then auto-fill below)",
+            "Optional: paste your full story here in one block",
             ss.get("full_context_block", ""),
             help=(
-                "You can paste your whole narrative here once, then tick auto-split and the tool will "
-                "try to populate the individual questions for you."
+                "You can paste your whole narrative here once (e.g. from an email or concept note). "
+                "If auto-split is ticked, the tool will try to fill in the six questions below for you."
             ),
             height=80,
         )
+
         auto_split = st.checkbox(
-            "Auto-split pasted context into fields on Save",
+            "Auto-split pasted story into the six questions on Save",
             value=ss.get("auto_split_on_save", True),
             help="If ticked, the block above will be split across the questions below when you click Save.",
         )
 
-        why_service = st.text_area(
-            "Why is the company seeking this service? *",
+        # Q1 – What are you working on?
+        q1_what = st.text_area(
+            "1) What are you working on? *",
             ss.get("why_service", ""),
             height=90,
+            help="Briefly describe your product, service or idea (even if it’s still a project or spin-out in preparation).",
         )
-        stage = st.text_area(
-            "What stage are the products/services at? *",
+
+        # Q2 – Where are you on the journey?
+        q2_stage = st.text_area(
+            "2) Where are you on the journey right now? *",
             ss.get("stage", ""),
             height=90,
+            help="For example: idea only / prototype or pilot / first users or customers / growing business.",
         )
-        c4, c5, c6 = st.columns(3)
-        with c4:
-            plan_s = st.text_area(
-                "3a) Short-term plan (0–6m) *",
-                ss.get("plan_s", ""),
-                height=90,
-            )
-        with c5:
-            plan_m = st.text_area(
-                "3b) Medium-term plan (6–24m) *",
-                ss.get("plan_m", ""),
-                height=90,
-            )
-        with c6:
-            plan_l = st.text_area(
-                "3c) Long-term plan (24m+) *",
-                ss.get("plan_l", ""),
-                height=90,
-            )
-        markets_why = st.text_area(
-            "4) Which markets fit and why? *",
+
+        # Q3 – Who should use this, and where?
+        q3_users = st.text_area(
+            "3) Who do you want to use this, and where? *",
+            ss.get("plan_s", ""),
+            height=90,
+            help="Types of users or customers (e.g. farmers, clinics, SMEs, students) and any key countries or regions.",
+        )
+
+        # Q4 – What do you already have written down or built?
+        q4_assets = st.text_area(
+            "4) What do you already have written down or built? *",
+            ss.get("plan_m", ""),
+            height=90,
+            help="For example: documents, designs, software, data, training materials, brand, website, contracts, trial results.",
+        )
+
+        # Q5 – Who else is involved, and what’s agreed?
+        q5_partners = st.text_area(
+            "5) Who else is involved, and what have you already agreed with them? *",
+            ss.get("plan_l", ""),
+            height=90,
+            help="Co-founders, universities, employers, funders, partners or clients — and any emails or contracts that talk about ownership or rights.",
+        )
+
+        # Q6 – How do you hope to earn from this, and what are you happy to share?
+        q6_earn = st.text_area(
+            "6) How do you hope to earn from this, and what are you happy to share? *",
             ss.get("markets_why", ""),
             height=90,
-        )
-        sale_price_why = st.text_area(
-            "5) If selling tomorrow, target price & why? *",
-            ss.get("sale_price_why", ""),
-            height=90,
+            help="One-off sales, subscriptions, pay-per-use, revenue share, free access for some groups, exclusive vs non-exclusive, etc.",
         )
 
         st.caption("Uploads are held in session until analysis. Nothing is written to server until export.")
@@ -1094,54 +1113,59 @@ if page == "Company":
         )
 
         submitted = st.form_submit_button("Save details")
+
         if submitted:
             # Optional auto-split of a single pasted narrative into all questions
             if auto_split and full_block.strip():
                 derived = _auto_split_expert_block(full_block)
-                if not why_service.strip() and derived["why_service"]:
-                    why_service = derived["why_service"]
-                if not stage.strip() and derived["stage"]:
-                    stage = derived["stage"]
-                if not plan_s.strip() and derived["plan_s"]:
-                    plan_s = derived["plan_s"]
-                if not plan_m.strip() and derived["plan_m"]:
-                    plan_m = derived["plan_m"]
-                if not plan_l.strip() and derived["plan_l"]:
-                    plan_l = derived["plan_l"]
-                if not markets_why.strip() and derived["markets_why"]:
-                    markets_why = derived["markets_why"]
-                if not sale_price_why.strip() and derived["sale_price_why"]:
-                    sale_price_why = derived["sale_price_why"]
+                # Map auto-split chunks into our six questions where fields are still empty
+                if not q1_what.strip() and derived.get("why_service"):
+                    q1_what = derived["why_service"]
+                if not q2_stage.strip() and derived.get("stage"):
+                    q2_stage = derived["stage"]
+                if not q3_users.strip() and derived.get("plan_s"):
+                    q3_users = derived["plan_s"]
+                if not q4_assets.strip() and derived.get("plan_m"):
+                    q4_assets = derived["plan_m"]
+                if not q5_partners.strip() and derived.get("plan_l"):
+                    q5_partners = derived["plan_l"]
+                if not q6_earn.strip() and derived.get("markets_why"):
+                    q6_earn = derived["markets_why"]
 
+            # Required fields check (six questions + name)
             missing = [
-                ("Company name", case_name),
-                ("Why service", why_service),
-                ("Stage", stage),
-                ("Short plan", plan_s),
-                ("Medium plan", plan_m),
-                ("Long plan", plan_l),
-                ("Markets & why", markets_why),
-                ("Sale price & why", sale_price_why),
+                ("Company or project name", case_name),
+                ("What are you working on?", q1_what),
+                ("Where are you on the journey?", q2_stage),
+                ("Who do you want to use this, and where?", q3_users),
+                ("What do you already have written down or built?", q4_assets),
+                ("Who else is involved, and what’s agreed?", q5_partners),
+                ("How do you hope to earn from this, and what are you happy to share?", q6_earn),
             ]
             missing_fields = [label for (label, val) in missing if not (val or "").strip()]
+
             if missing_fields:
                 st.error("Please complete required fields: " + ", ".join(missing_fields))
             else:
+                # Store everything back into session (reuse existing keys)
                 ss["case_name"] = case_name
                 ss["company_size"] = size
                 ss["sector"] = sector
-                ss["why_service"] = why_service.strip()
-                ss["stage"] = stage.strip()
-                ss["plan_s"] = plan_s.strip()
-                ss["plan_m"] = plan_m.strip()
-                ss["plan_l"] = plan_l.strip()
-                ss["markets_why"] = markets_why.strip()
-                ss["sale_price_why"] = sale_price_why.strip()
+
+                ss["why_service"] = q1_what.strip()
+                ss["stage"] = q2_stage.strip()
+                ss["plan_s"] = q3_users.strip()
+                ss["plan_m"] = q4_assets.strip()
+                ss["plan_l"] = q5_partners.strip()
+                ss["markets_why"] = q6_earn.strip()
+                # sale_price_why key remains in session defaults but isn’t asked for here
+
                 ss["full_context_block"] = full_block
                 ss["auto_split_on_save"] = auto_split
                 if uploads:
                     ss["uploads"] = uploads
-                st.success("Saved company details & context.")
+
+                st.success("Saved company / project details and licensing context.")
 
     if ss.get("uploads"):
         st.info(f"{len(ss['uploads'])} file(s) stored in session. Go to **Analyse Evidence** next.")
