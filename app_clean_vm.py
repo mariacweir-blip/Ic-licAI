@@ -2713,7 +2713,37 @@ elif page == "LIP Console":
             st.success("Assumptions confirmed. They will be used in the IC report.")
         elif confirm and not accepted_all:
             st.warning("No assumptions are defined yet. Add or accept at least one.")
+            
+elif page == "Glossary":
+    st.header("Glossary – key terms & acronyms")
 
+    st.markdown(
+        """
+**IC – Intellectual Capital**  
+The combined value of Human, Structural, Customer and Strategic Alliance Capital.
+
+**IA – Intangible Assets**  
+The explicit parts of IC that can potentially be recognised on the balance sheet (subject to IAS 38).
+
+**4-Leaf Model**  
+Areopa’s IC model: Human, Structural, Customer, Strategic Alliance Capital.
+
+**Ten-Steps**  
+Areopa’s 10-step lifecycle for IC: Identify, Separate, Protect, Safeguard, Manage, Control, Use, Monitor, Value, Report.
+
+**LIP – Licensing & Intangibles Partner**  
+The senior person using the LIP Console to interpret results and design licensing.
+
+**VM – Value Manager**  
+The person preparing evidence, running diagnostics, and curating assumptions into reports.
+
+**FRAND – Fair, Reasonable and Non-Discriminatory**  
+Used here as a design principle for pricing, access tiers and governance, especially in licensing templates.
+
+**IAS 38 – International Accounting Standard 38 (Intangible Assets)**  
+IFRS standard governing recognition and measurement of many intangible assets (software, trademarks, etc.).
+        """
+    )
 # 5) REPORTS
 elif page == "Reports":
     st.header("Reports & Exports")
