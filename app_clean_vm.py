@@ -122,46 +122,41 @@ st.markdown(
     background: {PRIMARY_NAVY} !important;
   }}
 
-    /* Sidebar styling */
-  section[data-testid="stSidebar"] {
+  /* Sidebar styling */
+  section[data-testid="stSidebar"] {{
     background: {SIDEBAR_BG};
-  }
+  }}
 
   section[data-testid="stSidebar"] h1,
   section[data-testid="stSidebar"] h2,
   section[data-testid="stSidebar"] h3,
   section[data-testid="stSidebar"] p,
   section[data-testid="stSidebar"] label,
-  section[data-testid="stSidebar"] span {
+  section[data-testid="stSidebar"] span {{
     color: #E7F0FF !important;
-  }
+  }}
 
-  .stRadio div[role="radiogroup"] label {
+  .stRadio div[role="radiogroup"] label {{
     color: #E7F0FF !important;
-  }
+  }}
 
-  /* Make cards / expanders look clean on light background */
-  .stExpander, .stTabs [data-baseweb="tab"] {
-    background: {CARD_BG};
-  }
-
-  /* Sidebar expander (Glossary) – same colour as sidebar, light text */
-  section[data-testid="stSidebar"] [data-testid="stExpander"] {
-    background: {SIDEBAR_BG} !important;
-  }
-
-  section[data-testid="stSidebar"] [data-testid="stExpander"] div[role="button"] p {
-    color: #E7F0FF !important;
-  }
   /* Make cards / expanders look clean on light background */
   .stExpander, .stTabs [data-baseweb="tab"] {{
     background: {CARD_BG};
+  }}
+
+  /* Sidebar expander (Glossary) – match sidebar colour, light text */
+  section[data-testid="stSidebar"] [data-testid="stExpander"] {{
+    background: {SIDEBAR_BG} !important;
+  }}
+
+  section[data-testid="stSidebar"] [data-testid="stExpander"] div[role="button"] p {{
+    color: #E7F0FF !important;
   }}
 </style>
 """,
     unsafe_allow_html=True,
 )
-
 st.markdown(
     '<div class="ic-title-bar">IC-LicAI Expert Console</div>',
     unsafe_allow_html=True,
