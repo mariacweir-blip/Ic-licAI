@@ -1607,67 +1607,200 @@ elif page == "Reports":
         return title, "\n".join(b)
 
     def _compose_lic() -> Tuple[str, str]:
-        title = f"Licensing Report — {case_name}"
+        """
+        Licensing-focused report, using the 6 SME-style questions plus IC map.
+        Keeps language simple so it can be shared with SMEs / spin-outs if needed.
+        """
+        title = f"Licensing Readiness Report — {case_name}"
+
+        size = ss.get("company_size", "Not specified")
+        sector = ss.get("sector", "Other")
+
+        # Pull the six company-page answers (re-using existing keys)
+        why_service = (ss.get("why_service", "") or "").strip()        # "What are you hoping this help will achieve?"
+        stage = (ss.get("stage", "") or "").strip()                    # "Where is the idea / product today?"
+        plan_s = (ss.get("plan_s", "") or "").strip()                  # Short-term focus
+        plan_m = (ss.get("plan_m", "") or "").strip()                  # Medium-term focus
+        plan_l = (ss.get("plan_l", "") or "").strip()                  # Long-term focus
+        markets_why = (ss.get("markets_why", "") or "").strip()        # Who would benefit / what markets
+        sale_price_why = (ss.get("sale_price_why", "") or "").strip()  # What would feel “fair” if a partner asked tomorrow
+
+        ic_map = ss.get("ic_map", {}) or {}
+        evidence_quality = int(ss.get("evidence_quality", 0))
+
+        # Simple flags for narrative
+        structural_row = ic_map.get("Structural", {"tick": False, "score": 0.0})
+        structural_ready = bool(structural_row.get("tick"))
+        structural_score = float(structural_row.get("score", 0.0))
+
+        customer_row = ic_map.get("Customer", {"tick": False, "score": 0.0})
+        customer_ready = bool(customer_row.get("tick"))
+
+        alliance_row = ic_map.get("Strategic Alliance", {"tick": False, "score": 0.0})
+        alliance_ready = bool(alliance_row.get("tick"))
+
         b: List[str] = []
-        b.append(f"Licensing Options & FRAND-Informed Readiness for {case_name}\n")
 
-        b.append("Status & Disclaimer")
+        # 1. Overview & purpose
+        b.append(f"1. Overview & Purpose\n")
         b.append(
-            "This report is an advisory draft only. It does not constitute legal advice and must be "
-            "reviewed and adapted by qualified legal counsel before signature or implementation.\n"
+            f"{case_name} is described as a {size} organisation operating in {sector}. "
+            "This report summarises how ready the company (or project/spin-out) is to license or share its know-how, "
+            "technology, data or content, and what practical next steps are recommended."
+        )
+        if why_service:
+            b.append(f"\nMain reason for using this service (in your own words):\n- {why_service}\n")
+        else:
+            b.append("\nMain reason for using this service has not been fully described yet.\n")
+
+        # 2. Goals for licensing / partnering
+        b.append("\n2. Goals for Licensing or Partnering\n")
+        if any([plan_s, plan_m, plan_l]):
+            if plan_s:
+                b.append(f"- Next 0–6 months: {plan_s}")
+            if plan_m:
+                b.append(f"- Next 6–24 months: {plan_m}")
+            if plan_l:
+                b.append(f"- Beyond 24 months: {plan_l}")
+        else:
+            b.append(
+                "- Short, medium and longer-term goals have not yet been set in detail. "
+                "A short planning session is recommended to agree what ‘good’ looks like for the next 2–3 years."
+            )
+
+        # 3. Asset & readiness snapshot
+        b.append("\n3. What is Being Licensed & How Ready It Is\n")
+        if stage:
+            b.append(f"- Current stage (how you described it): {stage}")
+        else:
+            b.append("- Current stage of the idea / product has not yet been clearly described.")
+
+        if structural_ready:
+            b.append(
+                f"\nBased on the uploaded documents, there are signs of **codified assets** "
+                f"(contracts, methods, processes, datasets, training, software, etc.) "
+                f"that are suitable for licensing. Structural Capital scored around {structural_score:.1f} in the IC map, "
+                "which suggests there is something real to license — not just an idea."
+            )
+        else:
+            b.append(
+                "\nThe IC analysis suggests that codified assets (contracts, processes, datasets, content, software) "
+                "are not yet clearly evidenced. Before licensing, it will help to gather and tidy the key documents "
+                "into a simple register (what exists, who owns it, and where it is stored)."
+            )
+
+        if customer_ready or alliance_ready:
+            bullets = []
+            if customer_ready:
+                bullets.append("customer relationships or repeat business")
+            if alliance_ready:
+                bullets.append("partners, universities, suppliers or other strategic allies")
+            b.append(
+                "\nThere is also evidence of value sitting in "
+                + " and ".join(bullets)
+                + ", which can support partnership-based licensing and pilot deals."
+            )
+
+        if evidence_quality:
+            b.append(
+                f"\nEvidence quality from the file mix is estimated at about {evidence_quality}% "
+                "(heuristic). More structured documents will increase confidence for investors, partners "
+                "and auditors."
+            )
+
+        # 4. Who could benefit (markets & partner types)
+        b.append("\n4. Who Could Benefit (Markets & Partner Types)\n")
+        if markets_why:
+            b.append(
+                "In your own words, you see the best fit with:\n"
+                f"- {markets_why}\n"
+            )
+            b.append(
+                "Licensing professionals can translate this into a short list of **partner types** "
+                "(for example: pilot customers, distributors, technology partners, universities, NGOs or government programmes)."
+            )
+        else:
+            b.append(
+                "- Target markets and partner types are not yet described. A quick exercise to map 3–5 ideal partner profiles "
+                "will make licensing discussions much easier."
+            )
+
+        # 5. Pricing & “fair” outcome
+        b.append("\n5. What Would Feel ‘Fair’ if a Partner Asked Tomorrow?\n")
+        if sale_price_why:
+            b.append(
+                "You described a fair outcome as:\n"
+                f"- {sale_price_why}\n"
+            )
+            b.append(
+                "This is a good starting point. A licensing professional can now work backwards from this to design:\n"
+                "- simple, transparent fee or royalty structures; and\n"
+                "- options for pilots or community/low-fee access where that makes sense."
+            )
+        else:
+            b.append(
+                "- A clear view of what would feel ‘fair’ has not been written down yet. "
+                "A short internal discussion (what minimum would we accept, what would feel like a win, "
+                "and what are we *not* willing to do) will speed up negotiations later."
+            )
+
+        # 6. Suggested licensing directions (plain language)
+        b.append("\n6. Suggested Licensing Directions (Plain Language)\n")
+        b.append(
+            "Based on the information so far, the following **families of licensing options** are likely to be relevant. "
+            "Exact terms will depend on the asset, partners and country-specific law."
+        )
+        b.append(
+            "- **Paid usage licences** – a partner pays a fee or royalty to use your software, content, method, data or brand "
+            "under agreed conditions (field of use, territory, time period)."
+        )
+        b.append(
+            "- **Pilot or project licences** – a short, time-bound licence to test the asset in a real setting, usually with a "
+            "limited number of users or sites. Useful for proofs-of-concept and early adoption."
+        )
+        b.append(
+            "- **Co-creation / joint development** – you and one or more partners build something together. Ownership of the "
+            "new results is shared and clearly written down (who owns what, how revenue or savings are shared)."
+        )
+        b.append(
+            "- **Access or community licences** – low-fee or free access for specific groups (for example schools, farmers, "
+            "public bodies or communities) where the main value is impact, data, learning or reputation."
+        )
+        b.append(
+            "- **Data / algorithm access** – controlled use of your datasets, indices, risk scores or algorithms, with clear rules "
+            "on how they are used, who can see what, and how results are reported back."
         )
 
-        b.append("Company Context (selected)")
-        b.append(f"- Why service: {ss.get('why_service', '')}")
-        b.append(f"- Target sale & why: {ss.get('sale_price_why', '')}\n")
-
-        b.append("Licensing Model Families")
         b.append(
-            "- Revenue licences: royalty or fee-based licences (e.g. per unit, per user, revenue share, or per dataset) with "
-            "FRAND-informed fee corridors, audit rights and performance conditions."
-        )
-        b.append(
-            "- Access / community licences: royalty-free or low-fee licences that prioritise fair, reasonable "
-            "and non-discriminatory access (FRAND-aligned) for social, educational or public-good outcomes."
-        )
-        b.append(
-            "- Co-creation / joint development licences: shared ownership of Foreground IP, clear contribution "
-            "records, revenue sharing, and publication rights aligned to partner mandates."
-        )
-        b.append(
-            "- Defensive and cross-licence arrangements: IP pooling, non-assert agreements and mutual access "
-            "to codified know-how to reduce litigation risk and accelerate adoption."
-        )
-        b.append(
-            "- Data / algorithm licences: controlled use of datasets, indices, scoring models and algorithms "
-            "with clear field-of-use, access tiers and governance.\n"
+            "\nA licensing professional can combine these building blocks into a small number of realistic options that fit "
+            "your situation (for example: one commercial licence, one pilot licence and one access-for-impact licence)."
         )
 
-        b.append("FRAND & Seven Stakeholder Perspective")
+        # 7. Immediate next steps
+        b.append("\n7. Immediate Next Steps\n")
         b.append(
-            "FRAND is treated here as a design principle rather than a legal certification. For each proposed "
-            "licence family, the company should consider fairness, reasonableness and non-discrimination across "
-            "the seven stakeholders defined in the Sugai–Weir model (employees, investors, customers, partners "
-            "and suppliers, communities and the natural environment). Royalty-bearing and royalty-free licences "
-            "can both be FRAND-aligned when access criteria, pricing rationales and governance are clearly stated.\n"
+            "- Create a simple **asset list**: what you want to license (software, content, training, methods, datasets, indices, "
+            "brand elements, etc.), where each item is stored and who currently owns/controls it."
+        )
+        b.append(
+            "- Identify 3–5 **ideal partner types** and 3–5 concrete organisations to approach first."
+        )
+        b.append(
+            "- Decide your **red lines and must-haves**: what you will not give away, how you want your work to be credited, and "
+            "which partners or sectors are off-limits."
+        )
+        b.append(
+            "- Work with a Licensing & Intangibles Partner (LIP) and legal adviser to turn this report into draft licence terms "
+            "and a small set of template agreements."
         )
 
-        b.append("Governance & Audit Expectations")
+        # 8. Status & disclaimer
+        b.append("\n8. Status & Disclaimer\n")
         b.append(
-            "- Maintain an IA Register that links each explicit asset (software, indices, datasets, methods, "
-            "processes, brand, training content, CRM data) to its licensing model(s)."
-        )
-        b.append(
-            "- Define board-level oversight for licensing, including regular reporting on licence performance, "
-            "compliance, ESG and stakeholder impacts."
-        )
-        b.append(
-            "- Ensure that key contracts, JVs, MoUs and access licences are auditable and compatible with "
-            "applicable accounting standards (e.g. IAS 38 for intangible assets).\n"
+            "This report is an advisory draft only. It does **not** replace legal advice. All licensing decisions and legal "
+            "documents must be reviewed and approved by qualified legal counsel in the relevant country or countries."
         )
 
-        if PUBLIC_MODE:
-            b.append("(Details suppressed in public mode.)")
         return title, "\n".join(b)
 
     c1, c2 = st.columns(2)
