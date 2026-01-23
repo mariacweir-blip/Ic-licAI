@@ -1727,3 +1727,42 @@ elif page == "LIP Assistant":
                 st.markdown(f"**Q{i}:** {entry['q']}")
                 st.markdown(entry["a"])
                 st.markdown("---")
+                
+    # 8) GLOSSARY — simple static page for key terms
+    if page == "Glossary":
+    st.header("Glossary – key terms & acronyms")
+
+    st.markdown(
+        """
+**IC – Intellectual Capital**  
+The combined value of Human, Structural, Customer and Strategic Alliance Capital.
+
+**IA – Intangible Assets**  
+The explicit parts of IC that can potentially be recognised on the balance sheet (subject to IAS 38).
+
+**4-Leaf Model**  
+Areopa’s IC model: Human Capital, Structural Capital, Customer Capital, and Strategic Alliance Capital.
+
+**Ten-Steps**  
+Areopa’s 10-step lifecycle for IC: Identify, Separate, Protect, Safeguard, Manage, Control, Use, Monitor, Value, Report.
+
+**LIP – Licensing & Intangibles Partner**  
+The senior person using the LIP Console to interpret results and design licensing / commercialisation options.
+
+**VM – Value Manager**  
+The person preparing evidence, running diagnostics and curating assumptions into IC and licensing reports.
+
+**FRAND – Fair, Reasonable and Non-Discriminatory**  
+Used here as a design principle for pricing, access tiers and governance, especially when designing licences.
+
+**IAS 38 – International Accounting Standard 38 (Intangible Assets)**  
+IFRS standard that governs recognition and measurement of many intangible assets (software, brands, some IP, etc.).
+
+**ESG – Environmental, Social and Governance**  
+A set of factors and indicators used to assess a company’s wider impact and non-financial performance.
+
+**Seven Stakeholder Model (SSM)**  
+Framework (Sugai–Weir) for mapping value creation and impact across: employees, investors/lenders, customers,
+partners & suppliers, communities, and the natural environment.
+        """
+    )
