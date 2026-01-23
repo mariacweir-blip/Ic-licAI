@@ -1729,11 +1729,12 @@ elif page == "LIP Assistant":
                 st.markdown("---")
                 
     # 8) GLOSSARY — simple static page for key terms
+    
     if page == "Glossary":
-    st.header("Glossary – key terms & acronyms")
+                st.header("Glossary – key terms & acronyms")
 
-    st.markdown(
-        """
+                st.markdown(
+                """
 **IC – Intellectual Capital**  
 The combined value of Human, Structural, Customer and Strategic Alliance Capital.
 
@@ -1764,5 +1765,5 @@ A set of factors and indicators used to assess a company’s wider impact and no
 **Seven Stakeholder Model (SSM)**  
 Framework (Sugai–Weir) for mapping value creation and impact across: employees, investors/lenders, customers,
 partners & suppliers, communities, and the natural environment.
-        """
+           """
     )
