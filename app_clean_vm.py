@@ -1979,20 +1979,20 @@ def render_glossary() -> None:
 - **SDGs** – *UN Sustainable Development Goals*: global goals that many ESG and impact claims are mapped to.
 """
         )
-# --------------- SIDEBAR BRANDING & NAV ---------------
+# --------------- SIDEBAR BRANDING & NAV ----------------
 with st.sidebar:
     # IMPAC3T-IP logo (top) – safe load, moderate width
     try:
         if IMPACT3T_LOGO_PATH.is_file():
             st.image(str(IMPACT3T_LOGO_PATH), width=170)
         else:
-            st.markdown("**IMPAC3T-IP**")
+            st.markdown("**IMPACT3T-IP**")
     except Exception:
-        st.markdown("**IMPAC3T-IP**")
+        st.markdown("**IMPACT3T-IP**")
 
-    st.markdown("---")
+    st.markdown("----")
 
-    # Navigation (middle of sidebar)
+    # Navigation
     st.markdown("### Navigate")
     page = st.radio(
         "Go to:",
@@ -2004,18 +2004,14 @@ with st.sidebar:
             "Reports",
             "Licensing Templates",
             "LIP Assistant",
+            "Glossary",  # NEW PAGE
         ],
         index=0,
     )
 
-    st.markdown("---")
+    st.markdown("----")
 
-    # Glossary (acronyms explained)
-    render_glossary()
-
-    st.markdown("---")
-
-    # EU flag + funding line – **footer**
+    # EU flag + funding line
     try:
         if EU_FLAG_PATH.is_file():
             st.image(str(EU_FLAG_PATH), width=80)
@@ -2025,9 +2021,9 @@ with st.sidebar:
         st.markdown("EU-funded tool")
 
     st.caption(
-        "This tool has been developed within the IMPAC3T-IP project, which has received "
-        "funding from the European Union's Horizon Europe programme under Grant Agreement "
-        "No. 101135832."
+        "This tool has been developed within the IMPAC3T-IP project, which has "
+        "received funding from the European Union's Horizon Europe programme "
+        "under Grant Agreement No. 101135832."
     )
     
 # -------------------- PAGES -------------------------
