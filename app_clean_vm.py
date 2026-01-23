@@ -135,7 +135,11 @@ st.markdown(
   section[data-testid="stSidebar"] span {{
     color: #E7F0FF !important;
   }}
-
+  /* Make glossary list text match other sidebar text */
+  section[data-testid="stSidebar"] ul,
+  section[data-testid="stSidebar"] li {
+    color: #E7F0FF !important;
+   }
   .stRadio div[role="radiogroup"] label {{
     color: #E7F0FF !important;
   }}
