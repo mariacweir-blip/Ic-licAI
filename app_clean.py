@@ -941,12 +941,14 @@ ss.setdefault("lip_history", [])
 
 # Asset verification (overall notes)
 ss.setdefault("verification_notes", "")
+
 SIZES = [
     "Micro (1–10)",
     "Small (11–50)",
     "Medium (51–250)",
     "Large (250+)",
 ]
+
 SECTORS = [
     "Food & Beverage",
     "MedTech",
@@ -975,9 +977,7 @@ COMPANY_TYPES = [
     "Other",
 ]
 
-# --------------- SIDEBAR BRANDING & NAV ---------------,
-    
-]# --------------- SIDEBAR BRANDING & NAV ---------------
+# --------------- SIDEBAR BRANDING & NAV ---------------
 with st.sidebar:
     # IMPAC3T-IP logo (top) – safe load, moderate width
     try:
@@ -1002,14 +1002,13 @@ with st.sidebar:
             "Reports",
             "Licensing Templates",
             "LIP Assistant",
-            "Glossary",
         ],
         index=0,
     )
 
     st.markdown("---")
 
-    # EU flag + funding line – footer
+    # EU flag + funding line – **footer**
     try:
         if Path(EU_FLAG_PATH).is_file():
             st.image(EU_FLAG_PATH, width=80)
@@ -1023,6 +1022,7 @@ with st.sidebar:
         "funding from the European Union's Horizon Europe programme under Grant Agreement "
         "No. 101135832."
     )
+
 # -------------------- PAGES -------------------------
 
 # 1) COMPANY (licensing-focused SME questions with dropdowns)
