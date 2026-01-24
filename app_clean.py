@@ -1946,7 +1946,7 @@ elif page == "Licensing Templates":
                 f"Knowledge Licence — {case} ({sector})\n\n"
                 + disclaimer
                 + "1. Knowledge Asset Definition\n"
-                "   - Describe the codified know-how (e.g. methods, training materials, playbooks, indices, checklists).\n\n"
+                "   - Describe the codified know-how (e.g. methods, training materials, playbooks, indices.   m , checklists).\n\n"
                 "2. Scope of Licence & Field of Use\n"
                 "   - Specify permitted uses (internal training, consulting, product development, policy design, etc.).\n"
                 "   - Clarify any restricted uses and prohibited activities.\n\n"
@@ -2066,41 +2066,208 @@ elif page == "LIP Assistant":
                 st.markdown(entry["a"])
                 st.markdown("---")
 
-# 8) GLOSSARY — simple static page for key terms
+## 8) GLOSSARY — simple static page for key terms
 elif page == "Glossary":
     st.header("Glossary – key terms & acronyms")
 
     st.markdown(
         """
-**IC – Intellectual Capital**  
-The combined value of Human, Structural, Customer and Strategic Alliance Capital.
+### 1. Intellectual Capital, Intangible Assets and Areopa models
 
-**IA – Intangible Assets**  
-The explicit parts of IC that can potentially be recognised on the balance sheet (subject to IAS 38).
+**Intellectual Capital (IC)**  
+The total “know-how value” of an organisation – people, structures, relationships and partnerships that create value but do not sit neatly on the balance sheet. In this tool, IC is analysed using the 4-Leaf Model and Ten-Steps.
+
+**Intangible Assets (IA)**  
+The explicit, documented parts of IC that can potentially be recognised as assets under accounting rules (for example software, licences, brands, contracts, datasets). This tool helps identify which parts of IC are close to being IA.
 
 **4-Leaf Model**  
-Areopa’s IC model: Human Capital, Structural Capital, Customer Capital, and Strategic Alliance Capital.
+Areopa’s IC framework. It groups Intellectual Capital into four “leaves”:  
+- **Human Capital** – people, skills, experience and culture.  
+- **Structural Capital** – documented processes, systems, IP, contracts and data.  
+- **Customer Capital** – relationships with customers, users and channels.  
+- **Strategic Alliance Capital** – value created with partners, universities, suppliers, funders and other allies.
 
-**Ten-Steps**  
-Areopa’s 10-step lifecycle for IC: Identify, Separate, Protect, Safeguard, Manage, Control, Use, Monitor, Value, Report.
+**Human Capital (HC)**  
+The knowledge, experience, skills and culture held by people. Often tacit (in heads and habits). It becomes more valuable – and more auditable – when training, competency frameworks and safety records are documented.
 
-**LIP – Licensing & Intangibles Partner**  
-The senior person using the LIP Console to interpret results and design licensing / commercialisation options.
+**Structural Capital (SC)**  
+The “codified” side of the business: contracts, licences, SOPs, manuals, datasets, software, board packs, registers, QMS, CRM and other repeatable systems. In this tool, Structural Capital is treated as the main home for potential IAS 38-ready intangible assets.
 
-**VM – Value Manager**  
-The person preparing evidence, running diagnostics and curating assumptions into IC and licensing reports.
+**Customer Capital (CC)**  
+The strength and quality of customer relationships: who you sell to, how often they return, what contracts you have, and how you manage the pipeline and renewals (often through CRM or account plans).
 
-**FRAND – Fair, Reasonable and Non-Discriminatory**  
-Used here as a design principle for pricing, access tiers and governance, especially when designing licences.
+**Strategic Alliance Capital (SAC)**  
+Value built with partners and allies: universities, research institutes, innovation hubs, corporates, funders, governments, NGOs, suppliers and integrators. MoUs, JV agreements and framework contracts are key artefacts here.
+
+**Ten-Steps (IC lifecycle)**  
+Areopa’s 10-step lifecycle for building and managing IC and IA. In this tool each step is given a readiness score (1–10):  
+1. **Identify** – spot the knowledge, methods, software, data and relationships that create value.  
+2. **Separate** – distinguish what is really new or special from what is generic or commodity.  
+3. **Protect** – put in place IP, contracts, confidentiality and access controls where needed.  
+4. **Safeguard** – make sure assets cannot be easily lost, copied or misused (back-ups, roles, policies).  
+5. **Manage** – give someone responsibility to maintain and use the asset, not just “store” it.  
+6. **Control** – set clear rights and permissions: who can use, change, license or sell the asset.  
+7. **Use** – actually deploy the asset in products, services, partnerships or internal systems.  
+8. **Monitor** – track performance, usage, risks and outcomes (KPIs, dashboards, board packs).  
+9. **Value** – estimate financial value (for deals, investment, or accounting) using a suitable method.  
+10. **Report** – explain the asset and its value clearly to boards, investors, auditors and regulators.
+
+**IC Map**  
+The combined picture of the 4-Leaf Model and Ten-Steps scores generated by the tool. It shows where IC is strong, where it is under-evidenced, and which assets are closest to being licensing-ready or IAS 38-ready.
+
+---
+
+### 2. Accounting, valuation and evidence concepts
 
 **IAS 38 – International Accounting Standard 38 (Intangible Assets)**  
-IFRS standard that governs recognition and measurement of many intangible assets (software, brands, some IP, etc.).
+The main IFRS standard covering recognition and measurement of many intangible assets (such as software, brands, some IP and development costs). This tool does **not** give an accounting opinion, but it highlights Structural Capital that looks close to IAS 38 criteria (identifiable, controlled and expected to generate future economic benefits).
+
+**Fair value (approach)**  
+A valuation approach that estimates what a knowledgeable, willing buyer would pay in an arm’s-length transaction. In the tool, fair value thinking is used when discussing how explicit assets might support deals, licensing or investment – not just what they cost to create.
+
+**Cost approach**  
+A valuation method that focuses on how much it cost (or would cost) to build or replace an asset. Often underestimates value for high-impact IC where licensing, market access or unique positioning matter. The tool leans towards fair value logic rather than pure cost.
+
+**Evidence quality (heuristic)**  
+A percentage score used inside the app to summarise how strong the uploaded evidence set looks. It blends:  
+- diversity of file types,  
+- spread across the four IC leaves, and  
+- how “codified” the artefacts appear to be.  
+It is a guidance signal only – not an audit opinion.
+
+**IA Register (Intangible Asset Register)**  
+A structured list of key intangible assets: what they are, where they are recorded, who owns them, and how they are used. The tool encourages the creation of such a register from contracts, software, datasets, methods and brand assets that show up in Structural Capital.
+
+**Structural Capital dominance**  
+A design choice in this tool: when both tacit and explicit signals exist for an asset, Structural Capital is deliberately weighted higher. This reflects the practical reality that auditors and investors place more trust in clear, documented artefacts.
+
+---
+
+### 3. Roles, pages and tool components
+
+**IC-LicAI**  
+The name of this tool – an IC and Licensing Assistant for identifying, structuring and preparing intangible assets and licensing options, with an emphasis on Structural Capital and FRAND-aware licensing.
+
+**VM – Value Manager**  
+The person preparing evidence, running diagnostics and curating assumptions into IC and licensing reports. Often works closely with founders, TTOs or programme teams.
+
+**LIP – Licensing & Intangibles Partner**  
+The senior person (internal or external) who interprets results, designs licensing options and works with legal counsel. The LIP uses the LIP Console, Reports and Templates pages.
+
+**Company / project page**  
+The starting page where basic context is captured in SME-friendly language: what is being built, stage of development, who will use it, what already exists and how the team hopes to earn and share value.
+
+**Analyse Evidence (Evidence Dashboard)**  
+The page that pulls together uploaded files, runs the IC analysis, and shows radar charts and Ten-Steps readiness. It also surfaces the “evidence quality” score.
+
+**Asset Verification**  
+A human review page where the VM or LIP checks ownership, dates, validity and ESG claims for each document, and records follow-up notes. It does **not** replace legal review.
+
+**LIP Console**  
+A workspace for the LIP to edit the overall narrative, review the IC Map, and see key context from the company page before generating reports or templates.
+
+**Reports page**  
+Generates two main exports:  
+- an **IC Report** – focused on IC, Ten-Steps and evidence coverage; and  
+- a **Licensing Readiness Report** – aimed at SMEs, summarising what can be licensed and practical next steps.
+
+**Licensing Templates page**  
+Creates editable draft templates (DOCX/TXT) for three families of agreements: FRAND-style standard licences, co-creation/joint development arrangements, and non-traditional knowledge licences.
+
+**LIP Assistant (beta)**  
+A lightweight Q&A helper that re-uses the IC narrative and licensing logic locally (no external AI calls in this demo). It is designed to assist the LIP in thinking through options, not to draft final legal text.
+
+---
+
+### 4. Licensing concepts used in the tool
+
+**Licensing / Licence**  
+A legal permission to use software, data, content, methods, brands or other assets under defined conditions (for example where, for how long, and for which users). Licensing can generate revenue, support pilots, or enable wider access.
+
+**Field of use**  
+The specific application or sector where a licence applies (for example “healthcare research only”, “agricultural advisory services” or “educational use”). Narrow fields of use allow different licences in different markets.
+
+**Territory**  
+The geographic scope of a licence (for example one country, a region such as EU or East Africa, or worldwide).
+
+**FRAND – Fair, Reasonable and Non-Discriminatory**  
+In this tool, FRAND is used as a design principle, not a formal legal status. It guides how pricing, access tiers and governance are framed so that similar users are treated fairly, and community or public-good access can be justified and described.
+
+**Standard licence (FRAND-informed)**  
+A more traditional commercial licence with transparent prices or royalty terms, shaped by FRAND ideas and, where relevant, by stakeholder and ESG considerations.
+
+**Co-creation / Joint Development**  
+A partnership where two or more parties jointly develop new assets. Background IP (what each party brings) is kept separate from Foreground IP (results created together). Revenue sharing and ownership rules are explicitly written down.
+
+**Knowledge licence (non-traditional)**  
+A licence focused on codified know-how – methods, training content, playbooks, indices, checklists – rather than classic patents or software only. Can be structured for internal use, consulting, policy work or education.
+
+**Pilot licence**  
+A short-term or limited-scope licence used to test a product, service or method with early adopters. Often restricted by time, number of users or locations.
+
+**Access / community licence**  
+A licence that provides low-cost or free access for specific groups (for example schools, farmers, public bodies or community organisations) where the main value is impact, learning, data or reputation rather than direct revenue.
+
+**Data / algorithm licence**  
+A licence that allows controlled use of datasets, indices, risk scores or algorithms (for example via APIs or dashboards) with clear rules on privacy, attribution, reuse and feedback of results.
+
+**Background IP**  
+Existing intellectual property that each party brings into a project before any new work is done (for example an existing platform, method, dataset or brand).
+
+**Foreground IP**  
+New IP created during a project or collaboration. A co-creation or joint development agreement should clearly define who owns it, how it is licensed and how revenues or savings are shared.
+
+**Royalty**  
+A payment calculated as a percentage of revenue, profit or usage (for example per unit or per user) that the licensee pays to the licensor under a licensing agreement.
+
+**Revenue share**  
+A broader concept than royalty – an agreed split of income (sometimes including grants or savings) between parties to a licence or partnership.
+
+**NDA – Non-Disclosure Agreement**  
+A confidentiality agreement that controls how sensitive information may be shared and used, usually before or alongside licensing or co-creation discussions.
+
+**MoU – Memorandum of Understanding**  
+A non-binding (or partly binding) framework that sets out intentions and main principles for collaboration. Often a stepping stone before a full contract.
+
+**Joint Venture (JV)**  
+A separate structure (often a new company) owned by two or more parties to exploit specific assets or markets, with detailed agreements on contributions, governance and profit sharing.
+
+---
+
+### 5. ESG, stakeholders and policy language
 
 **ESG – Environmental, Social and Governance**  
-A set of factors and indicators used to assess a company’s wider impact and non-financial performance.
+A set of factors used by investors, regulators and stakeholders to assess a company’s wider impact. In this tool, ESG language is linked to concrete assets (for example policies, datasets, procedures and dashboards) rather than slogans.
 
 **Seven Stakeholder Model (SSM)**  
-Framework (Sugai–Weir) for mapping value creation and impact across: employees, investors/lenders, customers,
-partners & suppliers, communities, and the natural environment.
-        """
+A framework (Sugai–Weir) for mapping value creation and impact across seven stakeholder groups:  
+1. Employees and workers  
+2. Investors and lenders  
+3. Customers and users  
+4. Partners, suppliers and intermediaries  
+5. Communities and public bodies  
+6. The natural environment / nature  
+7. Future generations (often reflected through long-term environmental and social impacts)
+
+**Double materiality**  
+The idea that we must look both at:  
+- how sustainability issues affect the company’s financial performance; and  
+- how the company’s activities affect people, communities and the environment.  
+The tool supports this by tying ESG and stakeholder claims back to specific intangible assets and evidence.
+
+**Impact or community access licences**  
+Licences that deliberately build in reduced fees, open access or shared ownership for certain stakeholder groups (for example farmers, schools or low-income communities) while still protecting core IP and commercial value.
+
+---
+
+### 6. Project and funding references
+
+**IMPAC3T-IP**  
+The Horizon Europe project under which this tool has been developed. It focuses on practical methods for valuing Intellectual Capital, ESG and licensing in SMEs and ecosystems.
+
+**Horizon Europe**  
+The European Union’s main research and innovation funding programme. IMPAC3T-IP is funded under Grant Agreement No. 101135832.
+
+If a term appears in the tool and is **not** in this glossary, it can be added or clarified in future versions.
+"""
     )
