@@ -2595,7 +2595,7 @@ Before running analysis, create a 1–2 page note (IC_SystemView_<CompanyName>.t
 4. **Current & potential value streams** – who pays, who accesses for free or reduced price, who benefits indirectly.
 5. **Key tensions & risks** – ESG tensions, dependency on single partners, regulatory or reputational risks.
 
-    with st.expander("4. Evidence checklist for IA valuation (what to collect from the client)"):
+        with st.expander("4. Evidence checklist for IA valuation (what to collect from the client)"):
         st.markdown(
             """
 This is a **static checklist** to help the Value Manager collect enough evidence for
@@ -2606,7 +2606,7 @@ the report will be.
 **A. Core company & financials**
 
 - Latest business plan or pitch deck (PDF / PPTX / DOCX).
-- Last 2–3 years of financial statements (audited if available).
+- Last 2-3 years of financial statements (audited if available).
 - Current management accounts or cash-flow forecast.
 - Company structure chart and cap table (shareholders, options, key loans).
 
@@ -2662,12 +2662,11 @@ the report will be.
 - Any regulator correspondence or approvals (where relevant).
 
 **Practical tip:**  
-If you can’t get everything at once, start with: business plan, IA/IP register (or best
+If you cannot get everything at once, start with: business plan, IA/IP register (or best
 approximation), top 10 contracts, one board pack, and any ESG / impact report. That is
 usually enough for a first diagnostic, with follow-up requests to fill the gaps.
 """
-        ).           
-
+        )
 Upload this note **as evidence** together with the other files. It gives IC-LicAI and the ILP a richer starting point.
 """
         )
