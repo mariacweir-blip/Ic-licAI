@@ -1053,6 +1053,20 @@ if page == "Company":
                 index=sector_index,
             )
 
+        # NEW: organisation / project type (covers pre-company & spin-outs)
+        stored_type = ss.get("company_type", "Registered company / SME")
+        if stored_type in COMPANY_TYPES:
+            company_type_index = COMPANY_TYPES.index(stored_type)
+        else:
+            company_type_index = 0
+
+        company_type = st.selectbox(
+            "What best describes this organisation or project?",
+            COMPANY_TYPES,
+            index=company_type_index,
+            help="Covers registered companies, pre-startups, spin-outs, innovation hubs, university-based projects and large corporates.",
+        )
+
         st.markdown("#### Simple questions to set the scene (for licensing)")
 
         # --- Q1: What are you working on? ---
@@ -1313,6 +1327,7 @@ if page == "Company":
                 # Store everything back into session (reuse existing keys)
                 ss["case_name"] = case_name
                 ss["company_size"] = size
+                ss["company_type"] = company_type
                 ss["sector"] = sector
 
                 # Map to existing keys used by the analysis engine
@@ -1335,7 +1350,7 @@ if page == "Company":
 
     if ss.get("uploads"):
         st.info(f"{len(ss['uploads'])} file(s) stored in session. Go to **Analyse Evidence** next.")
-
+        
 # 2) ANALYSE EVIDENCE (with radar / evidence quality)
 elif page == "Analyse Evidence":
     st.header("Evidence Dashboard & Analysis")
