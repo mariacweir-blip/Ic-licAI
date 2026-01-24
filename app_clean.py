@@ -1,4 +1,4 @@
-# app_clean.py — IC-LicAI Expert Console (Structural + FRAND + LIP Assistant)
+  # app_clean.py — IC-LicAI Expert Console (Structural + FRAND + LIP Assistant)
 # Adds: DOCX/PPTX extraction, weighted IC signal engine, interpreted narrative,
 # radar dashboard, CSV semantic extraction, robust company-context auto-split,
 # IAS 38 Structural Capital emphasis, FRAND-aware licensing templates,
@@ -978,7 +978,7 @@ COMPANY_TYPES = [
     "Other",
 ]
 
-# --------------- SIDEBAR BRANDING & NAV ---------------
+## --------------- SIDEBAR BRANDING & NAV ---------------
 with st.sidebar:
     # IMPAC3T-IP logo (top) – safe load, moderate width
     try:
@@ -1003,6 +1003,7 @@ with st.sidebar:
             "Reports",
             "Licensing Templates",
             "LIP Assistant",
+            "Glossary",
         ],
         index=0,
     )
@@ -1023,7 +1024,6 @@ with st.sidebar:
         "funding from the European Union's Horizon Europe programme under Grant Agreement "
         "No. 101135832."
     )
-
 # -------------------- PAGES -------------------------
 
 # 1) COMPANY (licensing-focused SME questions with dropdowns)
