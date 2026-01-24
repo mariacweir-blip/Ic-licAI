@@ -2595,6 +2595,79 @@ Before running analysis, create a 1–2 page note (IC_SystemView_<CompanyName>.t
 4. **Current & potential value streams** – who pays, who accesses for free or reduced price, who benefits indirectly.
 5. **Key tensions & risks** – ESG tensions, dependency on single partners, regulatory or reputational risks.
 
+    with st.expander("4. Evidence checklist for IA valuation (what to collect from the client)"):
+        st.markdown(
+            """
+This is a **static checklist** to help the Value Manager collect enough evidence for
+a serious IA / IC valuation and licensing review. Not everything will exist for every
+company, but the more of these items you can gather, the stronger and more accurate
+the report will be.
+
+**A. Core company & financials**
+
+- Latest business plan or pitch deck (PDF / PPTX / DOCX).
+- Last 2–3 years of financial statements (audited if available).
+- Current management accounts or cash-flow forecast.
+- Company structure chart and cap table (shareholders, options, key loans).
+
+**B. IP, data & IA register artefacts**
+
+- Any existing IP or IA register (even if incomplete).
+- Copies or summaries of: trademarks, patents, design rights, copyrights.
+- Documentation of trade secrets / algorithms / indices (at least at high level).
+- Software architecture notes, data dictionaries, model documentation.
+- Brand guidelines and key marketing assets (logos, taglines, core messages).
+
+**C. Contracts & commercial evidence**
+
+- Key customer contracts and framework agreements.
+- Supplier and partner contracts (including joint ventures, distributors, OEMs).
+- Licences in or out (software, datasets, methods, content).
+- Standard Ts&Cs, order forms, SLAs and pricing sheets.
+- Evidence of pipeline / CRM data (renewals, churn, upsell, key accounts).
+
+**D. Processes, governance & risk**
+
+- SOPs, process maps, playbooks and manuals for core operations.
+- Quality or risk-management systems (QMS, ISO 9001/27001/13485, etc.).
+- Board packs, strategy papers and governance reports.
+- Policies: information security, data protection, HR, ethics, ESG, etc.
+
+**E. People, know-how & training**
+
+- Organisation chart with key roles and responsibilities.
+- Competency matrices or skills maps (if they exist).
+- Training plans, onboarding materials, safety training records.
+- Evidence of communities of practice, technical forums, or R&D meetings.
+
+**F. Technology, platforms & data**
+
+- System architecture diagrams (platform, integrations, APIs).
+- Description of core datasets and data flows (where data comes from, how it is used).
+- Technical documentation for software, models, indices or scoring systems.
+- Any SLAs or performance dashboards for the technology.
+
+**G. ESG, SDG & impact artefacts**
+
+- ESG policies, sustainability strategy or impact framework.
+- ESG / impact reports, scorecards or third-party ratings.
+- Evidence of SDG alignment or climate targets.
+- Community, user or beneficiary stories that are backed by real activity.
+
+**H. Market & external validation**
+
+- Market research reports or sector analyses used by the company.
+- External awards, certifications and recognitions.
+- Reference letters, testimonials, case studies from clients or partners.
+- Any regulator correspondence or approvals (where relevant).
+
+**Practical tip:**  
+If you can’t get everything at once, start with: business plan, IA/IP register (or best
+approximation), top 10 contracts, one board pack, and any ESG / impact report. That is
+usually enough for a first diagnostic, with follow-up requests to fill the gaps.
+"""
+        ).           
+
 Upload this note **as evidence** together with the other files. It gives IC-LicAI and the ILP a richer starting point.
 """
         )
