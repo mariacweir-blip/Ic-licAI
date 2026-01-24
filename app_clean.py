@@ -915,6 +915,7 @@ def _auto_split_expert_block(text: str) -> Dict[str, str]:
 ss = st.session_state
 ss.setdefault("case_name", "Untitled Company")
 ss.setdefault("company_size", "Micro (1–10)")
+ss.setdefault("company_type", "Registered company / SME")
 ss.setdefault("sector", "Other")
 ss.setdefault("uploads", [])
 ss.setdefault("combined_text", "")
