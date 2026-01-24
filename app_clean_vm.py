@@ -2523,7 +2523,7 @@ if page == "Company":
             "Go to **Analyse Evidence** next."
         )
 
-    # ---------------- VM TOOLBOX (unchanged) ----------------
+    #    # ---------------- VM TOOLBOX (unchanged + checklist) ----------------
     st.markdown("---")
     st.subheader("Value Manager toolbox (evidence preparation)")
 
@@ -2532,8 +2532,8 @@ if page == "Company":
             """
 Use these external tools **before** uploading evidence, especially for large reports:
 
-- **PDF → Word (DOCX)**: Convert long ESG or strategy PDFs into Word so key text can be pasted into the Company context fields and uploaded as DOCX.
-- **Excel → CSV**: Export key sheets (contracts, IP registers, ESG KPIs) as CSV so IC-LicAI can read headers and sample rows.
+- PDF to Word (DOCX): convert long ESG or strategy PDFs into Word so key text can be pasted into the Company context fields and uploaded as DOCX.
+- Excel to CSV: export key sheets (contracts, IP registers, ESG KPIs) as CSV so IC-LicAI can read headers and sample rows.
 
 Remember: never upload anything that breaches confidentiality or data-sharing rules agreed with the client.
 """
@@ -2555,13 +2555,13 @@ Remember: never upload anything that breaches confidentiality or data-sharing ru
     with st.expander("2. Optional AI helper for drafting the Company context"):
         st.markdown(
             """
-You can use an AI assistant (e.g. ChatGPT) **before** opening this tool to help draft the answers for:
+You can use an AI assistant (for example, ChatGPT) **before** opening this tool to help draft the answers for:
 
-- Why is the company seeking this service?
-- Stage of products/services
-- Short / medium / long-term plans
-- Markets & why
-- Target sale price & why
+- Why the company is seeking this service.
+- Stage of products/services.
+- Short, medium and long-term plans.
+- Markets and why.
+- Target sale price and why.
 
 **Suggested prompt to paste into your AI tool:**
 """
@@ -2571,7 +2571,7 @@ You can use an AI assistant (e.g. ChatGPT) **before** opening this tool to help 
             "Based on the attached business plan or PDF, draft:\n"
             "1) Why the company is seeking this service (funding, growth, governance, ESG, etc.),\n"
             "2) The stage of each key product/service,\n"
-            "3) Short (0–6m), medium (6–24m) and long-term (24m+) plans,\n"
+            "3) Short (0-6m), medium (6-24m) and long-term (24m+) plans,\n"
             "4) Which markets fit and why (sectors, partners, channels, not just countries),\n"
             "5) If the owners wanted to sell tomorrow, a realistic target sale price and the reasons.\n\n"
             "Write each as a clear paragraph I can paste into a diagnostic tool. Do not invent numbers; "
@@ -2587,89 +2587,91 @@ and adjusting anything that does not match reality.
     with st.expander("3. IC System View note (complex systems lens)"):
         st.markdown(
             """
-Before running analysis, create a 1–2 page note (IC_SystemView_<CompanyName>.txt) with:
+Before running analysis, create a 1-2 page note (IC_SystemView_<CompanyName>.txt) with:
 
-1. **Market system & actors** – who is upstream (suppliers, data sources, funders) and downstream (customers, end-users, regulators, communities)?
-2. **Innovation loops & learning** – how products/services are improved; pilots, feedback, R&D, training.
-3. **Key intangible / data / IP assets** – contracts, protocols, datasets, algorithms, indices, software, brand, training packages.
-4. **Current & potential value streams** – who pays, who accesses for free or reduced price, who benefits indirectly.
-5. **Key tensions & risks** – ESG tensions, dependency on single partners, regulatory or reputational risks.
+1. Market system and actors – who is upstream (suppliers, data sources, funders) and downstream (customers, end-users, regulators, communities)?
+2. Innovation loops and learning – how products/services are improved; pilots, feedback, R&D, training.
+3. Key intangible / data / IP assets – contracts, protocols, datasets, algorithms, indices, software, brand, training packages.
+4. Current and potential value streams – who pays, who accesses for free or reduced price, who benefits indirectly.
+5. Key tensions and risks – ESG tensions, dependency on single partners, regulatory or reputational risks.
 
-        with st.expander("4. Evidence checklist for IA valuation (what to collect from the client)"):
+Upload this note as evidence together with the other files. It gives IC-LicAI and the LIP a richer starting point.
+"""
+        )
+
+    with st.expander("4. Evidence checklist for IA valuation (what to collect from the client)"):
         st.markdown(
             """
-This is a **static checklist** to help the Value Manager collect enough evidence for
+This is a static checklist to help the Value Manager collect enough evidence for
 a serious IA / IC valuation and licensing review. Not everything will exist for every
 company, but the more of these items you can gather, the stronger and more accurate
 the report will be.
 
-**A. Core company & financials**
+**A. Core company and financials**
 
 - Latest business plan or pitch deck (PDF / PPTX / DOCX).
 - Last 2-3 years of financial statements (audited if available).
 - Current management accounts or cash-flow forecast.
 - Company structure chart and cap table (shareholders, options, key loans).
 
-**B. IP, data & IA register artefacts**
+**B. IP, data and IA register artefacts**
 
 - Any existing IP or IA register (even if incomplete).
-- Copies or summaries of: trademarks, patents, design rights, copyrights.
-- Documentation of trade secrets / algorithms / indices (at least at high level).
-- Software architecture notes, data dictionaries, model documentation.
+- Copies or summaries of trademarks, patents, design rights and copyrights.
+- Documentation of trade secrets, algorithms or indices (at least at high level).
+- Software architecture notes, data dictionaries and model documentation.
 - Brand guidelines and key marketing assets (logos, taglines, core messages).
 
-**C. Contracts & commercial evidence**
+**C. Contracts and commercial evidence**
 
 - Key customer contracts and framework agreements.
-- Supplier and partner contracts (including joint ventures, distributors, OEMs).
+- Supplier and partner contracts (including joint ventures, distributors and OEMs).
 - Licences in or out (software, datasets, methods, content).
-- Standard Ts&Cs, order forms, SLAs and pricing sheets.
-- Evidence of pipeline / CRM data (renewals, churn, upsell, key accounts).
+- Standard terms and conditions, order forms, SLAs and pricing sheets.
+- Evidence of pipeline or CRM data (renewals, churn, upsell, key accounts).
 
-**D. Processes, governance & risk**
+**D. Processes, governance and risk**
 
 - SOPs, process maps, playbooks and manuals for core operations.
-- Quality or risk-management systems (QMS, ISO 9001/27001/13485, etc.).
+- Quality or risk-management systems (QMS, ISO 9001/27001/13485 and similar).
 - Board packs, strategy papers and governance reports.
-- Policies: information security, data protection, HR, ethics, ESG, etc.
+- Policies: information security, data protection, HR, ethics and ESG.
 
-**E. People, know-how & training**
+**E. People, know-how and training**
 
 - Organisation chart with key roles and responsibilities.
-- Competency matrices or skills maps (if they exist).
-- Training plans, onboarding materials, safety training records.
-- Evidence of communities of practice, technical forums, or R&D meetings.
+- Competency matrices or skills maps (where they exist).
+- Training plans, onboarding materials and safety training records.
+- Evidence of communities of practice, technical forums or R&D meetings.
 
-**F. Technology, platforms & data**
+**F. Technology, platforms and data**
 
 - System architecture diagrams (platform, integrations, APIs).
-- Description of core datasets and data flows (where data comes from, how it is used).
+- Description of core datasets and data flows (where data comes from and how it is used).
 - Technical documentation for software, models, indices or scoring systems.
 - Any SLAs or performance dashboards for the technology.
 
-**G. ESG, SDG & impact artefacts**
+**G. ESG, SDG and impact artefacts**
 
 - ESG policies, sustainability strategy or impact framework.
-- ESG / impact reports, scorecards or third-party ratings.
+- ESG or impact reports, scorecards or third-party ratings.
 - Evidence of SDG alignment or climate targets.
 - Community, user or beneficiary stories that are backed by real activity.
 
-**H. Market & external validation**
+**H. Market and external validation**
 
 - Market research reports or sector analyses used by the company.
 - External awards, certifications and recognitions.
-- Reference letters, testimonials, case studies from clients or partners.
-- Any regulator correspondence or approvals (where relevant).
+- Reference letters, testimonials or case studies from clients or partners.
+- Any regulator correspondence or approvals where relevant.
 
-**Practical tip:**  
+Practical tip:
 If you cannot get everything at once, start with: business plan, IA/IP register (or best
-approximation), top 10 contracts, one board pack, and any ESG / impact report. That is
+approximation), top 10 contracts, one board pack, and any ESG or impact report. That is
 usually enough for a first diagnostic, with follow-up requests to fill the gaps.
 """
         )
-Upload this note **as evidence** together with the other files. It gives IC-LicAI and the ILP a richer starting point.
-"""
-        )
+        
 # 2) ANALYSE EVIDENCE (with radar / evidence quality)
 elif page == "Analyse Evidence":
     st.header("Evidence Dashboard & Analysis")
