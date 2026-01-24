@@ -2029,15 +2029,165 @@ with st.sidebar:
 # -------------------- PAGES -------------------------
 
 
-# 1) COMPANY (with required prompts + auto-split)
+# 1) COMPANY (simple client view + VM expert context with dropdowns)
 if page == "Company":
     st.header("Company details")
 
     # Load any saved context for this case into session_state
     load_company_context_for_current_case()
 
-    # ---------------- COMPANY FORM ----------------
-    with st.form("company_form"):
+    # ---------- Simple (client-facing) fields – same idea as demo ----------
+    ss.setdefault("quick_use_where", [])
+    ss.setdefault("quick_countries", [])
+    ss.setdefault("quick_written_assets", [])
+    ss.setdefault("quick_other_assets", "")
+    ss.setdefault("quick_who_involved", [])
+    ss.setdefault("quick_agreements", [])
+    ss.setdefault("quick_sensitive", "")
+    ss.setdefault("quick_earn", [])
+    ss.setdefault("quick_share", [])
+
+    SIMPLE_USE_OPTIONS = [
+        "Inside our own organisation",
+        "With a small group of partners/clients",
+        "Across our home country",
+        "Across several countries / regions",
+        "Global / mostly online users",
+    ]
+
+    SIMPLE_COUNTRY_OPTIONS = [
+        "Kenya",
+        "East Africa",
+        "Rest of Africa",
+        "Europe",
+        "UK & Ireland",
+        "Middle East",
+        "North America",
+        "Latin America",
+        "Asia-Pacific",
+        "Global / unsure",
+    ]
+
+    SIMPLE_WRITTEN_OPTIONS = [
+        "Business plan or pitch deck",
+        "Technical specifications / drawings",
+        "Software / platform or app",
+        "Policies, SOPs or manuals",
+        "Training materials or playbooks",
+        "Spreadsheets (customers, pricing, KPIs)",
+        "Contracts, MoUs, or grant agreements",
+        "IP register, patent or trademark docs",
+    ]
+
+    SIMPLE_WHO_OPTIONS = [
+        "Founders / core team only",
+        "Advisors / board members",
+        "Universities or research partners",
+        "Corporate or public sector partners",
+        "Distributors or resellers",
+        "NGOs / community organisations",
+        "Investors / lenders",
+    ]
+
+    SIMPLE_AGREEMENT_OPTIONS = [
+        "No written agreements yet",
+        "Basic NDAs / confidentiality agreements",
+        "Supplier / service contracts",
+        "Customer / offtake agreements",
+        "Licensing or IP agreements",
+        "Grant or funding agreements",
+        "Joint venture / MoU style agreements",
+    ]
+
+    SIMPLE_EARN_OPTIONS = [
+        "Selling products or devices",
+        "Selling services / consulting",
+        "Subscription or SaaS fees",
+        "Usage-based or pay-per-use fees",
+        "Data or analytics fees",
+        "Licensing our IP or know-how",
+        "Mixed model / still exploring",
+    ]
+
+    SIMPLE_SHARE_OPTIONS = [
+        "Training and capacity-building",
+        "Open access or community licences",
+        "Discounted access for priority groups",
+        "Shared datasets or indicators",
+        "Shared methods, playbooks or protocols",
+        "Nothing for now – full commercial",
+    ]
+
+    # ---------- VM expert-side dropdowns / presets ----------
+    ss.setdefault("why_service_choices", [])
+    ss.setdefault("why_service_free", "")
+    ss.setdefault("stage_choice", "Prototype / pilot")
+    ss.setdefault("stage_free", "")
+    ss.setdefault("plan_s_choice", "Stabilise product and early users")
+    ss.setdefault("plan_m_choice", "Grow customers and partnerships")
+    ss.setdefault("plan_l_choice", "Scale and/or prepare for exit")
+    ss.setdefault("plan_s_free", "")
+    ss.setdefault("plan_m_free", "")
+    ss.setdefault("plan_l_free", "")
+    ss.setdefault("markets_focus", [])
+    ss.setdefault("markets_free", "")
+    ss.setdefault("sale_reason_choice", "Thinking about investor or trade sale in 3–5 years")
+    ss.setdefault("sale_reason_free", "")
+    ss.setdefault("full_context_block", "")
+    ss.setdefault("auto_split_on_save", False)  # default OFF for VMs
+
+    WHY_SERVICE_OPTIONS = [
+        "Prepare for funding or investment",
+        "Prepare for sale or partial exit",
+        "Understand and protect intangible assets",
+        "Evidence value for board / governance",
+        "Align ESG/impact with IC and licensing",
+        "Support an audit or fair value review",
+        "Design licensing and pricing models",
+        "General IC baseline and growth plan",
+    ]
+
+    STAGE_OPTIONS = [
+        "Idea / concept only",
+        "Prototype / pilot",
+        "MVP with first users",
+        "Paying customers, early contracts",
+        "Repeatable revenues, growing pipeline",
+        "Mature scale-up with stable revenues",
+    ]
+
+    PLAN_OPTIONS = [
+        "Stabilise product and early users",
+        "Secure key reference customers",
+        "Formalise IA / IP and governance",
+        "Strengthen technology and data",
+        "Grow customers and partnerships",
+        "Enter new markets or sectors",
+        "Secure major strategic partners",
+        "Scale and/or prepare for exit",
+    ]
+
+    MARKETS_FOCUS_OPTIONS = [
+        "Domestic only (home country)",
+        "Regional (e.g. East Africa, EU)",
+        "Global digital / online users",
+        "Public sector / government",
+        "Corporate / enterprise clients",
+        "SMEs and mid-market",
+        "Non-profits / NGOs / community",
+    ]
+
+    SALE_REASON_OPTIONS = [
+        "Founders want partial de-risking",
+        "Targeting investor entry (VC/PE)",
+        "Preparing for trade sale to strategic buyer",
+        "Succession planning / founder exit",
+        "Exploring options, no fixed plan yet",
+        "Positioning for future IPO / listing",
+    ]
+
+    # ---------------- ONE FORM FOR SIMPLE + EXPERT --------------------
+    with st.form("company_simple_and_expert"):
         c1, c2, c3 = st.columns([1.1, 1, 1])
 
         # Basic identifiers
@@ -2058,66 +2208,169 @@ if page == "Company":
             )
             sector = st.selectbox("Sector / Industry", SECTORS, index=sector_index)
 
-        # Narrative context
-        st.markdown("#### Company context (required)")
-        full_block = st.text_area(
-            "Optional: paste full context here (one block, then auto-fill below)",
-            ss.get("full_context_block", ""),
-            help=(
-                "You can paste your whole narrative here once, then tick auto-split and "
-                "the tool will try to populate the individual questions for you."
-            ),
-            height=80,
-        )
-        auto_split = st.checkbox(
-            "Auto-split pasted context into fields on Save",
-            value=ss.get("auto_split_on_save", True),
-            help=(
-                "If ticked, the block above will be split across the questions below "
-                "when you click Save."
-            ),
+        # ---------- Simple questions block ----------
+        st.markdown("#### Simple overview (for client conversation)")
+
+        quick_use_where = st.multiselect(
+            "Where do you mainly want to use or sell it? *",
+            SIMPLE_USE_OPTIONS,
+            default=ss.get("quick_use_where", []),
         )
 
-        why_service = st.text_area(
-            "Why is the company seeking this service? *",
-            ss.get("why_service", ""),
-            height=90,
+        quick_countries = st.multiselect(
+            "Key countries or regions (optional)",
+            SIMPLE_COUNTRY_OPTIONS,
+            default=ss.get("quick_countries", []),
         )
-        stage = st.text_area(
+
+        quick_written_assets = st.multiselect(
+            "What do you already have written down or built?",
+            SIMPLE_WRITTEN_OPTIONS,
+            default=ss.get("quick_written_assets", []),
+        )
+
+        quick_other_assets = st.text_area(
+            "Anything else you have already created (optional)",
+            ss.get("quick_other_assets", ""),
+            height=60,
+        )
+
+        quick_who_involved = st.multiselect(
+            "Who else is involved? *",
+            SIMPLE_WHO_OPTIONS,
+            default=ss.get("quick_who_involved", []),
+        )
+
+        quick_agreements = st.multiselect(
+            "What (if anything) has already been agreed in writing?",
+            SIMPLE_AGREEMENT_OPTIONS,
+            default=ss.get("quick_agreements", []),
+        )
+
+        quick_sensitive = st.text_area(
+            "Anything sensitive or important about these relationships (optional)",
+            ss.get("quick_sensitive", ""),
+            height=60,
+        )
+
+        quick_earn = st.multiselect(
+            "How do you hope to earn from this? *",
+            SIMPLE_EARN_OPTIONS,
+            default=ss.get("quick_earn", []),
+        )
+
+        quick_share = st.multiselect(
+            "What are you happy to share or make easier to access?",
+            SIMPLE_SHARE_OPTIONS,
+            default=ss.get("quick_share", []),
+        )
+
+        st.markdown("---")
+
+        # ---------------- VM EXPERT CONTEXT (with dropdowns) ---------------
+        st.markdown("#### VM context & growth plans (expert view)")
+
+        # VMs hate the big block – make it optional and tucked away
+        with st.expander("Optional: paste long context for auto-fill (VM use only)", expanded=False):
+            full_block = st.text_area(
+                "Paste long context (optional – auto-split on Save if enabled)",
+                ss.get("full_context_block", ""),
+                height=80,
+            )
+            auto_split = st.checkbox(
+                "Auto-split this block into the fields below on Save",
+                value=ss.get("auto_split_on_save", False),
+            )
+
+        # Reasons for service: multiselect + small free text
+        why_service_choices = st.multiselect(
+            "Why is the company seeking this service? *",
+            WHY_SERVICE_OPTIONS,
+            default=ss.get("why_service_choices", []),
+        )
+        why_service_free = st.text_area(
+            "Add any extra detail (optional)",
+            ss.get("why_service_free", ""),
+            height=60,
+        )
+
+        # Stage: dropdown + extra detail
+        stage_choice = st.selectbox(
             "What stage are the products/services at? *",
-            ss.get("stage", ""),
-            height=90,
+            STAGE_OPTIONS,
+            index=STAGE_OPTIONS.index(ss.get("stage_choice", "Prototype / pilot"))
+            if ss.get("stage_choice", "Prototype / pilot") in STAGE_OPTIONS
+            else 1,
+        )
+        stage_free = st.text_area(
+            "Stage detail (optional)",
+            ss.get("stage_free", ""),
+            height=60,
         )
 
         c4, c5, c6 = st.columns(3)
         with c4:
-            plan_s = st.text_area(
-                "3a) Short-term plan (0–6m) *",
-                ss.get("plan_s", ""),
-                height=90,
+            plan_s_choice = st.selectbox(
+                "3a) Short-term focus (0–6m) *",
+                PLAN_OPTIONS,
+                index=PLAN_OPTIONS.index(ss.get("plan_s_choice", "Stabilise product and early users"))
+                if ss.get("plan_s_choice", "Stabilise product and early users") in PLAN_OPTIONS
+                else 0,
+            )
+            plan_s_free = st.text_area(
+                "Short-term notes (optional)",
+                ss.get("plan_s_free", ""),
+                height=60,
             )
         with c5:
-            plan_m = st.text_area(
-                "3b) Medium-term plan (6–24m) *",
-                ss.get("plan_m", ""),
-                height=90,
+            plan_m_choice = st.selectbox(
+                "3b) Medium-term focus (6–24m) *",
+                PLAN_OPTIONS,
+                index=PLAN_OPTIONS.index(ss.get("plan_m_choice", "Grow customers and partnerships"))
+                if ss.get("plan_m_choice", "Grow customers and partnerships") in PLAN_OPTIONS
+                else 4,
+            )
+            plan_m_free = st.text_area(
+                "Medium-term notes (optional)",
+                ss.get("plan_m_free", ""),
+                height=60,
             )
         with c6:
-            plan_l = st.text_area(
-                "3c) Long-term plan (24m+) *",
-                ss.get("plan_l", ""),
-                height=90,
+            plan_l_choice = st.selectbox(
+                "3c) Long-term focus (24m+) *",
+                PLAN_OPTIONS,
+                index=PLAN_OPTIONS.index(ss.get("plan_l_choice", "Scale and/or prepare for exit"))
+                if ss.get("plan_l_choice", "Scale and/or prepare for exit") in PLAN_OPTIONS
+                else 7,
+            )
+            plan_l_free = st.text_area(
+                "Long-term notes (optional)",
+                ss.get("plan_l_free", ""),
+                height=60,
             )
 
-        markets_why = st.text_area(
-            "4) Which markets fit and why? *",
-            ss.get("markets_why", ""),
-            height=90,
+        markets_focus = st.multiselect(
+            "4) Which markets fit best? *",
+            MARKETS_FOCUS_OPTIONS,
+            default=ss.get("markets_focus", []),
         )
-        sale_price_why = st.text_area(
-            "5) If selling tomorrow, target price & why? *",
-            ss.get("sale_price_why", ""),
-            height=90,
+        markets_free = st.text_area(
+            "Why these markets? (optional – add channels, segments, partners)",
+            ss.get("markets_free", ""),
+            height=70,
+        )
+
+        sale_reason_choice = st.selectbox(
+            "5) If selling tomorrow, what is the main logic? *",
+            SALE_REASON_OPTIONS,
+            index=SALE_REASON_OPTIONS.index(ss.get("sale_reason_choice", "Thinking about investor or trade sale in 3–5 years"))
+            if ss.get("sale_reason_choice", "Thinking about investor or trade sale in 3–5 years") in SALE_REASON_OPTIONS
+            else 0,
+        )
+        sale_reason_free = st.text_area(
+            "Sale price & reasoning (optional – narrative, not numbers)",
+            ss.get("sale_reason_free", ""),
+            height=70,
         )
 
         st.caption(
@@ -2141,31 +2394,67 @@ if page == "Company":
             key="uploader_main",
         )
 
-        # SINGLE submit button for the whole form
         submitted = st.form_submit_button("Save details")
 
         if submitted:
-            # Optional auto-split from the big narrative block
+            # Optional auto-split from long block (VMs can ignore this completely)
             if auto_split and full_block.strip():
                 derived = _auto_split_expert_block(full_block)
-                if not why_service.strip() and derived["why_service"]:
-                    why_service = derived["why_service"]
-                if not stage.strip() and derived["stage"]:
-                    stage = derived["stage"]
-                if not plan_s.strip() and derived["plan_s"]:
-                    plan_s = derived["plan_s"]
-                if not plan_m.strip() and derived["plan_m"]:
-                    plan_m = derived["plan_m"]
-                if not plan_l.strip() and derived["plan_l"]:
-                    plan_l = derived["plan_l"]
-                if not markets_why.strip() and derived["markets_why"]:
-                    markets_why = derived["markets_why"]
-                if not sale_price_why.strip() and derived["sale_price_why"]:
-                    sale_price_why = derived["sale_price_why"]
+                # Only auto-fill blanks
+                if not ss.get("why_service_free", "").strip() and derived["why_service"]:
+                    why_service_free = derived["why_service"]
+                if not ss.get("stage_free", "").strip() and derived["stage"]:
+                    stage_free = derived["stage"]
+                if not ss.get("plan_s_free", "").strip() and derived["plan_s"]:
+                    plan_s_free = derived["plan_s"]
+                if not ss.get("plan_m_free", "").strip() and derived["plan_m"]:
+                    plan_m_free = derived["plan_m"]
+                if not ss.get("plan_l_free", "").strip() and derived["plan_l"]:
+                    plan_l_free = derived["plan_l"]
+                if not ss.get("markets_free", "").strip() and derived["markets_why"]:
+                    markets_free = derived["markets_why"]
+                if not ss.get("sale_reason_free", "").strip() and derived["sale_price_why"]:
+                    sale_reason_free = derived["sale_price_why"]
+
+            # Compose the expert strings from the structured inputs
+            why_service = ""
+            if why_service_choices:
+                why_service = " | ".join(why_service_choices)
+            if why_service_free.strip():
+                why_service = (why_service + " — " if why_service else "") + why_service_free.strip()
+
+            stage = stage_choice
+            if stage_free.strip():
+                stage = f"{stage_choice}. {stage_free.strip()}"
+
+            plan_s = plan_s_choice
+            if plan_s_free.strip():
+                plan_s = f"{plan_s_choice}. {plan_s_free.strip()}"
+
+            plan_m = plan_m_choice
+            if plan_m_free.strip():
+                plan_m = f"{plan_m_choice}. {plan_m_free.strip()}"
+
+            plan_l = plan_l_choice
+            if plan_l_free.strip():
+                plan_l = f"{plan_l_choice}. {plan_l_free.strip()}"
+
+            markets_why = ""
+            if markets_focus:
+                markets_why = " | ".join(markets_focus)
+            if markets_free.strip():
+                markets_why = (markets_why + " — " if markets_why else "") + markets_free.strip()
+
+            sale_price_why = sale_reason_choice
+            if sale_reason_free.strip():
+                sale_price_why = f"{sale_reason_choice}. {sale_reason_free.strip()}"
 
             # Required field check
             missing = [
                 ("Company name", case_name),
+                ("Where use/sell", ", ".join(quick_use_where)),
+                ("Who else is involved", ", ".join(quick_who_involved)),
+                ("How hope to earn", ", ".join(quick_earn)),
                 ("Why service", why_service),
                 ("Stage", stage),
                 ("Short plan", plan_s),
@@ -2179,7 +2468,34 @@ if page == "Company":
             if missing_fields:
                 st.error("Please complete required fields: " + ", ".join(missing_fields))
             else:
-                # Persist in session
+                # Persist simple answers
+                ss["quick_use_where"] = quick_use_where
+                ss["quick_countries"] = quick_countries
+                ss["quick_written_assets"] = quick_written_assets
+                ss["quick_other_assets"] = quick_other_assets
+                ss["quick_who_involved"] = quick_who_involved
+                ss["quick_agreements"] = quick_agreements
+                ss["quick_sensitive"] = quick_sensitive
+                ss["quick_earn"] = quick_earn
+                ss["quick_share"] = quick_share
+
+                # Persist VM structured inputs
+                ss["why_service_choices"] = why_service_choices
+                ss["why_service_free"] = why_service_free
+                ss["stage_choice"] = stage_choice
+                ss["stage_free"] = stage_free
+                ss["plan_s_choice"] = plan_s_choice
+                ss["plan_m_choice"] = plan_m_choice
+                ss["plan_l_choice"] = plan_l_choice
+                ss["plan_s_free"] = plan_s_free
+                ss["plan_m_free"] = plan_m_free
+                ss["plan_l_free"] = plan_l_free
+                ss["markets_focus"] = markets_focus
+                ss["markets_free"] = markets_free
+                ss["sale_reason_choice"] = sale_reason_choice
+                ss["sale_reason_free"] = sale_reason_free
+
+                # Persist expert context (strings that the rest of the app already uses)
                 ss["case_name"] = case_name
                 ss["company_size"] = size
                 ss["sector"] = sector
@@ -2198,7 +2514,7 @@ if page == "Company":
                 # Save per-company context to disk so it’s there next time
                 save_company_context(case_name)
 
-                st.success("Saved company details, context and uploads for this case.")
+                st.success("Saved simple overview, expert context and uploads for this case.")
 
     # ---------------- POST-FORM INFO ----------------
     if ss.get("uploads"):
@@ -2282,7 +2598,6 @@ Before running analysis, create a 1–2 page note (IC_SystemView_<CompanyName>.t
 Upload this note **as evidence** together with the other files. It gives IC-LicAI and the ILP a richer starting point.
 """
         )
-        
 # 2) ANALYSE EVIDENCE (with radar / evidence quality)
 elif page == "Analyse Evidence":
     st.header("Evidence Dashboard & Analysis")
