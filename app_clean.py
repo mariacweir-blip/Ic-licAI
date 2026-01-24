@@ -941,7 +941,6 @@ ss.setdefault("lip_history", [])
 
 # Asset verification (overall notes)
 ss.setdefault("verification_notes", "")
-
 SIZES = [
     "Micro (1–10)",
     "Small (11–50)",
@@ -963,6 +962,21 @@ SECTORS = [
     "Mobility/Transport",
     "Energy",
     "Other",
+]
+
+# New: organisation / project type (covers pre-company & spin-outs)
+COMPANY_TYPES = [
+    "Registered company / SME",
+    "Large corporate / group",
+    "Pre-startup (idea or prototype)",
+    "Spin-out from an existing organisation",
+    "Innovation hub / lab",
+    "Research-based (university or institute)",
+    "Other",
+]
+
+# --------------- SIDEBAR BRANDING & NAV ---------------,
+    
 ]# --------------- SIDEBAR BRANDING & NAV ---------------
 with st.sidebar:
     # IMPAC3T-IP logo (top) – safe load, moderate width
