@@ -1115,33 +1115,25 @@ if page == "Company":
 
         st.markdown("#### Simple questions to set the scene (for licensing)")
 
-      st.markdown("#### Valuation & Exit Timing (for planning)")
+              st.markdown("#### Valuation & Exit Timing (for planning)")
 
-colv1, colv2 = st.columns(2)
+        colv1, colv2 = st.columns(2)
 
-import datetime
+        with colv1:
+            last_valuation_date = st.date_input(
+                "Date of last valuation (if any)",
+                value=datetime.date(2025, 12, 31),
+                key="last_valuation_date",
+                help="If a valuation has already been carried out, enter the date."
+            )
 
-st.markdown("#### Valuation & Exit Timing (for planning)")
-
-colv1, colv2 = st.columns(2)
-
-with colv1:
-    last_valuation_date = st.date_input(
-        "Date of last valuation (if any)",
-        value=datetime.date(2025, 12, 31),
-        key="last_valuation_date",
-        help="If a valuation has already been carried out, enter the date. Leave blank if not applicable."
-    )
-
-with colv2:
-    exit_date = st.date_input(
-        "Suggested or expected exit date",
-        value=datetime.date(2027, 1, 1),
-        key="exit_date",
-        help="When do you expect a sale, investment, or restructuring event to take place?"
-    )
-    )
-
+        with colv2:
+            exit_date = st.date_input(
+                "Suggested or expected exit date",
+                value=datetime.date(2027, 1, 1),
+                key="exit_date",
+                help="When do you expect a sale, investment, or restructuring event to take place?"
+            )
         # --- Q1: What are you working on? ---
         q1_type_options = [
             "New product",
