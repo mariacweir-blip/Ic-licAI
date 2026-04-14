@@ -1119,10 +1119,16 @@ if page == "Company":
 
 colv1, colv2 = st.columns(2)
 
+import datetime
+
+st.markdown("#### Valuation & Exit Timing (for planning)")
+
+colv1, colv2 = st.columns(2)
+
 with colv1:
     last_valuation_date = st.date_input(
         "Date of last valuation (if any)",
-        value=None,
+        value=datetime.date(2025, 12, 31),
         key="last_valuation_date",
         help="If a valuation has already been carried out, enter the date. Leave blank if not applicable."
     )
@@ -1130,9 +1136,10 @@ with colv1:
 with colv2:
     exit_date = st.date_input(
         "Suggested or expected exit date",
-        value=None,
+        value=datetime.date(2027, 1, 1),
         key="exit_date",
         help="When do you expect a sale, investment, or restructuring event to take place?"
+    )
     )
 
         # --- Q1: What are you working on? ---
