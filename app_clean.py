@@ -126,7 +126,32 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.caption("INTERNAL VERSION — FOR REAL EVIDENCE (PASS-PHRASE PROTECTED)")
+st.markdown(
+    '<div class="ic-title-bar">IC-LicAI Expert Console</div>',
+    unsafe_allow_html=True,
+)
+st.caption("INTERNAL VERSION — FOR REAL EVIDENCE (PASS-PHRASE PROTECTED)")
 
+st.markdown("## Belgian Tax Planning Note")
+
+st.info(
+    """
+    Belgium has announced a new capital gains tax framework for certain financial assets from 1 January 2026.
+    For demo purposes, this tool highlights the value of obtaining a robust, evidence-based valuation position
+    before a future transaction, while following a data-minimisation approach and not retaining client files.
+    """
+)
+
+st.markdown(
+    """
+    **Illustrative planning message**
+    
+    A stronger, evidence-based valuation record can help support a more defensible starting position when
+    assessing future share value movements, exits, restructurings, or shareholder tax exposure.
+
+    This note is informational only. It is not tax or legal advice.
+    """
+)
 # ------------------ AUTH GATE ------------------------
 def _auth_gate() -> None:
     if not REQUIRE_PASS:
