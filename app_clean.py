@@ -1870,7 +1870,42 @@ elif page == "Reports":
             "\nA licensing professional can combine these building blocks into a small number of realistic options that fit "
             "your situation (for example: one commercial licence, one pilot licence and one access-for-impact licence)."
         )
+       
+        b.append(
+            "\nA licensing professional can combine these building blocks into a small number of realistic options that fit "
+            "your situation (for example: one commercial licence, one pilot licence and one access-for-impact licence)."
+        )
 
+        # 6A. Belgian Tax Positioning (Indicative)
+        last_val = ss.get("last_valuation_date")
+        exit_dt = ss.get("exit_date")
+
+        if last_val and exit_dt:
+            b.append("\n6A. Belgian Tax Positioning (Indicative)\n")
+            b.append(f"- Last valuation date recorded: {last_val}")
+            b.append(f"- Expected exit timing: {exit_dt}")
+
+            b.append(
+                "Based on the announced Belgian capital gains tax changes from 2026, "
+                "there is a clear distinction between value established before 2026 and "
+                "value realised at exit."
+            )
+
+            b.append(
+                "This suggests a strategic focus on establishing a robust and supportable "
+                "valuation position before 2026, strengthening Structural Capital such as "
+                "contracts, datasets, software and methods, and using licensing activity "
+                "to demonstrate real market value ahead of any exit event."
+            )
+
+            b.append(
+                "Licensing can help evidence value through revenue or access agreements, "
+                "partner and co-creation arrangements, and multiple value streams that "
+                "support a higher and more defensible valuation position."
+            )
+
+        # 7. Immediate next steps
+        b.append("\n7. Immediate Next Steps\n")
         # 7. Immediate next steps
         b.append("\n7. Immediate Next Steps\n")
         b.append(
