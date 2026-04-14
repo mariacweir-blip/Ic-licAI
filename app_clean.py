@@ -1111,7 +1111,7 @@ if page == "Company":
             COMPANY_TYPES,
             index=company_type_index,
             help="Covers registered companies, pre-startups, spin-outs, innovation hubs, university-based projects and large corporates.",
-        ~)
+           )
 
         st.markdown("#### Simple questions to set the scene (for licensing)")
 
