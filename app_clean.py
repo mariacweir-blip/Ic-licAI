@@ -1115,7 +1115,7 @@ if page == "Company":
 
         st.markdown("#### Simple questions to set the scene (for licensing)")
 
-              st.markdown("#### Valuation & Exit Timing (for planning)")
+        st.markdown("#### Valuation & Exit Timing (for planning)")
 
         colv1, colv2 = st.columns(2)
 
