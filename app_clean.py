@@ -149,6 +149,25 @@ st.markdown(
     A stronger, evidence-based valuation record can help support a more defensible starting position when
     assessing future share value movements, exits, restructurings, or shareholder tax exposure.
 
+    In practice, this means:
+    - establishing a clear and supportable company value before 2026;
+    - strengthening documented Structural Capital (contracts, datasets, software, methods) that can be recognised and defended;
+    - using licensing strategies to generate value from these assets before any exit event.
+
+    Licensing can play a critical role by:
+    - demonstrating real market value through revenue or access agreements;
+    - creating multiple value streams (commercial, partner, and community access);
+    - supporting a higher and more defensible valuation position ahead of sale, investment, or restructuring.
+
+    This note is informational only. It is not tax or legal advice.
+    """
+)st.markdown(
+    """
+    **Illustrative planning message**
+    
+    A stronger, evidence-based valuation record can help support a more defensible starting position when
+    assessing future share value movements, exits, restructurings, or shareholder tax exposure.
+
     This note is informational only. It is not tax or legal advice.
     """
 )
