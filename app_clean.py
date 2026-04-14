@@ -1111,9 +1111,29 @@ if page == "Company":
             COMPANY_TYPES,
             index=company_type_index,
             help="Covers registered companies, pre-startups, spin-outs, innovation hubs, university-based projects and large corporates.",
-        )
+        ~)
 
         st.markdown("#### Simple questions to set the scene (for licensing)")
+
+      st.markdown("#### Valuation & Exit Timing (for planning)")
+
+colv1, colv2 = st.columns(2)
+
+with colv1:
+    last_valuation_date = st.date_input(
+        "Date of last valuation (if any)",
+        value=None,
+        key="last_valuation_date",
+        help="If a valuation has already been carried out, enter the date. Leave blank if not applicable."
+    )
+
+with colv2:
+    exit_date = st.date_input(
+        "Suggested or expected exit date",
+        value=None,
+        key="exit_date",
+        help="When do you expect a sale, investment, or restructuring event to take place?"
+    )
 
         # --- Q1: What are you working on? ---
         q1_type_options = [
