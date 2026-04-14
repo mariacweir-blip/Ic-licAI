@@ -161,7 +161,9 @@ st.markdown(
 
     This note is informational only. It is not tax or legal advice.
     """
-)st.markdown(
+)
+
+st.markdown(
     """
     **Illustrative planning message**
     
