@@ -1311,6 +1311,21 @@ if page == "Company":
         )
 
         st.caption("Uploads are held in session until analysis. Nothing is written to server until export.")
+        st.markdown("#### Suggested Evidence (for stronger results)")
+
+        st.info(
+            "For best results, upload a mix of the following:\n\n"
+            "• Contracts (customer, supplier, licence)\n"
+            "• IPR documentation (patents, trademarks, copyright, trade secrets)\n"
+            "• Business plan or pitch deck\n"
+            "• Pricing or revenue model\n"
+            "• Process documents or SOPs\n"
+            "• Software, platform, or technical descriptions\n"
+            "• Customer or pipeline data\n"
+            "• Partnership or joint venture agreements\n"
+            "• ESG or sustainability documentation\n\n"
+            "The more structured and documented your evidence, the stronger your valuation, licensing, and tax-positioning outputs will be."
+        )
         uploads = st.file_uploader(
             "Upload evidence (PDF, DOCX, TXT, CSV, XLSX, PPTX, images)",
             type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg", "webp"],
