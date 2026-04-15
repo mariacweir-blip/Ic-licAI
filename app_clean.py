@@ -1947,7 +1947,70 @@ elif page == "Reports":
         )
 
         return title, "\n".join(b)
+            def _compose_tax() -> Tuple[str, str]:
+        title = f"Belgian Tax Positioning Report — {case_name}"
 
+        sector = ss.get("sector", "Other")
+        size = ss.get("company_size", "Not specified")
+        last_val = ss.get("last_valuation_date")
+        exit_dt = ss.get("exit_date")
+
+        ic_map = ss.get("ic_map", {}) or {}
+        structural = ic_map.get("Structural", {"tick": False, "score": 0.0})
+
+        b: List[str] = []
+
+        b.append("1. Executive Summary\n")
+        b.append(
+            f"{case_name} operates in the {sector} sector and is currently positioned as a {size} organisation. "
+            "This report supports valuation anchoring for future exit and tax positioning purposes."
+        )
+
+        b.append("\n2. Valuation Anchor\n")
+        if last_val:
+            b.append(f"- Anchor valuation date: {last_val}")
+        else:
+            b.append("- Anchor valuation date: not set")
+
+        b.append("\n3. Structural Capital Position\n")
+        if structural.get("tick"):
+            b.append(
+                f"Structural Capital is present (score approx. {structural.get('score')}). "
+                "This supports a stronger and more defensible valuation position."
+            )
+        else:
+            b.append(
+                "Structural Capital is not yet fully evidenced. Strengthening contracts, IPR, data and systems is required."
+            )
+
+        b.append("\n4. Exit Position\n")
+        if exit_dt:
+            b.append(f"- Expected exit date: {exit_dt}")
+        else:
+            b.append("- Expected exit date: not set")
+
+        b.append("\n5. Tax Logic\n")
+        b.append(
+            "Value created after the anchor date may be taxed differently. "
+            "Establishing a defensible valuation early reduces exposure to future capital gains tax."
+        )
+
+        b.append("\n6. Role of Licensing\n")
+        b.append(
+            "Licensing agreements provide market validation of value and strengthen audit and tax defensibility."
+        )
+
+        b.append("\n7. Recommendations\n")
+        b.append("- Anchor valuation before exit")
+        b.append("- Strengthen Structural Capital")
+        b.append("- Use licensing to evidence value")
+        b.append("- Maintain audit-ready documentation")
+
+        b.append("\n8. Disclaimer\n")
+        b.append("This is an advisory report only and not tax advice.")
+
+        return title, "\n".join(b)
+        
     c1, c2 = st.columns(2)
     with c1:
         if st.button("Generate IC Report (DOCX/TXT)", key="btn_ic"):
