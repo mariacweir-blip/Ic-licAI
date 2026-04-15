@@ -2020,7 +2020,7 @@ with c1:
         data, fname, mime = _export_bytes(title, body)
         path, msg = _save_bytes(case_folder, fname, data)
         st.download_button(
-            "Download IC Report",
+            label="Download IC Report",
             data,
             file_name=fname,
             mime=mime,
@@ -2034,7 +2034,7 @@ with c2:
         data, fname, mime = _export_bytes(title, body)
         path, msg = _save_bytes(case_folder, fname, data)
         st.download_button(
-            "Download Licensing Report",
+            label="Download Licensing Report",
             data,
             file_name=fname,
             mime=mime,
@@ -2048,7 +2048,7 @@ with c3:
         data, fname, mime = _export_bytes(title, body)
         path, msg = _save_bytes(case_folder, fname, data)
         st.download_button(
-            "  "Download Tax Report",
+            label="Download Tax Report",
             data,
             file_name=fname,
             mime=mime,
