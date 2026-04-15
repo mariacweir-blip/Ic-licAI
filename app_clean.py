@@ -2012,51 +2012,55 @@ elif page == "Reports":
 
         return title, "\n".join(b)
         # --- REPORT BUTTONS (CLEAN BLOCK - SAFE) ---
-c1, c2, c3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
 
-with c1:
-    if st.button("Generate IC Report (DOCX/TXT)", key="btn_ic"):
-        title, body = _compose_ic()
-        data, fname, mime = _export_bytes(title, body)
-        path, msg = _save_bytes(case_folder, fname, data)
-        st.download_button(
-            label="Download IC Report",
-            data,
-            file_name=fname,
-            mime=mime,
-            key="dl_ic",
-        )
-        (st.success if path else st.warning)(msg)
+    with c1:
+        if st.button("Generate IC Report (DOCX/TXT)", key="btn_ic"):
+            title, body = _compose_ic()
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                label="Download IC Report",
+                data=data,
+                file_name=fname,
+                mime=mime,
+                key="dl_ic",
+            )
+            (st.success if path else st.warning)(msg)
 
-with c2:
-    if st.button("Generate Licensing Report (DOCX/TXT)", key="btn_lic"):
-        title, body = _compose_lic()
-        data, fname, mime = _export_bytes(title, body)
-        path, msg = _save_bytes(case_folder, fname, data)
-        st.download_button(
-            label="Download Licensing Report",
-            data,
-            file_name=fname,
-            mime=mime,
-            key="dl_lic",
-        )
-        (st.success if path else st.warning)(msg)
+    with c2:
+        if st.button("Generate Licensing Report (DOCX/TXT)", key="btn_lic"):
+            title, body = _compose_lic()
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                label="Download Licensing Report",
+                data=data,
+                file_name=fname,
+                mime=mime,
+                key="dl_lic",
+            )
+            (st.success if path else st.warning)(msg)
 
-with c3:
-    if st.button("Generate Belgian Tax Report (DOCX/TXT)", key="btn_tax"):
-        title, body = _compose_tax()
-        data, fname, mime = _export_bytes(title, body)
-        path, msg = _save_bytes(case_folder, fname, data)
-        st.download_button(
-            label="Download Tax Report",
-            data,
-            file_name=fname,
-            mime=mime,
-            key="dl_tax",
-            
-st.caption("Server save root: disabled (public mode)" if PUBLIC_MODE else ...)
-    st.caption("Server save root: disabled (public mode)" if PUBLIC_MODE else f"Server save root: {OUT_ROOT}")
+    with c3:
+        if st.button("Generate Belgian Tax Report (DOCX/TXT)", key="btn_tax"):
+            title, body = _compose_tax()
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                label="Download Tax Report",
+                data=data,
+                file_name=fname,
+                mime=mime,
+                key="dl_tax",
+            )
+            (st.success if path else st.warning)(msg)
 
+    st.caption(
+        "Server save root: disabled (public mode)"
+        if PUBLIC_MODE
+        else f"Server save root: {OUT_ROOT}"
+    )
 # 6) LICENSING TEMPLATES
 elif page == "Licensing Templates":
     st.header("Licensing Templates (editable DOCX/TXT)")
