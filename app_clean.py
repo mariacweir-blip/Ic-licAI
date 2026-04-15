@@ -1402,6 +1402,8 @@ if page == "Company":
                 ss["plan_m"] = q4_text
                 ss["plan_l"] = q5_text
                 ss["markets_why"] = q6_text
+                ss["last_valuation_date"] = last_valuation_date
+                ss["exit_date"] = exit_date
                 # sale_price_why stays as-is / unused in this simplified licensing view
 
                 # Clear legacy “full story” field (no longer used)
