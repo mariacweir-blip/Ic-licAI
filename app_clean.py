@@ -1682,39 +1682,54 @@ elif page == "Reports":
     st.header("Reports & Exports")
 
     case_name = ss.get("case_name", "Untitled Company")
-    case_folder = OUT_ROOT / _safe(case_name)
 
-    def _safe_float(v, default=0.0) -> float:
-        try:
-            return float(v)
-        except Exception:
-            return float(default)
+    def _compose_report(title):
+        text = f"""
+{title}
 
-    def _avg(nums: List[float]) -> float:
-        vals = [float(x) for x in nums if x is not None]
-        return sum(vals) / len(vals) if vals else 0.0
+Company: {case_name}
 
-    def _get_ten_scores() -> List[float]:
-        raw_ten = ss.get("ten_steps") or {}
-        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
-        return [_safe_float(s, 5.0) for s in scores]
+Market Positioning: Emerging
 
-    def _get_ten_narratives() -> List[str]:
-        raw_ten = ss.get("ten_steps") or {}
-        narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
-        return [str(n) for n in narrs]
+Market Comparison:
+This company is assessed based on internal evidence strength, asset clarity, and readiness for commercialisation.
 
-    def _ic_rows() -> Dict[str, Dict[str, Any]]:
-        return ss.get("ic_map", {}) or {}
+Action Plan:
+Top 3 Actions:
+1. Document key assets and contracts
+2. Define customer or partner pathway
+3. Prepare a licensing or pilot opportunity
 
-    def _market_positioning_signal() -> Tuple[str, str]:
-        ic_map = _ic_rows()
-        evidence_quality = int(ss.get("evidence_quality", 0))
-        ten_scores = _get_ten_scores()
-        ten_avg = _avg(ten_scores)
+Next Steps:
+• Build asset register
+• Strengthen documentation
+• Move towards licensing or investment readiness
 
-        structural = ic_map.get("Structural", {"tick": False, "score": 0.0})
-        customer = ic_map.get("
+Disclaimer:
+Advisory only. Not legal, tax or accounting advice.
+"""
+        return text
+
+    if st.button("Generate IC Report"):
+        st.download_button(
+            "Download IC Report",
+            _compose_report("IC REPORT"),
+            file_name="IC_Report.txt"
+        )
+
+    if st.button("Generate Licensing Report"):
+        st.download_button(
+            "Download Licensing Report",
+            _compose_report("LICENSING REPORT"),
+            file_name="Licensing_Report.txt"
+        )
+
+    if st.button("Generate Tax Report"):
+        st.download_button(
+            "Download Tax Report",
+            _compose_report("TAX REPORT"),
+            file_name="Tax_Report.txt"
+        )
  
 # 6) LICENSING TEMPLATES
 elif page == "Licensing Templates":
