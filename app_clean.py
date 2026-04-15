@@ -1694,7 +1694,23 @@ elif page == "Reports":
             positioning = "Structured"
         else:
             positioning = "Market-ready"
+            ic_map = ss.get("ic_map", {}) or {}
 
+        actions = []
+
+        if not ic_map.get("Structural", {}).get("tick"):
+            actions.append("Document and formalise Structural Capital (contracts, software, datasets, methods)")
+
+        if not ic_map.get("Customer", {}).get("tick"):
+            actions.append("Strengthen Customer Capital through real users, contracts or pipeline evidence")
+
+        if not ic_map.get("Strategic Alliance", {}).get("tick"):
+            actions.append("Establish Strategic Alliances with formal partners, collaborators or distribution channels")
+
+        while len(actions) < 3:
+            actions.append("Consolidate evidence into an audit-ready asset register")
+
+        actions = actions[:3]
         text = f"""
 {title}
 
@@ -1707,9 +1723,9 @@ This company is assessed based on internal evidence strength, asset clarity, and
 
 Action Plan:
 Top 3 Actions:
-1. Document key assets and contracts
-2. Define customer or partner pathway
-3. Prepare a licensing or pilot opportunity
+1. {actions[0]}
+2. {actions[1]}
+3. {actions[2]}
 
 Next Steps:
 • Build asset register
