@@ -1947,7 +1947,8 @@ elif page == "Reports":
         )
 
         return title, "\n".join(b)
-            def _compose_tax() -> Tuple[str, str]:
+      
+    def _compose_tax() -> Tuple[str, str]:
         title = f"Belgian Tax Positioning Report — {case_name}"
 
         sector = ss.get("sector", "Other")
