@@ -2039,7 +2039,21 @@ elif page == "Reports":
                 key="dl_lic",
             )
             (st.success if path else st.warning)(msg)
+   with c3:
+    if st.button("Generate Belgian Tax Report (DOCX/TXT)", key="btn_tax"):
+        title, body = _compose_tax()
+        data, fname, mime = _export_bytes(title, body)
+        path, msg = _save_bytes(case_folder, fname, data)
+        st.download_button(
+            "⬇️ Download Belgian Tax Report",
+            data,
+            file_name=fname,
+            mime=mime,
+            key="dl_tax",
+        )
+        (st.success if path else st.warning)(msg) 
 
+st.caption("Server save root: disabled (public mode)" if PUBLIC_MODE else ...)
     st.caption("Server save root: disabled (public mode)" if PUBLIC_MODE else f"Server save root: {OUT_ROOT}")
 
 # 6) LICENSING TEMPLATES
