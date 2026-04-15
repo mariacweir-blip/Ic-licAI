@@ -1047,6 +1047,7 @@ with st.sidebar:
             "Asset Verification",
             "LIP Console",
             "Reports",
+            "Market Growth",
             "Licensing Templates",
             "LIP Assistant",
             "Glossary",
