@@ -1680,13 +1680,134 @@ elif page == "LIP Console":
 # 5) REPORTS
 elif page == "Reports":
     st.header("Reports & Exports")
+
     case_name = ss.get("case_name", "Untitled Company")
     case_folder = OUT_ROOT / _safe(case_name)
 
+    def _market_comparison_section() -> str:
+        sector = ss.get("sector", "Other")
+        markets_why = (ss.get("markets_why", "") or "").strip()
+        stage = (ss.get("stage", "") or "").strip()
+        ic_map = ss.get("ic_map", {}) or {}
+
+        structural = ic_map.get("Structural", {"tick": False, "score": 0.0})
+        customer = ic_map.get("Customer", {"tick": False, "score": 0.0})
+        alliance = ic_map.get("Strategic Alliance", {"tick": False, "score": 0.0})
+
+        lines: List[str] = []
+        lines.append("Market Comparison\n")
+
+        lines.append(
+            f"{case_name} appears to be operating in the {sector} space. "
+            "At this stage, the tool does not claim to provide a formal external market benchmark "
+            "or valuation multiple. Instead, it provides a practical internal comparison of market "
+            "readiness based on evidence strength, documented assets, partner-readiness and "
+            "commercialisation signals."
+        )
+
+        if stage:
+            lines.append(f"• Current stage described by the company: {stage}")
+        else:
+            lines.append("• Current stage described by the company: not yet specified")
+
+        if markets_why:
+            lines.append(f"• Markets / beneficiaries described by the company: {markets_why}")
+        else:
+            lines.append("• Markets / beneficiaries described by the company: not yet specified")
+
+        lines.append(
+            "• Relative market-readiness view:\n"
+            f"  ○ Structural Capital: {'stronger' if structural.get('tick') else 'developing'} "
+            f"(score approx. {structural.get('score', 0.0)})\n"
+            f"  ○ Customer Capital: {'stronger' if customer.get('tick') else 'developing'} "
+            f"(score approx. {customer.get('score', 0.0)})\n"
+            f"  ○ Strategic Alliance Capital: {'stronger' if alliance.get('tick') else 'developing'} "
+            f"(score approx. {alliance.get('score', 0.0)})"
+        )
+
+        lines.append(
+            "Interpretation: organisations that are easier to license, invest in, or scale usually "
+            "have clearer documented assets, clearer routes to market, and clearer partner structures. "
+            "Where those elements are missing, the company may still have strong know-how, but it is "
+            "less easy to compare with market-facing peers because the value remains tacit rather than explicit."
+        )
+
+        lines.append(
+            "Practical benchmark logic used here:\n"
+            "• Better positioned than an early informal peer if key assets are documented and controllable.\n"
+            "• Closer to investor or licensing readiness if market routes and partner types are clearly defined.\n"
+            "• Still below best-in-class market comparability where formal contracts, pricing logic, usage evidence, "
+            "KPIs and audit-ready asset registers are absent."
+        )
+
+        return "\n".join(lines)
+
+    def _action_plan_section() -> str:
+        raw_ten = ss.get("ten_steps") or {}
+        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
+        step_pairs = list(zip(TEN_STEPS, scores))
+        weaker = [step for step, score in step_pairs if score <= 5]
+        stronger = [step for step, score in step_pairs if score >= 7]
+
+        actions: List[str] = []
+        actions.append("Action Plan\n")
+
+        actions.append("Immediate priorities (0–30 days)")
+        actions.append(
+            "• Create or update a single IA / IC register covering software, methods, data, contracts, "
+            "brands, licences, SOPs, indices, templates and partnership artefacts."
+        )
+        actions.append(
+            "• Confirm ownership, location, version control and commercial relevance for each asset."
+        )
+        actions.append(
+            "• Identify the first 3–5 priority partner or customer targets and the specific value proposition for each."
+        )
+
+        actions.append("\nNear-term priorities (30–90 days)")
+        actions.append(
+            "• Strengthen weaker Ten-Steps areas through targeted evidence gathering, especially around missing "
+            "documentation, governance, monitoring and reporting."
+        )
+        actions.append(
+            "• Convert important tacit know-how into explicit documents such as SOPs, methods, playbooks, datasets, "
+            "training logs or technical specifications."
+        )
+        actions.append(
+            "• Prepare at least one licensing-ready or audit-ready package for the strongest asset group."
+        )
+
+        actions.append("\nCommercialisation priorities (90–180 days)")
+        actions.append(
+            "• Test one live market route such as a pilot licence, paid access agreement, collaboration agreement "
+            "or strategic alliance framework."
+        )
+        actions.append(
+            "• Introduce simple KPI and governance reporting to support Monitor, Value and Report."
+        )
+        actions.append(
+            "• Use the strengthened evidence base to support valuation, licensing negotiations, investor conversations "
+            "and tax-positioning logic where relevant."
+        )
+
+        if weaker:
+            actions.append(
+                "\nCurrent lower-readiness Ten-Steps to prioritise:\n"
+                + "\n".join([f"• {step}" for step in weaker])
+            )
+
+        if stronger:
+            actions.append(
+                "\nCurrent stronger Ten-Steps to leverage:\n"
+                + "\n".join([f"• {step}" for step in stronger])
+            )
+
+        return "\n".join(actions)
+
     def _compose_ic() -> Tuple[str, str]:
         title = f"IC Report — {case_name}"
-        ic_map = ss.get("ic_map", {})
 
+        ic_map = ss.get("ic_map", {}) or {}
         raw_ten = ss.get("ten_steps") or {}
         scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
         narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
@@ -1694,7 +1815,9 @@ elif page == "Reports":
 
         b: List[str] = []
         interpreted = ss.get("combined_text", "").strip() or ss.get("narrative", "(no summary)")
+
         b.append(f"Executive Summary\n\n{interpreted}\n")
+
         if not PUBLIC_MODE:
             b.append(f"Evidence Quality: ~{ss.get('evidence_quality', 0)}% coverage (heuristic)\n")
 
@@ -1702,11 +1825,14 @@ elif page == "Reports":
         for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
             row = ic_map.get(leaf, {"tick": False, "narrative": "", "score": 0.0})
             tail = "" if PUBLIC_MODE else f" (score: {row.get('score', 0.0)})"
-            b.append(f"- {leaf}: {'✓' if row.get('tick') else '•'} — {row.get('narrative', '')}{tail}")
+            b.append(f"• {leaf}: {'✓' if row.get('tick') else '○'} — {row.get('narrative', '')}{tail}")
 
         b.append("\nTen-Steps Readiness")
-        for s, n in zip(TEN_STEPS, ten["narratives"]):
-            b.append(f"- {n}")
+        for n in ten["narratives"]:
+            b.append(f"• {n}")
+
+        b.append("\n" + _market_comparison_section())
+        b.append("\n" + _action_plan_section())
 
         b.append("\nNotes")
         b.append(
@@ -1714,31 +1840,26 @@ elif page == "Reports":
             if PUBLIC_MODE
             else "CONFIDENTIAL. Advisory-first; company and LIP review required for final scoring, licensing design and accounting treatment."
         )
+
         return title, "\n".join(b)
 
     def _compose_lic() -> Tuple[str, str]:
-        """
-        Licensing-focused report, using the 6 SME-style questions plus IC map.
-        Keeps language simple so it can be shared with SMEs / spin-outs if needed.
-        """
         title = f"Licensing Readiness Report — {case_name}"
 
         size = ss.get("company_size", "Not specified")
         sector = ss.get("sector", "Other")
 
-        # Pull the six company-page answers (re-using existing keys)
-        why_service = (ss.get("why_service", "") or "").strip()        # "What are you hoping this help will achieve?"
-        stage = (ss.get("stage", "") or "").strip()                    # "Where is the idea / product today?"
-        plan_s = (ss.get("plan_s", "") or "").strip()                  # Short-term focus
-        plan_m = (ss.get("plan_m", "") or "").strip()                  # Medium-term focus
-        plan_l = (ss.get("plan_l", "") or "").strip()                  # Long-term focus
-        markets_why = (ss.get("markets_why", "") or "").strip()        # Who would benefit / what markets
-        sale_price_why = (ss.get("sale_price_why", "") or "").strip()  # What would feel “fair” if a partner asked tomorrow
+        why_service = (ss.get("why_service", "") or "").strip()
+        stage = (ss.get("stage", "") or "").strip()
+        plan_s = (ss.get("plan_s", "") or "").strip()
+        plan_m = (ss.get("plan_m", "") or "").strip()
+        plan_l = (ss.get("plan_l", "") or "").strip()
+        markets_why = (ss.get("markets_why", "") or "").strip()
+        sale_price_why = (ss.get("sale_price_why", "") or "").strip()
 
         ic_map = ss.get("ic_map", {}) or {}
         evidence_quality = int(ss.get("evidence_quality", 0))
 
-        # Simple flags for narrative
         structural_row = ic_map.get("Structural", {"tick": False, "score": 0.0})
         structural_ready = bool(structural_row.get("tick"))
         structural_score = float(structural_row.get("score", 0.0))
@@ -1751,203 +1872,88 @@ elif page == "Reports":
 
         b: List[str] = []
 
-        # 1. Overview & purpose
-        b.append(f"1. Overview & Purpose\n")
+        b.append("1. Executive Summary\n")
         b.append(
-            f"{case_name} is described as a {size} organisation operating in {sector}. "
-            "This report summarises how ready the company (or project/spin-out) is to license or share its know-how, "
-            "technology, data or content, and what practical next steps are recommended."
+            f"{case_name} is described in this tool as a {size} organisation in the {sector} sector. "
+            "This report translates the company’s own answers and the IC analysis into practical licensing-readiness language."
         )
+
+        if not PUBLIC_MODE:
+            b.append(f"\nEvidence quality (heuristic): ~{evidence_quality}%")
+
+        b.append("\n2. What the Company Wants This Help To Achieve\n")
         if why_service:
-            b.append(f"\nMain reason for using this service (in your own words):\n- {why_service}\n")
+            b.append(f"• {why_service}")
         else:
-            b.append("\nMain reason for using this service has not been fully described yet.\n")
+            b.append("• The desired outcome has not yet been clearly written down.")
 
-        # 2. Goals for licensing / partnering
-        b.append("\n2. Goals for Licensing or Partnering\n")
-        if any([plan_s, plan_m, plan_l]):
-            if plan_s:
-                b.append(f"- Next 0–6 months: {plan_s}")
-            if plan_m:
-                b.append(f"- Next 6–24 months: {plan_m}")
-            if plan_l:
-                b.append(f"- Beyond 24 months: {plan_l}")
-        else:
-            b.append(
-                "- Short, medium and longer-term goals have not yet been set in detail. "
-                "A short planning session is recommended to agree what ‘good’ looks like for the next 2–3 years."
-            )
-
-        # 3. Asset & readiness snapshot
-        b.append("\n3. What is Being Licensed & How Ready It Is\n")
+        b.append("\n3. Current Position\n")
         if stage:
-            b.append(f"- Current stage (how you described it): {stage}")
+            b.append(f"• Current stage: {stage}")
         else:
-            b.append("- Current stage of the idea / product has not yet been clearly described.")
+            b.append("• Current stage: not yet specified")
 
-        if structural_ready:
-            b.append(
-                f"\nBased on the uploaded documents, there are signs of **codified assets** "
-                f"(contracts, methods, processes, datasets, training, software, etc.) "
-                f"that are suitable for licensing. Structural Capital scored around {structural_score:.1f} in the IC map, "
-                "which suggests there is something real to license — not just an idea."
-            )
-        else:
-            b.append(
-                "\nThe IC analysis suggests that codified assets (contracts, processes, datasets, content, software) "
-                "are not yet clearly evidenced. Before licensing, it will help to gather and tidy the key documents "
-                "into a simple register (what exists, who owns it, and where it is stored)."
-            )
+        b.append(
+            f"• Structural Capital readiness: {'stronger' if structural_ready else 'developing'} "
+            f"(score approx. {structural_score})"
+        )
+        b.append(
+            f"• Customer Capital readiness: {'stronger' if customer_ready else 'developing'}"
+        )
+        b.append(
+            f"• Strategic Alliance readiness: {'stronger' if alliance_ready else 'developing'}"
+        )
 
-        if customer_ready or alliance_ready:
-            bullets = []
-            if customer_ready:
-                bullets.append("customer relationships or repeat business")
-            if alliance_ready:
-                bullets.append("partners, universities, suppliers or other strategic allies")
-            b.append(
-                "\nThere is also evidence of value sitting in "
-                + " and ".join(bullets)
-                + ", which can support partnership-based licensing and pilot deals."
-            )
+        b.append("\n4. Planned Direction\n")
+        if plan_s:
+            b.append(f"• Short term: {plan_s}")
+        if plan_m:
+            b.append(f"• Medium term: {plan_m}")
+        if plan_l:
+            b.append(f"• Long term: {plan_l}")
+        if not any([plan_s, plan_m, plan_l]):
+            b.append("• No staged development plan has yet been recorded.")
 
-        if evidence_quality:
-            b.append(
-                f"\nEvidence quality from the file mix is estimated at about {evidence_quality}% "
-                "(heuristic). More structured documents will increase confidence for investors, partners "
-                "and auditors."
-            )
-
-        # 4. Who could benefit (markets & partner types)
-        b.append("\n4. Who Could Benefit (Markets & Partner Types)\n")
+        b.append("\n5. Who Could Benefit (Markets & Partner Types)\n")
         if markets_why:
-            b.append(
-                "In your own words, you see the best fit with:\n"
-                f"- {markets_why}\n"
-            )
-            b.append(
-                "Licensing professionals can translate this into a short list of **partner types** "
-                "(for example: pilot customers, distributors, technology partners, universities, NGOs or government programmes)."
-            )
+            b.append(f"• {markets_why}")
         else:
-            b.append(
-                "- Target markets and partner types are not yet described. A quick exercise to map 3–5 ideal partner profiles "
-                "will make licensing discussions much easier."
-            )
+            b.append("• Target markets and beneficiary groups have not yet been clearly described.")
 
-        # 5. Pricing & “fair” outcome
-        b.append("\n5. What Would Feel ‘Fair’ if a Partner Asked Tomorrow?\n")
+        b.append(
+            "Likely partner families include pilot customers, distributors, technology partners, universities, NGOs, "
+            "public bodies, delivery partners and ecosystem collaborators, depending on the asset type."
+        )
+
+        b.append("\n6. What Would Feel Fair Commercially?\n")
         if sale_price_why:
-            b.append(
-                "You described a fair outcome as:\n"
-                f"- {sale_price_why}\n"
-            )
-            b.append(
-                "This is a good starting point. A licensing professional can now work backwards from this to design:\n"
-                "- simple, transparent fee or royalty structures; and\n"
-                "- options for pilots or community/low-fee access where that makes sense."
-            )
+            b.append(f"• {sale_price_why}")
         else:
-            b.append(
-                "- A clear view of what would feel ‘fair’ has not been written down yet. "
-                "A short internal discussion (what minimum would we accept, what would feel like a win, "
-                "and what are we *not* willing to do) will speed up negotiations later."
-            )
-
-        # 6. Suggested licensing directions (plain language)
-        b.append("\n6. Suggested Licensing Directions (Plain Language)\n")
-        b.append(
-            "Based on the information so far, the following **families of licensing options** are likely to be relevant. "
-            "Exact terms will depend on the asset, partners and country-specific law."
-        )
-        b.append(
-            "- **Paid usage licences** – a partner pays a fee or royalty to use your software, content, method, data or brand "
-            "under agreed conditions (field of use, territory, time period)."
-        )
-        b.append(
-            "- **Pilot or project licences** – a short, time-bound licence to test the asset in a real setting, usually with a "
-            "limited number of users or sites. Useful for proofs-of-concept and early adoption."
-        )
-        b.append(
-            "- **Co-creation / joint development** – you and one or more partners build something together. Ownership of the "
-            "new results is shared and clearly written down (who owns what, how revenue or savings are shared)."
-        )
-        b.append(
-            "- **Access or community licences** – low-fee or free access for specific groups (for example schools, farmers, "
-            "public bodies or communities) where the main value is impact, data, learning or reputation."
-        )
-        b.append(
-            "- **Data / algorithm access** – controlled use of your datasets, indices, risk scores or algorithms, with clear rules "
-            "on how they are used, who can see what, and how results are reported back."
-        )
+            b.append("• A fair-value position for licensing has not yet been written down.")
 
         b.append(
-            "\nA licensing professional can combine these building blocks into a small number of realistic options that fit "
-            "your situation (for example: one commercial licence, one pilot licence and one access-for-impact licence)."
-        )
-       
-        b.append(
-            "\nA licensing professional can combine these building blocks into a small number of realistic options that fit "
-            "your situation (for example: one commercial licence, one pilot licence and one access-for-impact licence)."
+            "This can later be translated into entry fees, royalty logic, pilot pricing, access-for-impact terms "
+            "or co-creation value-sharing arrangements."
         )
 
-        # 6A. Belgian Tax Positioning (Indicative)
-        last_val = ss.get("last_valuation_date")
-        exit_dt = ss.get("exit_date")
+        b.append("\n7. Suggested Licensing Directions\n")
+        b.append("• Paid usage licences")
+        b.append("• Pilot or project licences")
+        b.append("• Co-creation / joint development arrangements")
+        b.append("• Access or community licences")
+        b.append("• Data / algorithm access arrangements")
 
-        if last_val and exit_dt:
-            b.append("\n6A. Belgian Tax Positioning (Indicative)\n")
-            b.append(f"- Last valuation date recorded: {last_val}")
-            b.append(f"- Expected exit timing: {exit_dt}")
+        b.append("\n" + _market_comparison_section())
+        b.append("\n" + _action_plan_section())
 
-            b.append(
-                "Based on the announced Belgian capital gains tax changes from 2026, "
-                "there is a clear distinction between value established before 2026 and "
-                "value realised at exit."
-            )
-
-            b.append(
-                "This suggests a strategic focus on establishing a robust and supportable "
-                "valuation position before 2026, strengthening Structural Capital such as "
-                "contracts, datasets, software and methods, and using licensing activity "
-                "to demonstrate real market value ahead of any exit event."
-            )
-
-            b.append(
-                "Licensing can help evidence value through revenue or access agreements, "
-                "partner and co-creation arrangements, and multiple value streams that "
-                "support a higher and more defensible valuation position."
-            )
-
-        # 7. Immediate next steps
-        b.append("\n7. Immediate Next Steps\n")
-        # 7. Immediate next steps
-        b.append("\n7. Immediate Next Steps\n")
-        b.append(
-            "- Create a simple **asset list**: what you want to license (software, content, training, methods, datasets, indices, "
-            "brand elements, etc.), where each item is stored and who currently owns/controls it."
-        )
-        b.append(
-            "- Identify 3–5 **ideal partner types** and 3–5 concrete organisations to approach first."
-        )
-        b.append(
-            "- Decide your **red lines and must-haves**: what you will not give away, how you want your work to be credited, and "
-            "which partners or sectors are off-limits."
-        )
-        b.append(
-            "- Work with a Licensing & Intangibles Partner (LIP) and legal adviser to turn this report into draft licence terms "
-            "and a small set of template agreements."
-        )
-
-        # 8. Status & disclaimer
         b.append("\n8. Status & Disclaimer\n")
         b.append(
-            "This report is an advisory draft only. It does **not** replace legal advice. All licensing decisions and legal "
-            "documents must be reviewed and approved by qualified legal counsel in the relevant country or countries."
+            "This report is an advisory draft only. It does not replace legal advice. "
+            "All licensing decisions and legal documents must be reviewed in the relevant jurisdiction."
         )
 
         return title, "\n".join(b)
-      
+
     def _compose_tax() -> Tuple[str, str]:
         title = f"Belgian Tax Positioning Report — {case_name}"
 
@@ -1955,7 +1961,6 @@ elif page == "Reports":
         size = ss.get("company_size", "Not specified")
         last_val = ss.get("last_valuation_date")
         exit_dt = ss.get("exit_date")
-
         ic_map = ss.get("ic_map", {}) or {}
         structural = ic_map.get("Structural", {"tick": False, "score": 0.0})
 
@@ -1964,14 +1969,11 @@ elif page == "Reports":
         b.append("1. Executive Summary\n")
         b.append(
             f"{case_name} operates in the {sector} sector and is currently positioned as a {size} organisation. "
-            "This report supports valuation anchoring for future exit and tax positioning purposes."
+            "This report supports valuation anchoring for future exit and tax-positioning purposes."
         )
 
         b.append("\n2. Valuation Anchor\n")
-        if last_val:
-            b.append(f"- Anchor valuation date: {last_val}")
-        else:
-            b.append("- Anchor valuation date: not set")
+        b.append(f"• Anchor valuation date: {last_val}" if last_val else "• Anchor valuation date: not set")
 
         b.append("\n3. Structural Capital Position\n")
         if structural.get("tick"):
@@ -1985,10 +1987,7 @@ elif page == "Reports":
             )
 
         b.append("\n4. Exit Position\n")
-        if exit_dt:
-            b.append(f"- Expected exit date: {exit_dt}")
-        else:
-            b.append("- Expected exit date: not set")
+        b.append(f"• Expected exit date: {exit_dt}" if exit_dt else "• Expected exit date: not set")
 
         b.append("\n5. Tax Logic\n")
         b.append(
@@ -2001,17 +2000,20 @@ elif page == "Reports":
             "Licensing agreements provide market validation of value and strengthen audit and tax defensibility."
         )
 
+        b.append("\n" + _market_comparison_section())
+        b.append("\n" + _action_plan_section())
+
         b.append("\n7. Recommendations\n")
-        b.append("- Anchor valuation before exit")
-        b.append("- Strengthen Structural Capital")
-        b.append("- Use licensing to evidence value")
-        b.append("- Maintain audit-ready documentation")
+        b.append("• Anchor valuation before exit")
+        b.append("• Strengthen Structural Capital")
+        b.append("• Use licensing to evidence value")
+        b.append("• Maintain audit-ready documentation")
 
         b.append("\n8. Disclaimer\n")
         b.append("This is an advisory report only and not tax advice.")
 
         return title, "\n".join(b)
-        # --- REPORT BUTTONS (CLEAN BLOCK - SAFE) ---
+
     c1, c2, c3 = st.columns(3)
 
     with c1:
