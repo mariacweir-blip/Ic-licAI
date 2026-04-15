@@ -1683,13 +1683,24 @@ elif page == "Reports":
 
     case_name = ss.get("case_name", "Untitled Company")
 
-    def _compose_report(title):
+        def _compose_report(title):
+        evidence = int(ss.get("evidence_quality", 0))
+
+        if evidence < 30:
+            positioning = "Early-stage"
+        elif evidence < 60:
+            positioning = "Emerging"
+        elif evidence < 80:
+            positioning = "Structured"
+        else:
+            positioning = "Market-ready"
+
         text = f"""
 {title}
 
 Company: {case_name}
 
-Market Positioning: Emerging
+Market Positioning: {positioning}
 
 Market Comparison:
 This company is assessed based on internal evidence strength, asset clarity, and readiness for commercialisation.
@@ -1709,7 +1720,6 @@ Disclaimer:
 Advisory only. Not legal, tax or accounting advice.
 """
         return text
-
     if st.button("Generate IC Report"):
         st.download_button(
             "Download IC Report",
