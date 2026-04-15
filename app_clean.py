@@ -1683,7 +1683,7 @@ elif page == "Reports":
 
     case_name = ss.get("case_name", "Untitled Company")
 
-        def _compose_report(title):
+    def _compose_report(title):
         evidence = int(ss.get("evidence_quality", 0))
 
         if evidence < 30:
