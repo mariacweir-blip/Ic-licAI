@@ -1681,82 +1681,348 @@ elif page == "LIP Console":
 # 5) REPORTS
 elif page == "Reports":
     st.header("Reports & Exports")
-
     case_name = ss.get("case_name", "Untitled Company")
+    case_folder = OUT_ROOT / _safe(case_name)
 
-    def _compose_report(title):
-        evidence = int(ss.get("evidence_quality", 0))
+    def _compose_ic() -> Tuple[str, str]:
+        title = f"IC Report — {case_name}"
+        ic_map = ss.get("ic_map", {}) or {}
 
-        if evidence < 30:
-            positioning = "Early-stage"
-        elif evidence < 60:
-            positioning = "Emerging"
-        elif evidence < 80:
-            positioning = "Structured"
+        raw_ten = ss.get("ten_steps") or {}
+        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
+        narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
+        ten = {"scores": scores, "narratives": narrs}
+
+        interpreted = ss.get("combined_text", "").strip() or ss.get("narrative", "(no summary)")
+        evidence_quality = int(ss.get("evidence_quality", 0))
+        sector = ss.get("sector", "Other")
+        size = ss.get("company_size", "Not specified")
+
+        strengths = [leaf for leaf, row in ic_map.items() if row.get("tick")]
+        strength_text = ", ".join(strengths) if strengths else "selected IC dimensions"
+
+        b: List[str] = []
+        b.append("Executive Summary\n")
+        b.append(
+            f"{case_name} is a {size} in {sector}. "
+            f"Evidence suggests relative strength in {strength_text}. "
+            "This report summarises the company’s Intellectual Capital position using the 4-Leaf Model and the Ten-Steps framework."
+        )
+        b.append(
+            f"\nEvidence Quality: ~{evidence_quality}% coverage (heuristic).\n"
+        )
+
+        b.append("Four-Leaf Analysis")
+        for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
+            row = ic_map.get(leaf, {"tick": False, "narrative": f"No assessment yet for {leaf}.", "score": 0.0})
+            tick = "✓" if row.get("tick") else "•"
+            score = row.get("score", 0.0)
+            tail = "" if PUBLIC_MODE else f" (score: {score})"
+            b.append(f"- {leaf}: {tick} — {row.get('narrative', '')}{tail}")
+
+        b.append("\nTen-Steps Readiness")
+        for step, score, nar in zip(TEN_STEPS, ten["scores"], ten["narratives"]):
+            b.append(f"- {step}: readiness ≈ {score}/10. {nar}")
+
+        b.append("\nMarket Comparison")
+        b.append(
+            "This company is compared qualitatively against peers on the basis of evidence strength, "
+            "Structural Capital maturity, customer traction, partnership depth, licensing readiness, and ability "
+            "to convert tacit value into explicit, auditable assets."
+        )
+        if ic_map.get("Structural", {}).get("tick"):
+            b.append(
+                "- Relative position: stronger than a purely concept-stage company because explicit artefacts are already visible."
+            )
         else:
-            positioning = "Market-ready"
-            ic_map = ss.get("ic_map", {}) or {}
+            b.append(
+                "- Relative position: still closer to an early-stage business because explicit Structural Capital remains under-documented."
+            )
 
-        actions = []
+        b.append("\nAction Plan")
+        b.append("Top 3 Actions:")
+        b.append("1. Consolidate explicit artefacts into an audit-ready IA / IC register")
+        b.append("2. Strengthen weaker Ten-Steps areas through documented governance, monitoring, and reporting")
+        b.append("3. Convert more tacit knowledge into codified Structural Capital suitable for licensing and valuation")
 
-        if not ic_map.get("Structural", {}).get("tick"):
-            actions.append("Document and formalise Structural Capital (contracts, software, datasets, methods)")
+        b.append("\nNext Steps:")
+        b.append("• Build or refresh the asset register")
+        b.append("• Strengthen documentation, controls, and governance evidence")
+        b.append("• Move towards licensing, investor readiness, or valuation uplift using explicit artefacts")
 
-        if not ic_map.get("Customer", {}).get("tick"):
-            actions.append("Strengthen Customer Capital through real users, contracts or pipeline evidence")
-
-        if not ic_map.get("Strategic Alliance", {}).get("tick"):
-            actions.append("Establish Strategic Alliances with formal partners, collaborators or distribution channels")
-
-        while len(actions) < 3:
-            actions.append("Consolidate evidence into an audit-ready asset register")
-
-        actions = actions[:3]
-        text = f"""
-{title}
-
-Company: {case_name}
-
-Market Positioning: {positioning}
-
-Market Comparison:
-This company is assessed based on internal evidence strength, asset clarity, and readiness for commercialisation.
-
-Action Plan:
-Top 3 Actions:
-1. {actions[0]}
-2. {actions[1]}
-3. {actions[2]}
-
-Next Steps:
-• Build asset register
-• Strengthen documentation
-• Move towards licensing or investment readiness
-
-Disclaimer:
-Advisory only. Not legal, tax or accounting advice.
-"""
-        return text
-    if st.button("Generate IC Report"):
-        st.download_button(
-            "Download IC Report",
-            _compose_report("IC REPORT"),
-            file_name="IC_Report.txt"
+        b.append("\nDisclaimer")
+        b.append(
+            "Advisory only. Not legal, tax, or accounting advice."
+            if PUBLIC_MODE
+            else "CONFIDENTIAL. Advisory-first; company and LIP review required for final scoring, licensing design, valuation treatment, and any accounting or tax use."
         )
 
-    if st.button("Generate Licensing Report"):
-        st.download_button(
-            "Download Licensing Report",
-            _compose_report("LICENSING REPORT"),
-            file_name="Licensing_Report.txt"
+        return title, "\n".join(b)
+
+    def _compose_lic() -> Tuple[str, str]:
+        title = f"Licensing Readiness Report — {case_name}"
+
+        size = ss.get("company_size", "Not specified")
+        sector = ss.get("sector", "Other")
+
+        why_service = (ss.get("why_service", "") or "").strip()
+        stage = (ss.get("stage", "") or "").strip()
+        plan_s = (ss.get("plan_s", "") or "").strip()
+        plan_m = (ss.get("plan_m", "") or "").strip()
+        plan_l = (ss.get("plan_l", "") or "").strip()
+        markets_why = (ss.get("markets_why", "") or "").strip()
+        sale_price_why = (ss.get("sale_price_why", "") or "").strip()
+
+        ic_map = ss.get("ic_map", {}) or {}
+        evidence_quality = int(ss.get("evidence_quality", 0))
+
+        structural_row = ic_map.get("Structural", {"tick": False, "score": 0.0})
+        structural_ready = bool(structural_row.get("tick"))
+        structural_score = float(structural_row.get("score", 0.0))
+
+        customer_row = ic_map.get("Customer", {"tick": False, "score": 0.0})
+        customer_ready = bool(customer_row.get("tick"))
+
+        alliance_row = ic_map.get("Strategic Alliance", {"tick": False, "score": 0.0})
+        alliance_ready = bool(alliance_row.get("tick"))
+
+        b: List[str] = []
+
+        b.append("1. Executive Summary\n")
+        b.append(
+            f"{case_name} is described as a {size} organisation operating in {sector}. "
+            "This report summarises how ready the company is to license or share its know-how, technology, data, content, or methods, "
+            "and what practical next steps are recommended."
+        )
+        if why_service:
+            b.append(f"\nMain reason for using this service:\n- {why_service}")
+
+        b.append("\n2. Goals for Licensing or Partnering")
+        if any([plan_s, plan_m, plan_l]):
+            if plan_s:
+                b.append(f"- Next 0–6 months: {plan_s}")
+            if plan_m:
+                b.append(f"- Next 6–24 months: {plan_m}")
+            if plan_l:
+                b.append(f"- Beyond 24 months: {plan_l}")
+        else:
+            b.append("- Goals are not yet fully defined; a short planning session is recommended.")
+
+        b.append("\n3. Asset and Readiness Snapshot")
+        if stage:
+            b.append(f"- Current stage: {stage}")
+        else:
+            b.append("- Current stage has not yet been clearly described.")
+
+        if structural_ready:
+            b.append(
+                f"- Structural Capital appears visible and documented (score approx. {structural_score:.1f}), "
+                "which suggests there is something real to license — not just an idea."
+            )
+        else:
+            b.append(
+                "- Structural Capital is not yet clearly evidenced. Before licensing, key artefacts should be gathered into a simple register."
+            )
+
+        if customer_ready or alliance_ready:
+            bullets = []
+            if customer_ready:
+                bullets.append("customer relationships or repeat business")
+            if alliance_ready:
+                bullets.append("partners, universities, suppliers, or strategic allies")
+            b.append("- Additional value is visible in " + " and ".join(bullets) + ".")
+
+        if evidence_quality:
+            b.append(f"- Evidence quality from the file mix is estimated at about {evidence_quality}% (heuristic).")
+
+        b.append("\n4. Who Could Benefit")
+        if markets_why:
+            b.append(f"- Best fit markets / users: {markets_why}")
+        else:
+            b.append("- Target markets and partner types are not yet clearly described.")
+
+        b.append("\n5. Fair Outcome and Commercial Logic")
+        if sale_price_why:
+            b.append(f"- Management view of a fair outcome: {sale_price_why}")
+        else:
+            b.append("- A clear statement of what would feel fair is not yet written down.")
+
+        b.append("\n6. Suggested Licensing Directions")
+        b.append("- Paid usage licences")
+        b.append("- Pilot or project licences")
+        b.append("- Co-creation / joint development")
+        b.append("- Access or community licences")
+        b.append("- Data / algorithm access arrangements")
+
+        b.append(
+            "\nA Licensing & Intangibles Partner can combine these building blocks into a small number of realistic options "
+            "that fit the company’s stage, markets, and stakeholder objectives."
         )
 
-    if st.button("Generate Tax Report"):
-        st.download_button(
-            "Download Tax Report",
-            _compose_report("TAX REPORT"),
-            file_name="Tax_Report.txt"
+        b.append("\nMarket Comparison")
+        b.append(
+            "Compared with similar early commercial companies, licensing readiness is assessed by looking at the strength of explicit "
+            "Structural Capital, customer traction, partnership maturity, and the extent to which value is already observable through "
+            "contracts, pilot agreements, or data-enabled services."
         )
+        if structural_ready and (customer_ready or alliance_ready):
+            b.append("- Relative position: stronger than a typical concept-stage company because explicit assets and commercial routes are already visible.")
+        else:
+            b.append("- Relative position: still developing, with more evidence needed before the company would look licensing-ready to external parties.")
+
+        b.append("\nAction Plan")
+        b.append("Top 3 Actions:")
+        b.append("1. Create a simple asset list showing what is to be licensed, where it sits, and who controls it")
+        b.append("2. Identify the first 3–5 partner types and convert one route into a draft licensing offer")
+        b.append("3. Use contracts, pilots, or access agreements to make value more observable and defensible")
+
+        b.append("\nNext Steps:")
+        b.append("• Build the licensing asset register")
+        b.append("• Clarify red lines, pricing logic, and access terms")
+        b.append("• Move towards draft licence templates and partner discussions")
+
+        b.append("\nDisclaimer")
+        b.append(
+            "This report is an advisory draft only. It does not replace legal advice. "
+            "All licensing decisions and legal documents must be reviewed by qualified legal counsel."
+        )
+
+        return title, "\n".join(b)
+
+    def _compose_tax() -> Tuple[str, str]:
+        title = f"Belgian Tax Positioning Report — {case_name}"
+
+        sector = ss.get("sector", "Other")
+        size = ss.get("company_size", "Not specified")
+        last_val = ss.get("last_valuation_date")
+        exit_dt = ss.get("exit_date")
+
+        ic_map = ss.get("ic_map", {}) or {}
+        structural = ic_map.get("Structural", {"tick": False, "score": 0.0})
+        customer = ic_map.get("Customer", {"tick": False, "score": 0.0})
+        alliance = ic_map.get("Strategic Alliance", {"tick": False, "score": 0.0})
+
+        b: List[str] = []
+
+        b.append("1. Executive Summary\n")
+        b.append(
+            f"{case_name} operates in the {sector} sector and is currently positioned as a {size} organisation. "
+            "This report supports valuation anchoring for future exit and tax positioning purposes."
+        )
+
+        b.append("\n2. Valuation Anchor")
+        if last_val:
+            b.append(f"- Anchor valuation date: {last_val}")
+        else:
+            b.append("- Anchor valuation date: not set")
+        b.append(
+            "- A defensible valuation anchor depends on explicit evidence of Structural Capital, commercial use, control, and future economic benefit."
+        )
+
+        b.append("\n3. Structural Capital Position")
+        if structural.get("tick"):
+            b.append(
+                f"- Structural Capital is present (score approx. {structural.get('score')}). This supports a stronger and more defensible valuation position."
+            )
+        else:
+            b.append(
+                "- Structural Capital is not yet fully evidenced. Strengthening contracts, IPR, data, systems, and governance artefacts is required."
+            )
+
+        if customer.get("tick") or alliance.get("tick"):
+            b.append(
+                "- Customer and alliance evidence also support defensibility by showing observable commercial pathways and third-party validation."
+            )
+
+        b.append("\n4. Exit Position")
+        if exit_dt:
+            b.append(f"- Expected exit date: {exit_dt}")
+        else:
+            b.append("- Expected exit date: not set")
+        b.append(
+            "- Future value growth beyond the anchor date may be subject to different tax treatment. Early valuation anchoring supported by evidence is therefore strategically important."
+        )
+
+        b.append("\n5. Role of Licensing")
+        b.append(
+            "- Licensing agreements provide observable market validation of value and strengthen audit and tax defensibility by linking assets to real commercial activity."
+        )
+
+        b.append("\nMarket Comparison")
+        b.append(
+            "Compared with similar privately held growth companies, tax-positioning strength depends on whether the company can evidence value through explicit artefacts, "
+            "commercial contracts, licensing logic, and governance records rather than relying on narrative assertions alone."
+        )
+        if structural.get("tick"):
+            b.append("- Relative position: stronger than an informal or purely concept-stage business because there is evidence capable of supporting a valuation anchor.")
+        else:
+            b.append("- Relative position: weaker than a well-prepared company because more explicit documentation is needed to support a robust anchor value.")
+
+        b.append("\nAction Plan")
+        b.append("Top 3 Actions:")
+        b.append("1. Establish and document the valuation anchor before future transaction milestones")
+        b.append("2. Strengthen Structural Capital and IPR evidence so value is more defensible")
+        b.append("3. Use licensing and customer agreements to demonstrate real market value")
+
+        b.append("\nNext Steps:")
+        b.append("• Confirm the most appropriate valuation anchor date")
+        b.append("• Maintain an audit-ready record of key assets and agreements")
+        b.append("• Refresh the valuation narrative before investment, sale, or restructuring")
+
+        b.append("\nDisclaimer")
+        b.append("This is an advisory report only and not tax advice.")
+
+        return title, "\n".join(b)
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        if st.button("Generate IC Report (DOCX/TXT)", key="btn_ic"):
+            title, body = _compose_ic()
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                label="Download IC Report",
+                data=data,
+                file_name=fname,
+                mime=mime,
+                key="dl_ic",
+            )
+            (st.success if path else st.warning)(msg)
+
+    with c2:
+        if st.button("Generate Licensing Report (DOCX/TXT)", key="btn_lic"):
+            title, body = _compose_lic()
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                label="Download Licensing Report",
+                data=data,
+                file_name=fname,
+                mime=mime,
+                key="dl_lic",
+            )
+            (st.success if path else st.warning)(msg)
+
+    with c3:
+        if st.button("Generate Belgian Tax Report (DOCX/TXT)", key="btn_tax"):
+            title, body = _compose_tax()
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                label="Download Tax Report",
+                data=data,
+                file_name=fname,
+                mime=mime,
+                key="dl_tax",
+            )
+            (st.success if path else st.warning)(msg)
+
+    st.caption(
+        "Server save root: disabled (public mode)"
+        if PUBLIC_MODE
+        else f"Server save root: {OUT_ROOT}"
+    )
  
 # 6) LICENSING TEMPLATES
 elif page == "Licensing Templates":
