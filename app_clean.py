@@ -1713,8 +1713,24 @@ elif page == "Reports":
         markets_why = (ss.get("markets_why") or "").strip()
         sale_price_why = (ss.get("sale_price_why") or "").strip()
 
-        last_val = ss.get("last_valuation_date")
-        exit_dt = ss.get("exit_date")
+        # Robust widget/session fallback for dates
+        last_val = ss.get("last_valuation_date", None)
+        exit_dt = ss.get("exit_date", None)
+
+        if last_val is None and "last_valuation_date" in st.session_state:
+            last_val = st.session_state["last_valuation_date"]
+
+        if exit_dt is None and "exit_date" in st.session_state:
+            exit_dt = st.session_state["exit_date"]
+
+        def _fmt_date(d):
+            try:
+                return d.strftime("%d %B %Y") if d else "Not set"
+            except Exception:
+                return "Not set"
+
+        last_val_fmt = _fmt_date(last_val)
+        exit_dt_fmt = _fmt_date(exit_dt)
 
         structural_row = ic_map.get("Structural", {"tick": False, "score": 0.0, "narrative": ""})
         customer_row = ic_map.get("Customer", {"tick": False, "score": 0.0, "narrative": ""})
@@ -1739,8 +1755,8 @@ elif page == "Reports":
             "plan_l": plan_l,
             "markets_why": markets_why,
             "sale_price_why": sale_price_why,
-            "last_val": last_val,
-            "exit_dt": exit_dt,
+            "last_val": last_val_fmt,
+            "exit_dt": exit_dt_fmt,
             "structural_row": structural_row,
             "customer_row": customer_row,
             "alliance_row": alliance_row,
@@ -1766,7 +1782,10 @@ elif page == "Reports":
 
         b.append("Four-Leaf Analysis")
         for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
-            row = ctx["ic_map"].get(leaf, {"tick": False, "narrative": f"No assessment yet for {leaf}.", "score": 0.0})
+            row = ctx["ic_map"].get(
+                leaf,
+                {"tick": False, "narrative": f"No assessment yet for {leaf}.", "score": 0.0},
+            )
             tick = "✓" if row.get("tick") else "•"
             score = row.get("score", 0.0)
             tail = "" if PUBLIC_MODE else f" (score: {score})"
@@ -1775,6 +1794,26 @@ elif page == "Reports":
         b.append("\nTen-Steps Readiness")
         for step, score, nar in zip(TEN_STEPS, ctx["ten"]["scores"], ctx["ten"]["narratives"]):
             b.append(f"- {step}: readiness ≈ {score}/10. {nar}")
+
+        b.append("\nAreopa Valuation Model (Confidential Framework)")
+        b.append(
+            "This section is intentionally structured to allow the insertion of a detailed valuation table, "
+            "supporting figures, and a full explanation of the Areopa proprietary methodology."
+        )
+        b.append(
+            "The valuation approach is based on a structured mathematical framework comprising:"
+        )
+        b.append("• 77 valuation formulas")
+        b.append("• 920 parameters")
+        b.append(
+            "\nThese parameters assess multiple dimensions including technical robustness, legal enforceability, "
+            "structural completeness, market alignment, and risk exposure / adjustment."
+        )
+        b.append(
+            "The detailed mechanics of this model are proprietary and are not generated automatically by this tool. "
+            "They should be inserted manually as part of an audit-grade valuation process."
+        )
+        b.append(">>> INSERT TABLES, VALUATION FIGURES, AND FULL METHODOLOGY EXPLANATION HERE <<<")
 
         b.append("\nMarket Comparison")
         b.append(
@@ -1937,11 +1976,25 @@ elif page == "Reports":
             b.append(f"\nIC Summary:\n{ctx['interpreted'][:700]}{'...' if len(ctx['interpreted']) > 700 else ''}")
 
         b.append("\n2. Valuation Anchor")
-        if ctx["last_val"]:
-            b.append(f"- Anchor valuation date: {ctx['last_val']}")
-        else:
-            b.append("- Anchor valuation date: not set")
+        b.append(f"- Anchor valuation date: {ctx['last_val']}")
         b.append("- A defensible valuation anchor depends on explicit evidence of Structural Capital, commercial use, control, and future economic benefit.")
+
+        b.append("\nAreopa Valuation Model (Confidential Framework)")
+        b.append(
+            "For Belgian tax positioning purposes, valuation defensibility relies on a structured and auditable methodology."
+        )
+        b.append("The Areopa valuation framework is based on:")
+        b.append("• 77 valuation formulas")
+        b.append("• 920 parameters")
+        b.append(
+            "\nThis framework evaluates asset identifiability and control (IAS 38 alignment), Structural Capital maturity and codification, "
+            "commercial evidence, market comparability, and risk adjustment."
+        )
+        b.append(
+            "The detailed model is proprietary and is not auto-generated within this tool. "
+            "It should be inserted manually to support formal valuation anchoring for tax purposes."
+        )
+        b.append(">>> INSERT VALUATION TABLE, SCENARIO ANALYSIS, AND FULL 77/920 METHODOLOGY HERE <<<")
 
         b.append("\n3. Structural Capital Position")
         if ctx["structural_row"].get("tick"):
@@ -1956,10 +2009,7 @@ elif page == "Reports":
             b.append("- Customer and alliance evidence also support defensibility by showing observable commercial pathways and third-party validation.")
 
         b.append("\n4. Exit Position")
-        if ctx["exit_dt"]:
-            b.append(f"- Expected exit date: {ctx['exit_dt']}")
-        else:
-            b.append("- Expected exit date: not set")
+        b.append(f"- Expected exit date: {ctx['exit_dt']}")
         b.append("- Future value growth beyond the anchor date may be subject to different tax treatment. Early valuation anchoring supported by evidence is therefore strategically important.")
 
         b.append("\n5. Role of Licensing")
@@ -2043,7 +2093,6 @@ elif page == "Reports":
         if PUBLIC_MODE
         else f"Server save root: {OUT_ROOT}"
     )
- 
 # 6) LICENSING TEMPLATES
 elif page == "Licensing Templates":
     st.header("Licensing Templates (editable DOCX/TXT)")
