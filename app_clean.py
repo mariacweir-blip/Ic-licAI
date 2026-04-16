@@ -1681,63 +1681,111 @@ elif page == "LIP Console":
 # 5) REPORTS
 elif page == "Reports":
     st.header("Reports & Exports")
-    case_name = ss.get("case_name", "Untitled Company")
-    case_folder = OUT_ROOT / _safe(case_name)
+    case_folder = OUT_ROOT / _safe(ss.get("case_name", "Untitled Company"))
 
-    def _compose_ic() -> Tuple[str, str]:
-        title = f"IC Report — {case_name}"
+    def _report_context() -> Dict[str, Any]:
         ic_map = ss.get("ic_map", {}) or {}
 
         raw_ten = ss.get("ten_steps") or {}
         scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
-        narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
+        narrs = raw_ten.get("narratives") or [f"{s}: readiness ≈ 5/10." for s in TEN_STEPS]
         ten = {"scores": scores, "narratives": narrs}
 
-        interpreted = ss.get("combined_text", "").strip() or ss.get("narrative", "(no summary)")
-        evidence_quality = int(ss.get("evidence_quality", 0))
-        sector = ss.get("sector", "Other")
-        size = ss.get("company_size", "Not specified")
+        case_name = (ss.get("case_name") or "").strip()
+        sector = (ss.get("sector") or "").strip()
+        company_size = (ss.get("company_size") or "").strip()
+
+        if not case_name:
+            case_name = "Untitled Company"
+        if not sector:
+            sector = "Other"
+        if not company_size:
+            company_size = "Not specified"
+
+        interpreted = (ss.get("combined_text") or "").strip() or (ss.get("narrative") or "").strip()
+        evidence_quality = int(ss.get("evidence_quality", 0) or 0)
+
+        why_service = (ss.get("why_service") or "").strip()
+        stage = (ss.get("stage") or "").strip()
+        plan_s = (ss.get("plan_s") or "").strip()
+        plan_m = (ss.get("plan_m") or "").strip()
+        plan_l = (ss.get("plan_l") or "").strip()
+        markets_why = (ss.get("markets_why") or "").strip()
+        sale_price_why = (ss.get("sale_price_why") or "").strip()
+
+        last_val = ss.get("last_valuation_date")
+        exit_dt = ss.get("exit_date")
+
+        structural_row = ic_map.get("Structural", {"tick": False, "score": 0.0, "narrative": ""})
+        customer_row = ic_map.get("Customer", {"tick": False, "score": 0.0, "narrative": ""})
+        alliance_row = ic_map.get("Strategic Alliance", {"tick": False, "score": 0.0, "narrative": ""})
+        human_row = ic_map.get("Human", {"tick": False, "score": 0.0, "narrative": ""})
 
         strengths = [leaf for leaf, row in ic_map.items() if row.get("tick")]
         strength_text = ", ".join(strengths) if strengths else "selected IC dimensions"
 
+        return {
+            "case_name": case_name,
+            "sector": sector,
+            "company_size": company_size,
+            "ic_map": ic_map,
+            "ten": ten,
+            "interpreted": interpreted,
+            "evidence_quality": evidence_quality,
+            "why_service": why_service,
+            "stage": stage,
+            "plan_s": plan_s,
+            "plan_m": plan_m,
+            "plan_l": plan_l,
+            "markets_why": markets_why,
+            "sale_price_why": sale_price_why,
+            "last_val": last_val,
+            "exit_dt": exit_dt,
+            "structural_row": structural_row,
+            "customer_row": customer_row,
+            "alliance_row": alliance_row,
+            "human_row": human_row,
+            "strength_text": strength_text,
+        }
+
+    def _compose_ic() -> Tuple[str, str]:
+        ctx = _report_context()
+        title = f"IC Report — {ctx['case_name']}"
+
         b: List[str] = []
         b.append("Executive Summary\n")
-        b.append(
-            f"{case_name} is a {size} in {sector}. "
-            f"Evidence suggests relative strength in {strength_text}. "
-            "This report summarises the company’s Intellectual Capital position using the 4-Leaf Model and the Ten-Steps framework."
-        )
-        b.append(
-            f"\nEvidence Quality: ~{evidence_quality}% coverage (heuristic).\n"
-        )
+        if ctx["interpreted"]:
+            b.append(ctx["interpreted"])
+        else:
+            b.append(
+                f"{ctx['case_name']} is a {ctx['company_size']} in {ctx['sector']}. "
+                f"Evidence suggests relative strength in {ctx['strength_text']}."
+            )
+
+        b.append(f"\nEvidence Quality: ~{ctx['evidence_quality']}% coverage (heuristic).\n")
 
         b.append("Four-Leaf Analysis")
         for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
-            row = ic_map.get(leaf, {"tick": False, "narrative": f"No assessment yet for {leaf}.", "score": 0.0})
+            row = ctx["ic_map"].get(leaf, {"tick": False, "narrative": f"No assessment yet for {leaf}.", "score": 0.0})
             tick = "✓" if row.get("tick") else "•"
             score = row.get("score", 0.0)
             tail = "" if PUBLIC_MODE else f" (score: {score})"
             b.append(f"- {leaf}: {tick} — {row.get('narrative', '')}{tail}")
 
         b.append("\nTen-Steps Readiness")
-        for step, score, nar in zip(TEN_STEPS, ten["scores"], ten["narratives"]):
+        for step, score, nar in zip(TEN_STEPS, ctx["ten"]["scores"], ctx["ten"]["narratives"]):
             b.append(f"- {step}: readiness ≈ {score}/10. {nar}")
 
         b.append("\nMarket Comparison")
         b.append(
             "This company is compared qualitatively against peers on the basis of evidence strength, "
-            "Structural Capital maturity, customer traction, partnership depth, licensing readiness, and ability "
-            "to convert tacit value into explicit, auditable assets."
+            "Structural Capital maturity, customer traction, partnership depth, licensing readiness, "
+            "and ability to convert tacit value into explicit, auditable assets."
         )
-        if ic_map.get("Structural", {}).get("tick"):
-            b.append(
-                "- Relative position: stronger than a purely concept-stage company because explicit artefacts are already visible."
-            )
+        if ctx["structural_row"].get("tick"):
+            b.append("- Relative position: stronger than a purely concept-stage company because explicit artefacts are already visible.")
         else:
-            b.append(
-                "- Relative position: still closer to an early-stage business because explicit Structural Capital remains under-documented."
-            )
+            b.append("- Relative position: still closer to an early-stage business because explicit Structural Capital remains under-documented.")
 
         b.append("\nAction Plan")
         b.append("Top 3 Actions:")
@@ -1760,94 +1808,80 @@ elif page == "Reports":
         return title, "\n".join(b)
 
     def _compose_lic() -> Tuple[str, str]:
-        title = f"Licensing Readiness Report — {case_name}"
-
-        size = ss.get("company_size", "Not specified")
-        sector = ss.get("sector", "Other")
-
-        why_service = (ss.get("why_service", "") or "").strip()
-        stage = (ss.get("stage", "") or "").strip()
-        plan_s = (ss.get("plan_s", "") or "").strip()
-        plan_m = (ss.get("plan_m", "") or "").strip()
-        plan_l = (ss.get("plan_l", "") or "").strip()
-        markets_why = (ss.get("markets_why", "") or "").strip()
-        sale_price_why = (ss.get("sale_price_why", "") or "").strip()
-
-        ic_map = ss.get("ic_map", {}) or {}
-        evidence_quality = int(ss.get("evidence_quality", 0))
-
-        structural_row = ic_map.get("Structural", {"tick": False, "score": 0.0})
-        structural_ready = bool(structural_row.get("tick"))
-        structural_score = float(structural_row.get("score", 0.0))
-
-        customer_row = ic_map.get("Customer", {"tick": False, "score": 0.0})
-        customer_ready = bool(customer_row.get("tick"))
-
-        alliance_row = ic_map.get("Strategic Alliance", {"tick": False, "score": 0.0})
-        alliance_ready = bool(alliance_row.get("tick"))
+        ctx = _report_context()
+        title = f"Licensing Readiness Report — {ctx['case_name']}"
 
         b: List[str] = []
-
         b.append("1. Executive Summary\n")
         b.append(
-            f"{case_name} is described as a {size} organisation operating in {sector}. "
+            f"{ctx['case_name']} is described as a {ctx['company_size']} organisation operating in {ctx['sector']}. "
             "This report summarises how ready the company is to license or share its know-how, technology, data, content, or methods, "
             "and what practical next steps are recommended."
         )
-        if why_service:
-            b.append(f"\nMain reason for using this service:\n- {why_service}")
+        if ctx["why_service"]:
+            b.append(f"\nMain reason for using this service:\n- {ctx['why_service']}")
+        if ctx["interpreted"]:
+            b.append(f"\nIC Summary:\n{ctx['interpreted'][:900]}{'...' if len(ctx['interpreted']) > 900 else ''}")
 
         b.append("\n2. Goals for Licensing or Partnering")
-        if any([plan_s, plan_m, plan_l]):
-            if plan_s:
-                b.append(f"- Next 0–6 months: {plan_s}")
-            if plan_m:
-                b.append(f"- Next 6–24 months: {plan_m}")
-            if plan_l:
-                b.append(f"- Beyond 24 months: {plan_l}")
+        if any([ctx["plan_s"], ctx["plan_m"], ctx["plan_l"]]):
+            if ctx["plan_s"]:
+                b.append(f"- Next 0–6 months: {ctx['plan_s']}")
+            if ctx["plan_m"]:
+                b.append(f"- Next 6–24 months: {ctx['plan_m']}")
+            if ctx["plan_l"]:
+                b.append(f"- Beyond 24 months: {ctx['plan_l']}")
         else:
             b.append("- Goals are not yet fully defined; a short planning session is recommended.")
 
         b.append("\n3. Asset and Readiness Snapshot")
-        if stage:
-            b.append(f"- Current stage: {stage}")
+        if ctx["stage"]:
+            b.append(f"- Current stage: {ctx['stage']}")
         else:
             b.append("- Current stage has not yet been clearly described.")
 
-        if structural_ready:
+        if ctx["structural_row"].get("tick"):
             b.append(
-                f"- Structural Capital appears visible and documented (score approx. {structural_score:.1f}), "
+                f"- Structural Capital appears visible and documented (score approx. {float(ctx['structural_row'].get('score', 0.0)):.1f}), "
                 "which suggests there is something real to license — not just an idea."
             )
         else:
-            b.append(
-                "- Structural Capital is not yet clearly evidenced. Before licensing, key artefacts should be gathered into a simple register."
-            )
+            b.append("- Structural Capital is not yet clearly evidenced. Before licensing, key artefacts should be gathered into a simple register.")
 
-        if customer_ready or alliance_ready:
-            bullets = []
-            if customer_ready:
-                bullets.append("customer relationships or repeat business")
-            if alliance_ready:
-                bullets.append("partners, universities, suppliers, or strategic allies")
-            b.append("- Additional value is visible in " + " and ".join(bullets) + ".")
+        if ctx["customer_row"].get("tick"):
+            b.append("- Customer Capital is visible, supporting recurring value capture and commercial licensing potential.")
+        if ctx["alliance_row"].get("tick"):
+            b.append("- Strategic Alliance Capital is visible, supporting co-creation, ecosystem deals, and partner-led market access.")
 
-        if evidence_quality:
-            b.append(f"- Evidence quality from the file mix is estimated at about {evidence_quality}% (heuristic).")
+        b.append(f"- Evidence quality from the file mix is estimated at about {ctx['evidence_quality']}% (heuristic).")
 
         b.append("\n4. Who Could Benefit")
-        if markets_why:
-            b.append(f"- Best fit markets / users: {markets_why}")
+        if ctx["markets_why"]:
+            b.append(f"- Best fit markets / users: {ctx['markets_why']}")
         else:
             b.append("- Target markets and partner types are not yet clearly described.")
 
         b.append("\n5. Fair Outcome and Commercial Logic")
-        if sale_price_why:
-            b.append(f"- Management view of a fair outcome: {sale_price_why}")
+        if ctx["sale_price_why"]:
+            b.append(f"- Management view of a fair outcome: {ctx['sale_price_why']}")
         else:
             b.append("- A clear statement of what would feel fair is not yet written down.")
 
-        b.append("\n6. Suggested Licensing Directions")
+        b.append("\n6. Three Licensing Routes")
+        b.append(
+            "- **FRAND-informed standard licence** – a structured commercial licence using fair, reasonable and non-discriminatory principles, "
+            "suitable where comparable users need transparent access and pricing."
+        )
+        b.append(
+            "- **Co-creation / joint development licence** – appropriate where value is built jointly with a partner, customer, university, "
+            "or strategic ally and ownership / revenue sharing must be clearly defined."
+        )
+        b.append(
+            "- **Knowledge / non-traditional licence** – suitable for methods, playbooks, datasets, training materials, indices, dashboards, "
+            "algorithms, and codified know-how that may not fit a classic patent-led model."
+        )
+
+        b.append("\n7. Suggested Licensing Directions")
         b.append("- Paid usage licences")
         b.append("- Pilot or project licences")
         b.append("- Co-creation / joint development")
@@ -1863,9 +1897,9 @@ elif page == "Reports":
         b.append(
             "Compared with similar early commercial companies, licensing readiness is assessed by looking at the strength of explicit "
             "Structural Capital, customer traction, partnership maturity, and the extent to which value is already observable through "
-            "contracts, pilot agreements, or data-enabled services."
+            "contracts, pilot agreements, data-enabled services, or alliance structures."
         )
-        if structural_ready and (customer_ready or alliance_ready):
+        if ctx["structural_row"].get("tick") and (ctx["customer_row"].get("tick") or ctx["alliance_row"].get("tick")):
             b.append("- Relative position: stronger than a typical concept-stage company because explicit assets and commercial routes are already visible.")
         else:
             b.append("- Relative position: still developing, with more evidence needed before the company would look licensing-ready to external parties.")
@@ -1873,12 +1907,12 @@ elif page == "Reports":
         b.append("\nAction Plan")
         b.append("Top 3 Actions:")
         b.append("1. Create a simple asset list showing what is to be licensed, where it sits, and who controls it")
-        b.append("2. Identify the first 3–5 partner types and convert one route into a draft licensing offer")
+        b.append("2. Match each key asset to one of the three licence routes: FRAND, co-creation, or knowledge licence")
         b.append("3. Use contracts, pilots, or access agreements to make value more observable and defensible")
 
         b.append("\nNext Steps:")
         b.append("• Build the licensing asset register")
-        b.append("• Clarify red lines, pricing logic, and access terms")
+        b.append("• Clarify pricing logic, access terms, and red lines")
         b.append("• Move towards draft licence templates and partner discussions")
 
         b.append("\nDisclaimer")
@@ -1890,70 +1924,56 @@ elif page == "Reports":
         return title, "\n".join(b)
 
     def _compose_tax() -> Tuple[str, str]:
-        title = f"Belgian Tax Positioning Report — {case_name}"
-
-        sector = ss.get("sector", "Other")
-        size = ss.get("company_size", "Not specified")
-        last_val = ss.get("last_valuation_date")
-        exit_dt = ss.get("exit_date")
-
-        ic_map = ss.get("ic_map", {}) or {}
-        structural = ic_map.get("Structural", {"tick": False, "score": 0.0})
-        customer = ic_map.get("Customer", {"tick": False, "score": 0.0})
-        alliance = ic_map.get("Strategic Alliance", {"tick": False, "score": 0.0})
+        ctx = _report_context()
+        title = f"Belgian Tax Positioning Report — {ctx['case_name']}"
 
         b: List[str] = []
-
         b.append("1. Executive Summary\n")
         b.append(
-            f"{case_name} operates in the {sector} sector and is currently positioned as a {size} organisation. "
+            f"{ctx['case_name']} operates in the {ctx['sector']} sector and is currently positioned as a {ctx['company_size']} organisation. "
             "This report supports valuation anchoring for future exit and tax positioning purposes."
         )
+        if ctx["interpreted"]:
+            b.append(f"\nIC Summary:\n{ctx['interpreted'][:700]}{'...' if len(ctx['interpreted']) > 700 else ''}")
 
         b.append("\n2. Valuation Anchor")
-        if last_val:
-            b.append(f"- Anchor valuation date: {last_val}")
+        if ctx["last_val"]:
+            b.append(f"- Anchor valuation date: {ctx['last_val']}")
         else:
             b.append("- Anchor valuation date: not set")
-        b.append(
-            "- A defensible valuation anchor depends on explicit evidence of Structural Capital, commercial use, control, and future economic benefit."
-        )
+        b.append("- A defensible valuation anchor depends on explicit evidence of Structural Capital, commercial use, control, and future economic benefit.")
 
         b.append("\n3. Structural Capital Position")
-        if structural.get("tick"):
+        if ctx["structural_row"].get("tick"):
             b.append(
-                f"- Structural Capital is present (score approx. {structural.get('score')}). This supports a stronger and more defensible valuation position."
+                f"- Structural Capital is present (score approx. {ctx['structural_row'].get('score')}). "
+                "This supports a stronger and more defensible valuation position."
             )
         else:
-            b.append(
-                "- Structural Capital is not yet fully evidenced. Strengthening contracts, IPR, data, systems, and governance artefacts is required."
-            )
+            b.append("- Structural Capital is not yet fully evidenced. Strengthening contracts, IPR, data, systems, and governance artefacts is required.")
 
-        if customer.get("tick") or alliance.get("tick"):
-            b.append(
-                "- Customer and alliance evidence also support defensibility by showing observable commercial pathways and third-party validation."
-            )
+        if ctx["customer_row"].get("tick") or ctx["alliance_row"].get("tick"):
+            b.append("- Customer and alliance evidence also support defensibility by showing observable commercial pathways and third-party validation.")
 
         b.append("\n4. Exit Position")
-        if exit_dt:
-            b.append(f"- Expected exit date: {exit_dt}")
+        if ctx["exit_dt"]:
+            b.append(f"- Expected exit date: {ctx['exit_dt']}")
         else:
             b.append("- Expected exit date: not set")
-        b.append(
-            "- Future value growth beyond the anchor date may be subject to different tax treatment. Early valuation anchoring supported by evidence is therefore strategically important."
-        )
+        b.append("- Future value growth beyond the anchor date may be subject to different tax treatment. Early valuation anchoring supported by evidence is therefore strategically important.")
 
         b.append("\n5. Role of Licensing")
         b.append(
             "- Licensing agreements provide observable market validation of value and strengthen audit and tax defensibility by linking assets to real commercial activity."
         )
+        b.append("- FRAND-informed, co-creation, and knowledge-licensing structures can all help evidence value if backed by real contracts and governance.")
 
         b.append("\nMarket Comparison")
         b.append(
             "Compared with similar privately held growth companies, tax-positioning strength depends on whether the company can evidence value through explicit artefacts, "
             "commercial contracts, licensing logic, and governance records rather than relying on narrative assertions alone."
         )
-        if structural.get("tick"):
+        if ctx["structural_row"].get("tick"):
             b.append("- Relative position: stronger than an informal or purely concept-stage business because there is evidence capable of supporting a valuation anchor.")
         else:
             b.append("- Relative position: weaker than a well-prepared company because more explicit documentation is needed to support a robust anchor value.")
