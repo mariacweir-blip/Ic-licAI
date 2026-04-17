@@ -1941,7 +1941,8 @@ elif page == "Reports":
         if ctx["structural_row"].get("tick") and (ctx["customer_row"].get("tick") or ctx["alliance_row"].get("tick")):
             b.append("- Relative position: stronger than a typical concept-stage company because explicit assets and commercial routes are already visible.")
         else:
-            b.append("- Relative position: still developing, with more evidence needed before the company would look licensing-ready to external parties.")
+          
+          b.append("- Relative position: still developing, with more evidence needed before the company would look licensing-ready to external parties.")
 
         b.append("\nAction Plan")
         b.append("Top 3 Actions:")
@@ -1954,33 +1955,34 @@ elif page == "Reports":
         b.append("• Clarify pricing logic, access terms, and red lines")
         b.append("• Move towards draft licence templates and partner discussions")
         # --- TTO QUICK VIEW (Netval) ---
-b.append("\nTTO Quick Decision Summary (Netval View)\n")
+                # --- TTO QUICK VIEW (Netval) ---
+        b.append("\nTTO Quick Decision Summary (Netval View)\n")
 
-if ctx["structural_row"].get("tick"):
-    b.append("- Asset status: Licensable (codified Structural Capital present)")
-else:
-    b.append("- Asset status: Not yet licensable (insufficient codified assets)")
+        if ctx["structural_row"].get("tick"):
+            b.append("- Asset status: Licensable (codified Structural Capital present)")
+        else:
+            b.append("- Asset status: Not yet licensable (insufficient codified assets)")
 
-if ctx["customer_row"].get("tick") or ctx["alliance_row"].get("tick"):
-    b.append("- Market signal: Present (partners / customers visible)")
-else:
-    b.append("- Market signal: Weak (limited external validation)")
+        if ctx["customer_row"].get("tick") or ctx["alliance_row"].get("tick"):
+            b.append("- Market signal: Present (partners / customers visible)")
+        else:
+            b.append("- Market signal: Weak (limited external validation)")
 
-b.append(f"- Evidence strength: {ctx['evidence_quality']}% (heuristic)")
+        b.append(f"- Evidence strength: {ctx['evidence_quality']}% (heuristic)")
 
-b.append("\nRecommended TTO Action:")
-if ctx["structural_row"].get("tick"):
-    b.append("→ Proceed to pilot licence or co-creation agreement")
-else:
-    b.append("→ Do not license yet — prioritise asset codification and documentation")
+        b.append("\nRecommended TTO Action:")
+        if ctx["structural_row"].get("tick"):
+            b.append("→ Proceed to pilot licence or co-creation agreement")
+        else:
+            b.append("→ Do not license yet — prioritise asset codification and documentation")
 
-b.append("\nSuggested Licence Type:")
-if ctx["structural_row"].get("tick") and ctx["alliance_row"].get("tick"):
-    b.append("→ Co-creation / joint development")
-elif ctx["structural_row"].get("tick"):
-    b.append("→ FRAND-informed standard licence")
-else:
-    b.append("→ Knowledge licence (early-stage / exploratory)")
+        b.append("\nSuggested Licence Type:")
+        if ctx["structural_row"].get("tick") and ctx["alliance_row"].get("tick"):
+            b.append("→ Co-creation / joint development")
+        elif ctx["structural_row"].get("tick"):
+            b.append("→ FRAND-informed standard licence")
+        else:
+            b.append("→ Knowledge licence (early-stage / exploratory)")
         b.append("\nDisclaimer")
         b.append(
             "This report is an advisory draft only. It does not replace legal advice. "
