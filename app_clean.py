@@ -1599,20 +1599,22 @@ elif page == "Analyse Evidence":
 
         st.success("Analysis complete. Open **LIP Console** to refine and export.")
                    
-  if page == "Asset Verification":
-    st.header("Asset Verification")
+  # --- TEMP DISABLED FOR DEMO ---
+# elif page == "Asset Verification":
+#     st.header("Asset Verification")
+#
+#     st.info("Asset verification temporarily simplified for demo.")
+#
+#     uploads = ss.get("uploads") or []
+#
+#     if not uploads:
+#         st.warning("No evidence files uploaded yet.")
+#     else:
+#         st.success(f"{len(uploads)} file(s) available for verification.")
+#
+#     st.markdown("You can proceed directly to analysis and reporting for this demo.")
 
-    st.info("Asset verification temporarily simplified for demo.")
-
-    uploads = ss.get("uploads") or []
-
-    if not uploads:
-        st.warning("No evidence files uploaded yet.")
-    else:
-        st.success(f"{len(uploads)} file(s) available for verification.")
-
-    st.markdown("You can proceed directly to analysis and reporting for this demo.")           
-# 4) LIP CONSOLE (was Expert View)
+#4) LIP CONSOLE (was Expert View)
 elif page == "LIP Console":
     st.header("LIP Console — Narrative & IC Map")
     nar = st.text_area(
