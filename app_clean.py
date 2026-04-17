@@ -1460,6 +1460,7 @@ elif page == "Analyse Evidence":
     st.header("Evidence Dashboard & Analysis")
 
     col1, col2 = st.columns([1, 1])
+
     with col1:
         st.subheader("Evidence Quality")
         eq = int(ss.get("evidence_quality", 0))
@@ -1468,34 +1469,32 @@ elif page == "Analyse Evidence":
 
         counts = ss.get("file_counts", {}) or {}
         if counts:
-    st.markdown("**Files by type (session):**")
-    for ext, n in counts.items():
-        st.markdown(f"– `{ext}` → {n} file(s)")
-else:
-    st.caption("No files analysed yet.")
+            st.markdown("**Files by type (session):**")
+            for ext, n in counts.items():
+                st.markdown(f"- `{ext}` → {n} file(s)")
+        else:
+            st.caption("No files analysed yet.")
 
-# ✅ NOW paste the badge here (same indentation level)
-st.subheader("Netval / TTO Badge")
+        st.subheader("Netval / TTO Badge")
 
-netval_score = 0
-if ss.get("ic_map", {}).get("Structural", {}).get("tick"):
-    netval_score += 40
-if ss.get("ic_map", {}).get("Customer", {}).get("tick"):
-    netval_score += 25
-if ss.get("ic_map", {}).get("Strategic Alliance", {}).get("tick"):
-    netval_score += 20
-netval_score += min(15, int(ss.get("evidence_quality", 0) / 10))
+        netval_score = 0
+        if ss.get("ic_map", {}).get("Structural", {}).get("tick"):
+            netval_score += 40
+        if ss.get("ic_map", {}).get("Customer", {}).get("tick"):
+            netval_score += 25
+        if ss.get("ic_map", {}).get("Strategic Alliance", {}).get("tick"):
+            netval_score += 20
+        netval_score += min(15, int(ss.get("evidence_quality", 0) / 10))
 
-if netval_score >= 75:
-    st.success(f"GREEN — Ready for licensing discussion ({netval_score}/100)")
-elif netval_score >= 50:
-    st.warning(f"AMBER — Promising but needs strengthening ({netval_score}/100)")
-else:
-    st.error(f"RED — Not yet ready for licensing ({netval_score}/100)")
-     
+        if netval_score >= 75:
+            st.success(f"GREEN — Ready for licensing discussion ({netval_score}/100)")
+        elif netval_score >= 50:
+            st.warning(f"AMBER — Promising but needs strengthening ({netval_score}/100)")
+        else:
+            st.error(f"RED — Not yet ready for licensing ({netval_score}/100)")
+
     with col2:
-     
-      st.subheader("IC Radar (4-Leaf + Ten-Steps)")
+        st.subheader("IC Radar (4-Leaf + Ten-Steps)")
 
         ic_map: Dict[str, Any] = ss.get("ic_map", {})
         ten = ss.get(
@@ -1505,6 +1504,7 @@ else:
 
         leaf_labels = ["Human", "Structural", "Customer", "Strategic Alliance"]
         leaf_vals = [float(ic_map.get(l, {}).get("score", 0.0)) for l in leaf_labels]
+
         if any(v > 0 for v in leaf_vals):
             fig_leaf = go.Figure()
             fig_leaf.add_trace(
@@ -1580,6 +1580,12 @@ else:
         interpreted = _build_interpreted_summary(case, leaf_scores, ic_map, ten, quality, context)
 
         ss["combined_text"] = interpreted
+        ss["narrative"] = interpreted
+        try:
+            st.session_state["persist_narrative"] = interpreted
+        except Exception:
+            pass
+
         ss["ic_map"] = ic_map
         ss["ten_steps"] = ten
         ss["leaf_scores"] = leaf_scores
