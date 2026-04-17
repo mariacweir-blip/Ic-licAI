@@ -1599,7 +1599,7 @@ elif page == "Analyse Evidence":
 
         st.success("Analysis complete. Open **LIP Console** to refine and export.")
                    
- elif page == "Asset Verification":
+  if page == "Asset Verification":
     st.header("Asset Verification")
 
     st.info("Asset verification temporarily simplified for demo.")
