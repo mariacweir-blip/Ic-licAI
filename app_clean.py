@@ -1329,7 +1329,7 @@ if page == "Company":
         )
         
         st.success("TTO / Netval quick-screening enabled: this tool helps identify whether assets are ready for licensing, co-creation, or knowledge transfer.")
-        )
+        
         uploads = st.file_uploader(
             "Upload evidence (PDF, DOCX, TXT, CSV, XLSX, PPTX, images)",
             type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg", "webp"],
