@@ -1953,10 +1953,30 @@ elif page == "Reports":
         b.append("\nNext Steps:")
         b.append("• Build the licensing asset register")
         b.append("• Clarify pricing logic, access terms, and red lines")
-        b.append("• Move towards draft licence templates and partner discussions")
-        # --- TTO QUICK VIEW (Netval) ---
+        b.append("• Move towards draft licence templates and partner 
+                 
                 # --- TTO QUICK VIEW (Netval) ---
+        netval_score = 0
+
+        if ctx["structural_row"].get("tick"):
+            netval_score += 40
+        if ctx["customer_row"].get("tick"):
+            netval_score += 25
+        if ctx["alliance_row"].get("tick"):
+            netval_score += 20
+
+        netval_score += min(15, int(ctx["evidence_quality"] / 10))
+
+        if netval_score >= 75:
+            netval_band = "GREEN – ready for licensing discussion"
+        elif netval_score >= 50:
+            netval_band = "AMBER – promising but needs strengthening"
+        else:
+            netval_band = "RED – not yet ready for licensing"
+
         b.append("\nTTO Quick Decision Summary (Netval View)\n")
+        b.append(f"- Netval TTO Score: {netval_score}/100")
+        b.append(f"- TTO Readiness Band: {netval_band}")
 
         if ctx["structural_row"].get("tick"):
             b.append("- Asset status: Licensable (codified Structural Capital present)")
