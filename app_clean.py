@@ -1599,48 +1599,48 @@ elif page == "Analyse Evidence":
 
         st.success("Analysis complete. Open **LIP Console** to refine and export.")
 # 3) ASSET VERIFICATION (human check of assets & ESG claims)
-  elif page == "Asset Verification":
-      st.header("Asset Verification")
+    elif page == "Asset Verification":
+        st.header("Asset Verification")
 
-      st.subheader("Quick LIP Verification (Demo Mode)")
+        st.subheader("Quick LIP Verification (Demo Mode)")
 
-      quick_ownership = st.selectbox(
+        quick_ownership = st.selectbox(
         "Ownership / rights position",
         ["Select…", "Clear", "Mostly clear", "Unclear / needs follow-up"],
         key="quick_verify_ownership"
     )
 
-      quick_validity = st.selectbox(
+        quick_validity = st.selectbox(
         "Document validity / status",
         ["Select…", "Current and in force", "Mixed / partial", "Unclear"],
         key="quick_verify_validity"
     )
 
-      quick_evidence = st.selectbox(. 
+        quick_evidence = st.selectbox(. 
         "Strength of supporting evidence",
         ["Select…", "Strong", "Moderate", "Weak"],
         key="quick_verify_evidence"
     )
 
-      quick_esg = st.selectbox(
+        quick_esg = st.selectbox(
         "ESG / impact credibility",
         ["Select…", "Well evidenced", "Partially evidenced", "Weak / unclear"],
         key="quick_verify_esg"
     )
 
-      ss["verification_notes"] = st.text_area(
+        ss["verification_notes"] = st.text_area(
         "LIP Verification Summary Note",
         ss.get("verification_notes", ""),
         height=120
     )
 
-      st.info("Use this quick summary for demos. Detailed document-level verification is optional.")
+        st.info("Use this quick summary for demos. Detailed document-level verification is optional.")
 
-      st.markdown("---")
+        st.markdown("---")
 
-      st.markdown("---")st.header("Asset Verification — Evidence & ESG checks")
+        st.markdown("---")st.header("Asset Verification — Evidence & ESG checks")
 
-      uploads = ss.get("uploads") or []
+        uploads = ss.get("uploads") or []
 
     if not uploads:
         st.warning("No evidence files found in session. Go to **Company** and upload documents first.")
