@@ -132,47 +132,67 @@ st.markdown(
 )
 st.caption("INTERNAL VERSION — FOR REAL EVIDENCE (PASS-PHRASE PROTECTED)")
 
-st.markdown("## Belgian Tax Planning Note")
-
-st.info(
-    """
-    Belgium has announced a new capital gains tax framework for certain financial assets from 1 January 2026.
-    For demo purposes, this tool highlights the value of obtaining a robust, evidence-based valuation position
-    before a future transaction, while following a data-minimisation approach and not retaining client files.
-    """
+ # --- USE CASE SELECTOR ---
+use_case = st.selectbox(
+    "Select perspective",
+    [
+        "Belgian Tax & Valuation (IMEC)",
+        "TTO / Netval (Licensing)",
+        "General IC & Investment"
+    ],
+    index=0
 )
 
-st.markdown(
-    """
-    **Illustrative planning message**
-    
-    A stronger, evidence-based valuation record can help support a more defensible starting position when
-    assessing future share value movements, exits, restructurings, or shareholder tax exposure.
+if use_case == "Belgian Tax & Valuation (IMEC)":
 
-    In practice, this means:
-    - establishing a clear and supportable company value before 2026;
-    - strengthening documented Structural Capital (contracts, datasets, software, methods) that can be recognised and defended;
-    - using licensing strategies to generate value from these assets before any exit event.
+    st.markdown("## Belgian Tax & Valuation Positioning")
 
-    Licensing can play a critical role by:
-    - demonstrating real market value through revenue or access agreements;
-    - creating multiple value streams (commercial, partner, and community access);
-    - supporting a higher and more defensible valuation position ahead of sale, investment, or restructuring.
+    st.info(
+        "This tool supports the creation of a clear, evidence-based valuation position ahead of potential "
+        "exit, investment, or restructuring events."
+    )
 
-    This note is informational only. It is not tax or legal advice.
-    """
-)
+    st.markdown(
+        """
+        In practice, this means:
+        
+        • establishing a defensible company value before future transactions;
+        • strengthening documented Structural Capital;
+        • using licensing activity to demonstrate market value;
+        • supporting audit, tax, and valuation discussions.
+        
+        This is informational only. Not tax or legal advice.
+        """
+    )
 
-st.markdown(
-    """
-    **Illustrative planning message**
-    
-    A stronger, evidence-based valuation record can help support a more defensible starting position when
-    assessing future share value movements, exits, restructurings, or shareholder tax exposure.
+elif use_case == "TTO / Netval (Licensing)":
 
-    This note is informational only. It is not tax or legal advice.
-    """
-)
+    st.markdown("## TTO / Netval Quick-Screening")
+
+    st.info(
+        "This tool helps Technology Transfer Offices assess whether assets are ready for licensing or co-creation."
+    )
+
+    st.markdown(
+        """
+        In practice, this means:
+        
+        • identifying codified Structural Capital;
+        • assessing partner and customer signals;
+        • suggesting licensing routes;
+        • supporting fast TTO decisions.
+        
+        This is informational only.
+        """
+    )
+
+else:
+
+    st.markdown("## Strategic IC & Investment Support")
+
+    st.info(
+        "This tool helps organisations structure and strengthen intangible assets for growth and investment."
+    )
 # ------------------ AUTH GATE ------------------------
 def _auth_gate() -> None:
     if not REQUIRE_PASS:
