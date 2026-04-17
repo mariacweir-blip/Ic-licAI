@@ -1597,7 +1597,7 @@ elif page == "Analyse Evidence":
                 "If PDFs dominate, consider adding a brief TXT note or export key pages to DOCX."
             )
 
-        st.success("Analysis complete. Open **LIP Console** to refine 
+        st.success("Analysis complete. Open **LIP Console** to refine and export.")
                    
  elif page == "Asset Verification":
     st.header("Asset Verification")
