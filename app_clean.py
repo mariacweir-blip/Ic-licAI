@@ -1597,117 +1597,21 @@ elif page == "Analyse Evidence":
                 "If PDFs dominate, consider adding a brief TXT note or export key pages to DOCX."
             )
 
-        st.success("Analysis complete. Open **LIP Console** to refine and export.")
-# 3) ASSET VERIFICATION (human check of assets & ESG claims)
-    elif page == "Asset Verification":
-        st.header("Asset Verification")
+        st.success("Analysis complete. Open **LIP Console** to refine 
+                   
+ elif page == "Asset Verification":
+    st.header("Asset Verification")
 
-        st.subheader("Quick LIP Verification (Demo Mode)")
+    st.info("Asset verification temporarily simplified for demo.")
 
-        quick_ownership = st.selectbox(
-        "Ownership / rights position",
-        ["Select…", "Clear", "Mostly clear", "Unclear / needs follow-up"],
-        key="quick_verify_ownership"
-    )
-
-        quick_validity = st.selectbox(
-        "Document validity / status",
-        ["Select…", "Current and in force", "Mixed / partial", "Unclear"],
-        key="quick_verify_validity"
-    )
-
-        quick_evidence = st.selectbox(. 
-        "Strength of supporting evidence",
-        ["Select…", "Strong", "Moderate", "Weak"],
-        key="quick_verify_evidence"
-    )
-
-        quick_esg = st.selectbox(
-        "ESG / impact credibility",
-        ["Select…", "Well evidenced", "Partially evidenced", "Weak / unclear"],
-        key="quick_verify_esg"
-    )
-
-        ss["verification_notes"] = st.text_area(
-        "LIP Verification Summary Note",
-        ss.get("verification_notes", ""),
-        height=120
-    )
-
-        st.info("Use this quick summary for demos. Detailed document-level verification is optional.")
-
-        st.markdown("---")
-
-        st.markdown("---")st.header("Asset Verification — Evidence & ESG checks")
-
-        uploads = ss.get("uploads") or []
+    uploads = ss.get("uploads") or []
 
     if not uploads:
-        st.warning("No evidence files found in session. Go to **Company** and upload documents first.")
+        st.warning("No evidence files uploaded yet.")
     else:
-        st.markdown(
-            "This page supports a **human verification step** for the documents already uploaded. "
-            "It helps the Licensing & Intangibles Partner (LIP) or TTO to check ownership, validity "
-            "and the robustness of ESG or impact claims before moving to the LIP Console and reports."
-        )
+        st.success(f"{len(uploads)} file(s) available for verification.")
 
-        st.info(
-            "Use this view to **challenge the evidence**: confirm who owns what, whether contracts are in force, "
-            "and whether ESG or impact language is backed by real proof (not greenwashing)."
-        )
-
-        OPTION_LABELS = ["Select…", "Yes", "No", "Unsure / needs follow-up"]
-
-        for f in uploads:
-            fname = getattr(f, "name", "(unnamed file)")
-            safe_key = _safe(fname)
-
-            st.markdown(f"### {fname}")
-
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.selectbox(
-                    "Ownership / rights clear?",
-                    OPTION_LABELS,
-                    key=f"ver_own_{safe_key}",
-                    help="Does this document clearly show who owns or controls the asset?",
-                )
-            with col2:
-                st.selectbox(
-                    "Up to date & in force?",
-                    OPTION_LABELS,
-                    key=f"ver_date_{safe_key}",
-                    help="Is the document current (still valid, signed, dates make sense)?",
-                )
-            with col3:
-                st.selectbox(
-                    "Claims supported by evidence?",
-                    OPTION_LABELS,
-                    key=f"ver_claim_{safe_key}",
-                    help="Where the document makes bold or ESG-related claims, are they backed by real detail?",
-                )
-
-            st.text_area(
-                "Notes / follow-up for this document",
-                key=f"ver_notes_{safe_key}",
-                height=80,
-                help="Capture anything that needs clarification, extra evidence, or legal review.",
-            )
-
-            st.markdown("---")
-
-        st.subheader("Overall verification summary for this company")
-        ss["verification_notes"] = st.text_area(
-            "Overall verification notes",
-            ss.get("verification_notes", ""),
-            height=120,
-            help="High-level view: which assets look robust, which are weak, and what needs to happen next.",
-        )
-
-        st.caption(
-            "These checks do **not** replace legal review. They are a structured way for the LIP / TTO to "
-            "document how far the evidence can be trusted before licensing design and valuation."
-        )
+    st.markdown("You can proceed directly to analysis and reporting for this demo.")           
 # 4) LIP CONSOLE (was Expert View)
 elif page == "LIP Console":
     st.header("LIP Console — Narrative & IC Map")
