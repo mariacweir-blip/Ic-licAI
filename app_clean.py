@@ -1956,7 +1956,7 @@ elif page == "Reports":
         b.append("\nNext Steps:")
         b.append("• Build the licensing asset register")
         b.append("• Clarify pricing logic, access terms, and red lines")
-        b.append("• Move towards draft licence templates and partner 
+        b.append("• Move towards draft licence templates and partner discussions")
                  
                 # --- TTO QUICK VIEW (Netval) ---
         netval_score = 0
