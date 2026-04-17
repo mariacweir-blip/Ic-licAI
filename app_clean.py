@@ -1473,9 +1473,26 @@ elif page == "Analyse Evidence":
                 st.markdown(f"- `{ext}` → {n} file(s)")
         else:
             st.caption("No files analysed yet.")
+                st.subheader("Netval / TTO Badge")
 
+        netval_score = 0
+        if ss.get("ic_map", {}).get("Structural", {}).get("tick"):
+            netval_score += 40
+        if ss.get("ic_map", {}).get("Customer", {}).get("tick"):
+            netval_score += 25
+        if ss.get("ic_map", {}).get("Strategic Alliance", {}).get("tick"):
+            netval_score += 20
+        netval_score += min(15, int(ss.get("evidence_quality", 0) / 10))
+
+        if netval_score >= 75:
+            st.success(f"GREEN — Ready for licensing discussion ({netval_score}/100)")
+        elif netval_score >= 50:
+            st.warning(f"AMBER — Promising but needs strengthening ({netval_score}/100)")
+        else:
+            st.error(f"RED — Not yet ready for licensing ({netval_score}/100)")
     with col2:
-        st.subheader("IC Radar (4-Leaf + Ten-Steps)")
+     
+      st.subheader("IC Radar (4-Leaf + Ten-Steps)")
 
         ic_map: Dict[str, Any] = ss.get("ic_map", {})
         ten = ss.get(
