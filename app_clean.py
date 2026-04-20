@@ -1662,7 +1662,110 @@ elif page == "Asset Verification":
             height=120,
             key="verification_summary"
         )
-        
+#4) LIP CONSOLE
+elif page == "LIP Console":
+    st.header("LIP Console — Narrative, IC Map & Decision Support")
+
+    narrative = (
+        ss.get("combined_text")
+        or ss.get("narrative")
+        or st.session_state.get("persist_narrative")
+        or ""
+    ).strip()
+
+    if not narrative:
+        st.warning(
+            "No IC narrative found in current session.\n\n"
+            "Run Analyse Evidence first to populate the LIP Console."
+        )
+
+    nar = st.text_area(
+        "Summary (editable by Licensing & Intangibles Partner)",
+        value=narrative,
+        height=220,
+        key="nar_edit",
+    )
+
+    ss["narrative"] = nar or ss.get("narrative", "")
+    ss["combined_text"] = ss["narrative"]
+
+    colA, colB = st.columns([1, 1])
+
+    with colA:
+        if not PUBLIC_MODE:
+            st.subheader("Evidence Quality")
+            st.progress(min(100, max(0, ss.get("evidence_quality", 0))) / 100.0)
+            st.caption(f"{ss.get('evidence_quality', 0)}% evidence coverage (heuristic)")
+
+        st.subheader("4-Leaf Map")
+        ic_map: Dict[str, Any] = ss.get("ic_map", {})
+        for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
+            row = ic_map.get(
+                leaf,
+                {"tick": False, "narrative": f"No assessment yet for {leaf}.", "score": 0.0},
+            )
+            tick = "✓" if row["tick"] else "•"
+            suffix = "" if PUBLIC_MODE else f"  _(score: {row.get('score', 0.0)})_"
+            st.markdown(f"- **{leaf}**: {tick}{suffix}")
+            st.caption(row["narrative"])
+
+        st.subheader("Netval / TTO Badge")
+        netval_score = 0
+        if ss.get("ic_map", {}).get("Structural", {}).get("tick"):
+            netval_score += 40
+        if ss.get("ic_map", {}).get("Customer", {}).get("tick"):
+            netval_score += 25
+        if ss.get("ic_map", {}).get("Strategic Alliance", {}).get("tick"):
+            netval_score += 20
+        netval_score += min(15, int(ss.get("evidence_quality", 0) / 10))
+
+        if netval_score >= 75:
+            st.success(f"GREEN — Ready for licensing discussion ({netval_score}/100)")
+        elif netval_score >= 50:
+            st.warning(f"AMBER — Promising but needs strengthening ({netval_score}/100)")
+        else:
+            st.error(f"RED — Not yet ready for licensing ({netval_score}/100)")
+
+        st.subheader("Quick Verification Summary")
+        verification_summary = ss.get("verification_summary", "")
+        if verification_summary:
+            st.text_area(
+                "LIP Verification Summary (read-only)",
+                verification_summary,
+                height=120,
+                disabled=True,
+            )
+        else:
+            st.caption("No verification summary entered yet.")
+
+    with colB:
+        st.subheader("Ten-Steps Readiness")
+        raw_ten = ss.get("ten_steps") or {}
+        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
+        narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
+
+        st.dataframe(
+            {"Step": TEN_STEPS, "Score (1–10)": scores},
+            hide_index=True,
+            use_container_width=True,
+        )
+
+        with st.expander("Narrative per step"):
+            for s, n in zip(TEN_STEPS, narrs):
+                st.markdown(f"**{s}** — {n}")
+
+        st.subheader("Company Context")
+        st.markdown(f"- **Company / project:** {ss.get('case_name', '') or '—'}")
+        st.markdown(f"- **Sector:** {ss.get('sector', '') or '—'}")
+        st.markdown(f"- **Size:** {ss.get('company_size', '') or '—'}")
+        st.markdown(f"- **Why service:** {ss.get('why_service', '') or '—'}")
+        st.markdown(f"- **Stage:** {ss.get('stage', '') or '—'}")
+        st.markdown(f"- **Markets / users:** {ss.get('markets_why', '') or '—'}")
+
+        st.subheader("LIP Suggested Next Moves")
+        st.markdown("- Review whether Structural Capital is sufficient for licensing.")
+        st.markdown("- Confirm whether the evidence supports FRAND, co-creation, or knowledge licensing.")
+        st.markdown("- Check whether valuation support and tax-positioning outputs are ready for reporting.")
  
 # 5) REPORTS
 elif page == "Reports":
