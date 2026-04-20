@@ -1620,7 +1620,7 @@ elif page == "Asset Verification":
                 "Safeguard": ["policy", "security", "risk"],
                 "Manage": ["management", "process", "system"],
                 "Control": ["board", "governance", "report"],
-                "Use": ["contract", "licence", "agreement"],
+                "Use": ["contract", "licence", "license", "agreement"],
                 "Monitor": ["kpi", "metrics", "dashboard"],
                 "Value": ["valuation", "financial", "revenue"],
                 "Report": ["report", "esg", "annual"]
@@ -1648,7 +1648,7 @@ elif page == "Asset Verification":
             else:
                 st.caption("No obvious supporting files detected.")
 
-            ss[f"verify_{step}"] = st.selectbox(
+            st.selectbox(
                 f"{step} verification",
                 ["Select…", "Well evidenced", "Partly evidenced", "Weak / not evidenced"],
                 key=f"verify_{step}"
@@ -1656,11 +1656,13 @@ elif page == "Asset Verification":
 
         st.markdown("---")
 
-        ss["verification_summary"] = st.text_area(
+        st.text_area(
             "LIP Verification Summary",
             ss.get("verification_summary", ""),
-            height=120
+            height=120,
+            key="verification_summary"
         )
+        
  
 # 5) REPORTS
 elif page == "Reports":
