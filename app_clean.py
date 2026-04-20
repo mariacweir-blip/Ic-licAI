@@ -1598,79 +1598,70 @@ elif page == "Analyse Evidence":
             )
 
         st.success("Analysis complete. Open **LIP Console** to refine and export.")
-                   
-  # --- TEMP DISABLED FOR DEMO ---
-# elif page == "Asset Verification":
-#     st.header("Asset Verification")
-#
-#     st.info("Asset verification temporarily simplified for demo.")
-#
-#     uploads = ss.get("uploads") or []
-#
-#     if not uploads:
-#         st.warning("No evidence files uploaded yet.")
-#     else:
-#         st.success(f"{len(uploads)} file(s) available for verification.")
-#
-#     st.markdown("You can proceed directly to analysis and reporting for this demo.")
 
-#4) LIP CONSOLE (was Expert View)
-elif page == "LIP Console":
-    st.header("LIP Console — Narrative & IC Map")
-    nar = st.text_area(
-        "Summary (editable by Licensing & Intangibles Partner)",
-        value=ss.get("combined_text", ""),
-        height=220,
-        key="nar_edit",
-    )
-    ss["narrative"] = nar or ss.get("narrative", "")
-    ss["combined_text"] = ss["narrative"]
+#3)Asset Verification 
+elif page == "Asset Verification":
+    st.header("Asset Verification (10 Steps – Sample-Based)")
 
-    colA, colB = st.columns([1, 1])
-    with colA:
-        if not PUBLIC_MODE:
-            st.subheader("Evidence Quality")
-            st.progress(min(100, max(0, ss.get("evidence_quality", 0))) / 100.0)
-            st.caption(f"{ss.get('evidence_quality', 0)}% evidence coverage (heuristic)")
+    st.info("Verify each step using suggested sample evidence. This replaces file-by-file checking.")
 
-        st.subheader("4-Leaf Map")
-        ic_map: Dict[str, Any] = ss.get("ic_map", {})
-        for leaf in ["Human", "Structural", "Customer", "Strategic Alliance"]:
-            row = ic_map.get(
-                leaf,
-                {"tick": False, "narrative": f"No assessment yet for {leaf}.", "score": 0.0},
+    uploads = ss.get("uploads") or []
+
+    if not uploads:
+        st.warning("No files uploaded yet.")
+    else:
+        file_names = [f.name for f in uploads]
+
+        def suggest_files(step):
+            step_map = {
+                "Identify": ["plan", "overview", "deck"],
+                "Separate": ["structure", "org", "process"],
+                "Protect": ["nda", "ip", "patent", "trademark"],
+                "Safeguard": ["policy", "security", "risk"],
+                "Manage": ["management", "process", "system"],
+                "Control": ["board", "governance", "report"],
+                "Use": ["contract", "licence", "agreement"],
+                "Monitor": ["kpi", "metrics", "dashboard"],
+                "Value": ["valuation", "financial", "revenue"],
+                "Report": ["report", "esg", "annual"]
+            }
+
+            keywords = step_map.get(step, [])
+            matches = []
+
+            for name in file_names:
+                lower = name.lower()
+                if any(k in lower for k in keywords):
+                    matches.append(name)
+
+            return matches[:2]
+
+        for step in TEN_STEPS:
+            st.markdown(f"### {step}")
+
+            suggested = suggest_files(step)
+
+            if suggested:
+                st.caption("Suggested evidence:")
+                for s in suggested:
+                    st.markdown(f"- {s}")
+            else:
+                st.caption("No obvious supporting files detected.")
+
+            ss[f"verify_{step}"] = st.selectbox(
+                f"{step} verification",
+                ["Select…", "Well evidenced", "Partly evidenced", "Weak / not evidenced"],
+                key=f"verify_{step}"
             )
-            tick = "✓" if row["tick"] else "•"
-            suffix = "" if PUBLIC_MODE else f"  _(score: {row.get('score', 0.0)})_"
-            st.markdown(f"- **{leaf}**: {tick}{suffix}")
-            st.caption(row["narrative"])
 
-        st.subheader("Company context (read-only)")
-        st.markdown(f"- **Why service:** {ss.get('why_service', '') or '—'}")
-        st.markdown(f"- **Stage:** {ss.get('stage', '') or '—'}")
-        st.markdown(
-            f"- **Plans:** S={ss.get('plan_s', '') or '—'} | "
-            f"M={ss.get('plan_m', '') or '—'} | L={ss.get('plan_l', '') or '—'}"
+        st.markdown("---")
+
+        ss["verification_summary"] = st.text_area(
+            "LIP Verification Summary",
+            ss.get("verification_summary", ""),
+            height=120
         )
-        st.markdown(f"- **Markets & why:** {ss.get('markets_why', '') or '—'}")
-        st.markdown(f"- **Target sale & why:** {ss.get('sale_price_why', '') or '—'}")
-
-    with colB:
-        st.subheader("Ten-Steps Readiness")
-        raw_ten = ss.get("ten_steps") or {}
-        scores = raw_ten.get("scores") or [5] * len(TEN_STEPS)
-        narrs = raw_ten.get("narratives") or [f"{s}: tbd" for s in TEN_STEPS]
-        ten = {"scores": scores, "narratives": narrs}
-
-        st.dataframe(
-            {"Step": TEN_STEPS, "Score (1–10)": ten["scores"]},
-            hide_index=True,
-            use_container_width=True,
-        )
-        with st.expander("Narrative per step"):
-            for s, n in zip(TEN_STEPS, ten["narratives"]):
-                st.markdown(f"**{s}** — {n}")
-
+ 
 # 5) REPORTS
 elif page == "Reports":
     st.header("Reports & Exports")
