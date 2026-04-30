@@ -220,16 +220,16 @@ elif use_case == "LESI / Licensing & Deals":
 
     deal_score = 0
 
-    if ss.get("ic_map", {}).get("Structural", {}).get("tick"):
+    if st.session_state.get("ic_map", {}).get("Structural", {}).get("tick"):
         deal_score += 40
 
-    if ss.get("ic_map", {}).get("Customer", {}).get("tick"):
+    if st.session_state.get("ic_map", {}).get("Customer", {}).get("tick"):
         deal_score += 25
 
-    if ss.get("ic_map", {}).get("Strategic Alliance", {}).get("tick"):
+    if st.session_state.get("ic_map", {}).get("Strategic Alliance", {}).get("tick"):
         deal_score += 25
 
-    deal_score += min(10, int(ss.get("evidence_quality", 0) / 10))
+    deal_score += min(10, int(st.session_state.get("evidence_quality", 0) / 10))
 
     if deal_score >= 75:
         st.success(f"GREEN — Strong licensing candidate ({deal_score}/100)")
@@ -243,13 +243,13 @@ elif use_case == "LESI / Licensing & Deals":
 
     st.markdown("**Likely deal routes:**")
 
-    if ss.get("ic_map", {}).get("Structural", {}).get("tick"):
+    if st.session_state.get("ic_map", {}).get("Structural", {}).get("tick"):
         st.markdown("- Standard / FRAND-style licensing")
 
-    if ss.get("ic_map", {}).get("Strategic Alliance", {}).get("tick"):
+    if st.session_state.get("ic_map", {}).get("Strategic Alliance", {}).get("tick"):
         st.markdown("- Co-creation / joint development")
 
-    if not ss.get("ic_map", {}).get("Structural", {}).get("tick"):
+    if not st.session_state.get("ic_map", {}).get("Structural", {}).get("tick"):
         st.markdown("- Knowledge / early-stage collaboration")
 else:
 
