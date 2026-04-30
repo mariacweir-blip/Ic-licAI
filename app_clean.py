@@ -187,7 +187,7 @@ elif use_case == "TTO / Netval (Licensing)":
         This is informational only.
         """
     )
-  elif use_case == "LESI / Licensing & Deals":
+elif use_case == "LESI / Licensing & Deals":
 
     st.markdown("## Licensing & Deal Structuring")
 
