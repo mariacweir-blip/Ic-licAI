@@ -187,6 +187,27 @@ elif use_case == "TTO / Netval (Licensing)":
         This is informational only.
         """
     )
+  elif use_case == "LESI / Licensing & Deals":
+
+    st.markdown("## Licensing & Deal Structuring")
+
+    st.info(
+        "This tool supports licensing professionals in assessing, structuring, and prioritising deal opportunities "
+        "based on evidence, asset structure, and commercial readiness."
+    )
+
+    st.markdown(
+        """
+        In practice, this means:
+
+        • identifying licensable assets and deal-ready components;
+        • distinguishing between FRAND-informed licensing, co-creation, and knowledge-based agreements;
+        • highlighting commercial leverage points such as contracts, data, IPR, customer evidence, and partnerships;
+        • supporting faster and more consistent licensing and deal-structuring decisions.
+
+        This is informational and does not replace legal, negotiation, or licensing expertise.
+        """
+    )
 
 else:
 
