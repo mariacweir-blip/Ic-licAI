@@ -135,9 +135,11 @@ st.caption("INTERNAL VERSION — FOR REAL EVIDENCE (PASS-PHRASE PROTECTED)")
  # --- USE CASE SELECTOR ---
 use_case = st.selectbox(
     "Select perspective",
-    [
+      [
         "Belgian Tax & Valuation (IMEC)",
         "TTO / Netval (Licensing)",
+        "ASTP / TTO Decision Support",
+        "LESI / Licensing & Deals",
         "General IC & Investment"
     ],
     index=0
