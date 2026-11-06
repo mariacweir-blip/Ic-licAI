@@ -1203,13 +1203,9 @@ ss.setdefault("lip_history", [])
 # Asset verification (overall notes)
 ss.setdefault("verification_notes", "")
 
-# Market Growth workspace
+# Specialist workspaces — both inherit the single evidence upload from Company
 ss.setdefault("market_growth", {})
-ss.setdefault("market_evidence_uploads", [])
-
-# Innovation Capacity workspace
 ss.setdefault("innovation_capacity", {})
-ss.setdefault("innovation_capacity_uploads", [])
 
 SIZES = [
     "Micro (1–10)",
@@ -1245,6 +1241,131 @@ COMPANY_TYPES = [
     "Research-based (university or institute)",
     "Other",
 ]
+
+
+def _uploaded_evidence_names(uploads: Optional[List[Any]] = None) -> List[str]:
+    """Return the canonical names from the single Company-page upload."""
+    evidence = uploads if uploads is not None else (ss.get("uploads") or [])
+    return [str(getattr(item, "name", "evidence file")) for item in evidence]
+
+
+def _csv_rows(upload: Any) -> List[Dict[str, str]]:
+    """Read a CSV upload without moving its stream pointer."""
+    if not str(getattr(upload, "name", "")).lower().endswith(".csv"):
+        return []
+    try:
+        raw = upload.getvalue()
+        text = raw.decode("utf-8-sig", errors="replace")
+        return [dict(row) for row in csv.DictReader(io.StringIO(text))]
+    except Exception:
+        return []
+
+
+def _number(value: Any) -> float:
+    cleaned = re.sub(r"[^0-9.\-]", "", str(value or ""))
+    try:
+        return float(cleaned) if cleaned else 0.0
+    except ValueError:
+        return 0.0
+
+
+def _truthy(value: Any) -> bool:
+    return str(value or "").strip().lower() in {"true", "yes", "y", "1", "present"}
+
+
+def _normalise_label(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(value or "").lower().replace("&", "and"))
+
+
+def _populate_specialist_workspaces_from_evidence(uploads: Optional[List[Any]] = None) -> List[str]:
+    """Prefill Market Growth and Innovation Capacity from structured evidence CSVs.
+
+    This keeps Company as the only upload point. The specialist pages inherit all
+    evidence files and, when a compatible parameter CSV is present, also inherit
+    the page-specific judgements and figures.
+    """
+    evidence = uploads if uploads is not None else (ss.get("uploads") or [])
+    evidence_names = _uploaded_evidence_names(evidence)
+    populated: List[str] = []
+
+    for upload in evidence:
+        rows = _csv_rows(upload)
+        if not rows:
+            continue
+
+        headers = {str(key or "").strip() for key in rows[0].keys()}
+        if {"Field", "Showcase value"}.issubset(headers):
+            values = {
+                str(row.get("Field") or "").strip().lower(): str(row.get("Showcase value") or "").strip()
+                for row in rows
+            }
+            if values.get("target segments") and values.get("starting market value"):
+                evidence_checks = [
+                    key
+                    for key in EVIDENCE_LABELS
+                    if _truthy(values.get(f"evidence check {key}"))
+                ]
+                market_data = {
+                    "customer_segments": values.get("target segments", ""),
+                    "geography": values.get("geography", ""),
+                    "market_need": values.get("market need", ""),
+                    "routes_to_market": values.get("routes to market", ""),
+                    "strategic_partners": values.get("strategic partners", ""),
+                    "figure_status": values.get("figure status", "Verified third-party evidence"),
+                    "currency": values.get("currency", "GBP"),
+                    "start_year": int(_number(values.get("starting year")) or datetime.date.today().year),
+                    "end_year": int(_number(values.get("projection year")) or datetime.date.today().year + 3),
+                    "start_value": _number(values.get("starting market value")),
+                    "end_value": _number(values.get("projection market value")),
+                    "tam": _number(values.get("tam")),
+                    "sam": _number(values.get("sam")),
+                    "som": _number(values.get("som")),
+                    "competitors": values.get("competitors", ""),
+                    "differentiation": values.get("differentiation", ""),
+                    "pricing_notes": values.get("pricing", ""),
+                    "evidence_checks": evidence_checks,
+                    "sources": values.get("named sources", "").replace(" | ", "\n"),
+                    "assumptions": values.get("assumptions and limitations", ""),
+                    "evidence_file_names": evidence_names,
+                    "saved_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                    "prefilled_from_company_evidence": True,
+                }
+                ss["market_growth"] = market_data
+                populated.append("Market Growth")
+
+        if {"Dimension", "Maturity out of 4", "Evidence out of 3", "Evidence note"}.issubset(headers):
+            dimension_lookup = {
+                _normalise_label(meta["label"]): key for key, meta in INNOVATION_DIMENSIONS.items()
+            }
+            dimension_lookup.update(
+                {
+                    "knowledge data and ip".replace(" ", ""): "knowledge",
+                    "process and portfolio".replace(" ", ""): "process",
+                    "partnerships and market learning".replace(" ", ""): "partnerships",
+                    "resources and funding".replace(" ", ""): "resources",
+                    "measurement and governance".replace(" ", ""): "measurement",
+                }
+            )
+            dimensions: Dict[str, Dict[str, Any]] = {}
+            for row in rows:
+                key = dimension_lookup.get(_normalise_label(row.get("Dimension")))
+                if key:
+                    dimensions[key] = {
+                        "maturity": max(0, min(4, int(_number(row.get("Maturity out of 4"))))),
+                        "evidence": max(0, min(3, int(_number(row.get("Evidence out of 3"))))),
+                        "notes": str(row.get("Evidence note") or "").strip(),
+                    }
+            if len(dimensions) == len(INNOVATION_DIMENSIONS):
+                ss["innovation_capacity"] = {
+                    "dimensions": dimensions,
+                    "limitations": "Prefilled from the structured evidence uploaded on the Company page.",
+                    "evidence_file_names": evidence_names,
+                    "saved_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                    "prefilled_from_company_evidence": True,
+                }
+                populated.append("Innovation Capacity")
+
+    return list(dict.fromkeys(populated))
 
 ## --------------- SIDEBAR BRANDING & NAV ---------------
 with st.sidebar:
@@ -1652,11 +1773,21 @@ if page == "Company":
 
                 if uploads:
                     ss["uploads"] = uploads
+                    inherited = _populate_specialist_workspaces_from_evidence(uploads)
+                else:
+                    inherited = []
 
                 st.success("Saved company / project details and licensing context.")
+                if inherited:
+                    st.success(
+                        "The same evidence set has also prefilled: " + ", ".join(inherited) + "."
+                    )
 
     if ss.get("uploads"):
-        st.info(f"{len(ss['uploads'])} file(s) stored in session. Go to **Analyse Evidence** next.")
+        st.info(
+            f"{len(ss['uploads'])} file(s) stored in the shared evidence set. "
+            "They are available automatically on every later page. Go to **Analyse Evidence** next."
+        )
         
 # 2) ANALYSE EVIDENCE (with radar / evidence quality)
 elif page == "Analyse Evidence":
@@ -1755,6 +1886,7 @@ elif page == "Analyse Evidence":
 
     if st.button("Run analysis now"):
         uploads: List[Any] = ss.get("uploads") or []
+        inherited = _populate_specialist_workspaces_from_evidence(uploads)
         extracted, counts, weights = _read_text(uploads)
 
         ss["file_counts"] = counts or {}
@@ -1793,6 +1925,8 @@ elif page == "Analyse Evidence":
         ss["ten_steps"] = ten
         ss["leaf_scores"] = leaf_scores
         ss["evidence_quality"] = quality
+        if inherited:
+            st.success("Shared evidence also refreshed: " + ", ".join(inherited) + ".")
 
         if len(extracted.strip()) < 100:
             st.warning(
@@ -2503,6 +2637,18 @@ elif page == "Innovation Capacity":
         "The score combines maturity with evidence strength so that confident claims do not substitute for proof."
     )
 
+    inherited_evidence_names = _uploaded_evidence_names()
+    if inherited_evidence_names:
+        st.success(
+            f"Using the shared Company evidence set: {len(inherited_evidence_names)} file(s). "
+            "No further upload is required."
+        )
+        with st.expander("Evidence inherited from Company"):
+            for filename in inherited_evidence_names:
+                st.markdown(f"- {filename}")
+    else:
+        st.warning("Upload the evidence set once on the Company page; it will then appear here automatically.")
+
     existing_capacity = ss.get("innovation_capacity", {}) or {}
     existing_dimensions = existing_capacity.get("dimensions", {}) or {}
 
@@ -2546,13 +2692,9 @@ elif page == "Innovation Capacity":
                         "notes": notes.strip(),
                     }
 
-        st.subheader("2. Supporting evidence")
-        capacity_uploads = st.file_uploader(
-            "Upload innovation-capacity evidence",
-            type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg", "webp"],
-            accept_multiple_files=True,
-            key="innovation_capacity_uploader",
-            help="Examples: strategy or portfolio review, skills register, development log, experiment log, governance pack, partner review and KPI dashboard.",
+        st.subheader("2. Evidence context")
+        st.caption(
+            "All evidence is inherited from the Company page. Use this box only to record context or a professional judgement; do not upload files again."
         )
         capacity_limitations = st.text_area(
             "Known limitations, context or recent changes",
@@ -2565,13 +2707,10 @@ elif page == "Innovation Capacity":
             capacity_data = {
                 "dimensions": capacity_values,
                 "limitations": capacity_limitations.strip(),
-                "evidence_file_names": [getattr(f, "name", "capacity evidence") for f in (capacity_uploads or [])]
-                or existing_capacity.get("evidence_file_names", []),
+                "evidence_file_names": inherited_evidence_names,
                 "saved_at": datetime.datetime.now().isoformat(timespec="seconds"),
             }
             ss["innovation_capacity"] = capacity_data
-            if capacity_uploads:
-                ss["innovation_capacity_uploads"] = capacity_uploads
             st.success("Innovation Capacity assessment saved.")
 
     capacity_data = ss.get("innovation_capacity", {}) or {}
@@ -2648,6 +2787,18 @@ elif page == "Market Growth":
         "Build an evidence-led view of the target market, growth potential and route to market. "
         "The page separates named sources, internal estimates and assumptions. It does not invent or independently verify market figures."
     )
+
+    inherited_evidence_names = _uploaded_evidence_names()
+    if inherited_evidence_names:
+        st.success(
+            f"Using the shared Company evidence set: {len(inherited_evidence_names)} file(s). "
+            "No further upload is required."
+        )
+        with st.expander("Evidence inherited from Company"):
+            for filename in inherited_evidence_names:
+                st.markdown(f"- {filename}")
+    else:
+        st.warning("Upload the evidence set once on the Company page; it will then appear here automatically.")
 
     existing_market = ss.get("market_growth", {}) or {}
     default_segments = existing_market.get("customer_segments") or ss.get("plan_s", "")
@@ -2817,12 +2968,9 @@ elif page == "Market Growth":
             value=existing_market.get("assumptions", ""),
             height=120,
         )
-        market_uploads = st.file_uploader(
-            "Upload supporting market evidence",
-            type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg", "webp"],
-            accept_multiple_files=True,
-            key="market_growth_uploader",
-            help="Files remain in the current session. Their presence supports review but does not verify their claims.",
+        st.caption(
+            "Supporting files are inherited automatically from the Company page. "
+            "The fields above confirm how the shared evidence should be interpreted."
         )
 
         save_market = st.form_submit_button("Save Market Growth analysis")
@@ -2864,13 +3012,10 @@ elif page == "Market Growth":
                     "evidence_checks": list(mg_evidence_checks),
                     "sources": mg_sources.strip(),
                     "assumptions": mg_assumptions.strip(),
-                    "evidence_file_names": [getattr(f, "name", "market evidence") for f in (market_uploads or [])]
-                    or existing_market.get("evidence_file_names", []),
+                    "evidence_file_names": inherited_evidence_names,
                     "saved_at": datetime.datetime.now().isoformat(timespec="seconds"),
                 }
                 ss["market_growth"] = market_data
-                if market_uploads:
-                    ss["market_evidence_uploads"] = market_uploads
                 st.success("Market Growth analysis saved. Review the calculated indicators below.")
 
     market_data = ss.get("market_growth", {}) or {}
