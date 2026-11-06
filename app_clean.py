@@ -145,15 +145,15 @@ st.caption("INTERNAL VERSION — FOR REAL EVIDENCE (PASS-PHRASE PROTECTED)")
 # Explain evidence handling before the user enters company data or uploads files.
 with st.expander("How IC-LicAI handles your evidence", expanded=True):
     st.markdown("""
-**IC-LicAI analyses documents; it is not a document storage system.**
+**IC-LicAI analyses evidence; it is not a document repository.**
 
-- **No evidence database:** The tool does not maintain a database of uploaded source documents.
-- **During the session:** Uploaded evidence is available across the analysis pages, so it does not need to be uploaded repeatedly.
-- **What reports contain:** Reports summarise and interpret the evidence. They do **not** include or archive the original uploaded files.
-- **After the session:** Keep your original documents and download any reports you wish to retain. Do not rely on the tool to retrieve previous uploads.
-- **Server exports:** In private/internal mode, generated report files may be saved to server storage; public/demo mode disables that server-save function. This is separate from storage of the original evidence.
+- **No evidence database or document archive:** IC-LicAI does not use a database to retain uploaded source documents, and it does not offer a way to retrieve them in a later session.
+- **Temporary session processing:** Uploaded documents are made available to the tool during the active Streamlit session to support its different analyses. Session data is not intended as permanent storage and becomes unavailable when the session ends or expires.
+- **Reports contain findings, not source documents:** Reports summarise and interpret the evidence. They do not reproduce or archive the uploaded files. Users should download reports they want to keep.
+- **Generated report files:** In the internal/private configuration, the application can write generated exports to its runtime file storage; public/demo mode disables that server-save function. This is not a database or archive of uploaded source documents.
+- **Professional confidentiality:** Licensing professionals should obtain appropriate client authorisation, use NDAs or equivalent confidentiality arrangements where applicable, and comply with data-protection obligations. Use anonymised or fictional evidence for demonstrations.
 
-**Confidentiality:** Only upload documents you are authorised to use. The absence of a database does not guarantee immediate deletion of temporary files, hosting logs or backups; any formal retention or deletion assurance must be confirmed with the hosting administrator.
+**Important distinction:** IC-LicAI has no separate evidence database or backup system operated by its team. However, Streamlit runs on hosted infrastructure. We cannot promise instantaneous or complete deletion of all temporary processing data, logs or infrastructure-level copies when a session closes. Keep your original documents securely in your own systems.
 """)
 
 st.markdown(
