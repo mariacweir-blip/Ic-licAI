@@ -84,6 +84,16 @@ and produces an editable Innovation Capacity report from the page or from
 **Reports & Exports**. The score is a structured discussion aid, not an audit,
 certification or prediction of innovation success.
 
+## One shared evidence upload
+
+Evidence is uploaded once on the **Company** page and is inherited by every
+later workspace and report. Market Growth and Innovation Capacity no longer
+request duplicate uploads. If the shared evidence set contains compatible
+`Market_Growth_*_Parameters.csv` or `Innovation_Capacity_*_Parameters.csv`
+files, their structured values prefill the specialist workspaces when the
+evidence analysis runs. Users can review or adjust the interpretation without
+re-uploading the source evidence.
+
 ---
 
 ## 5) Password
