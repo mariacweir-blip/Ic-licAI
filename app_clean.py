@@ -12,6 +12,14 @@ from typing import Dict, Any, List, Tuple, Optional
 import streamlit as st
 import plotly.graph_objects as go  # for radar charts
 
+from market_growth import (
+    EVIDENCE_LABELS,
+    build_market_growth_report,
+    licensing_implications,
+    market_metrics,
+    source_lines,
+)
+
 # -------------------- PROJECT LOGOS -----------------
 IMPACT3T_LOGO_PATH = "demo_assets/impact3t_logo.png"
 EU_FLAG_PATH = "demo_assets/eu_flag.png"
@@ -1188,6 +1196,10 @@ ss.setdefault("lip_history", [])
 # Asset verification (overall notes)
 ss.setdefault("verification_notes", "")
 
+# Market Growth workspace
+ss.setdefault("market_growth", {})
+ss.setdefault("market_evidence_uploads", [])
+
 SIZES = [
     "Micro (1–10)",
     "Small (11–50)",
@@ -1980,6 +1992,7 @@ elif page == "Reports":
         plan_l = (ss.get("plan_l") or "").strip()
         markets_why = (ss.get("markets_why") or "").strip()
         sale_price_why = (ss.get("sale_price_why") or "").strip()
+        market_growth = ss.get("market_growth", {}) or {}
 
         # Robust widget/session fallback for dates
         last_val = ss.get("last_valuation_date", None)
@@ -2023,6 +2036,7 @@ elif page == "Reports":
             "plan_l": plan_l,
             "markets_why": markets_why,
             "sale_price_why": sale_price_why,
+            "market_growth": market_growth,
             "last_val": last_val_fmt,
             "exit_dt": exit_dt_fmt,
             "structural_row": structural_row,
@@ -2168,6 +2182,18 @@ elif page == "Reports":
         else:
             b.append("- Target markets and partner types are not yet clearly described.")
 
+        if ctx["market_growth"]:
+            market_data = ctx["market_growth"]
+            market_view = market_metrics(market_data)
+            b.append("\nMarket Growth Evidence")
+            b.append(f"- Target segments: {market_data.get('customer_segments') or 'Not recorded'}")
+            b.append(f"- Geography: {market_data.get('geography') or 'Not recorded'}")
+            b.append(f"- Quantitative status: {market_data.get('figure_status') or 'Not recorded'}")
+            if market_view["cagr"] is not None:
+                b.append(f"- Recorded market scenario CAGR: {market_view['cagr']:.1f}%")
+            b.append(f"- Market evidence completeness: {market_view['evidence_score']}/100 — {market_view['evidence_band']}")
+            b.append("- These market indicators require source and professional verification before they inform licence terms or valuation.")
+
         b.append("\n5. Fair Outcome and Commercial Logic")
         if ctx["sale_price_why"]:
             b.append(f"- Management view of a fair outcome: {ctx['sale_price_why']}")
@@ -2279,6 +2305,14 @@ elif page == "Reports":
 
         return title, "\n".join(b)
 
+    def _compose_market() -> Tuple[str, str]:
+        ctx = _report_context()
+        return build_market_growth_report(
+            ctx["market_growth"],
+            ctx["case_name"],
+            ctx["sector"],
+        )
+
     def _compose_tax() -> Tuple[str, str]:
         ctx = _report_context()
         title = f"Belgian Tax Positioning Report — {ctx['case_name']}"
@@ -2361,7 +2395,7 @@ elif page == "Reports":
 
         return title, "\n".join(b)
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
 
     with c1:
         if st.button("Generate IC Report (DOCX/TXT)", key="btn_ic"):
@@ -2405,12 +2439,353 @@ elif page == "Reports":
             )
             (st.success if path else st.warning)(msg)
 
+    with c4:
+        if st.button("Generate Market Growth Report (DOCX/TXT)", key="btn_market"):
+            if not ss.get("market_growth"):
+                st.warning("Complete and save the Market Growth page first.")
+            else:
+                title, body = _compose_market()
+                data, fname, mime = _export_bytes(title, body)
+                path, msg = _save_bytes(case_folder, fname, data)
+                st.download_button(
+                    label="Download Market Growth Report",
+                    data=data,
+                    file_name=fname,
+                    mime=mime,
+                    key="dl_market",
+                )
+                (st.success if path else st.warning)(msg)
+
     st.caption(
         "Server save root: disabled (public mode)"
         if PUBLIC_MODE
         else f"Server save root: {OUT_ROOT}"
     )
-# 6) LICENSING TEMPLATES
+
+# 6) MARKET GROWTH
+elif page == "Market Growth":
+    st.header("Market Growth & Commercial Evidence")
+    st.info(
+        "Build an evidence-led view of the target market, growth potential and route to market. "
+        "The page separates named sources, internal estimates and assumptions. It does not invent or independently verify market figures."
+    )
+
+    existing_market = ss.get("market_growth", {}) or {}
+    default_segments = existing_market.get("customer_segments") or ss.get("plan_s", "")
+    default_revenue = existing_market.get("pricing_notes") or ss.get("markets_why", "")
+    current_year = datetime.date.today().year
+
+    with st.form("market_growth_form"):
+        st.subheader("1. Target market")
+        mg_customer_segments = st.text_area(
+            "Target customers and market segments *",
+            value=default_segments,
+            height=90,
+            help="Describe the specific organisations or people most likely to buy, use or license the offer.",
+        )
+        mg_geography = st.text_area(
+            "Target countries or regions *",
+            value=existing_market.get("geography", ""),
+            height=70,
+        )
+        mg_market_need = st.text_area(
+            "What market need or problem is evidenced? *",
+            value=existing_market.get("market_need", ""),
+            height=90,
+            help="State what customers need and the evidence that the need exists.",
+        )
+
+        route_col, partner_col = st.columns(2)
+        with route_col:
+            mg_routes = st.text_area(
+                "Routes to market",
+                value=existing_market.get("routes_to_market", ""),
+                height=100,
+                help="For example direct sales, distributors, TTOs, digital channels, public procurement or licensees.",
+            )
+        with partner_col:
+            mg_partners = st.text_area(
+                "Strategic partners and channels",
+                value=existing_market.get("strategic_partners", ""),
+                height=100,
+            )
+
+        st.subheader("2. Market size and growth")
+        st.caption("Enter zero where a figure is not yet available. Do not present a working estimate as verified evidence.")
+        figure_status_options = [
+            "Verified third-party evidence",
+            "Mixed sourced evidence and internal estimates",
+            "Internal working estimate",
+            "Unverified assumption requiring research",
+        ]
+        stored_status = existing_market.get("figure_status", figure_status_options[-1])
+        if stored_status not in figure_status_options:
+            stored_status = figure_status_options[-1]
+        mg_figure_status = st.selectbox(
+            "Status of the quantitative figures *",
+            figure_status_options,
+            index=figure_status_options.index(stored_status),
+        )
+
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            currency_options = ["EUR", "GBP", "USD", "KES", "ZAR", "Other currency"]
+            stored_currency = existing_market.get("currency", "EUR")
+            if stored_currency not in currency_options:
+                stored_currency = "Other currency"
+            mg_currency = st.selectbox(
+                "Currency / unit",
+                currency_options,
+                index=currency_options.index(stored_currency),
+            )
+        with c2:
+            mg_start_year = st.number_input(
+                "Starting year",
+                min_value=2000,
+                max_value=2100,
+                value=int(existing_market.get("start_year") or current_year),
+                step=1,
+            )
+        with c3:
+            mg_end_year = st.number_input(
+                "Projection year",
+                min_value=2000,
+                max_value=2100,
+                value=int(existing_market.get("end_year") or current_year + 3),
+                step=1,
+            )
+
+        c4, c5 = st.columns(2)
+        with c4:
+            mg_start_value = st.number_input(
+                "Market value in the starting year",
+                min_value=0.0,
+                value=float(existing_market.get("start_value") or 0.0),
+                step=1000.0,
+                format="%.2f",
+            )
+        with c5:
+            mg_end_value = st.number_input(
+                "Expected market value in the projection year",
+                min_value=0.0,
+                value=float(existing_market.get("end_value") or 0.0),
+                step=1000.0,
+                format="%.2f",
+            )
+
+        st.markdown("##### Addressable-market funnel")
+        tam_col, sam_col, som_col = st.columns(3)
+        with tam_col:
+            mg_tam = st.number_input(
+                "TAM — total addressable market",
+                min_value=0.0,
+                value=float(existing_market.get("tam") or 0.0),
+                step=1000.0,
+                format="%.2f",
+            )
+        with sam_col:
+            mg_sam = st.number_input(
+                "SAM — serviceable available market",
+                min_value=0.0,
+                value=float(existing_market.get("sam") or 0.0),
+                step=1000.0,
+                format="%.2f",
+            )
+        with som_col:
+            mg_som = st.number_input(
+                "SOM — realistically obtainable market",
+                min_value=0.0,
+                value=float(existing_market.get("som") or 0.0),
+                step=1000.0,
+                format="%.2f",
+            )
+
+        st.subheader("3. Competition and commercial position")
+        mg_competitors = st.text_area(
+            "Main competitors, substitutes or current alternatives *",
+            value=existing_market.get("competitors", ""),
+            height=100,
+        )
+        mg_differentiation = st.text_area(
+            "Evidence-based differentiation",
+            value=existing_market.get("differentiation", ""),
+            height=100,
+            help="Explain why customers may choose this offer, and identify the evidence supporting the claim.",
+        )
+        mg_pricing_notes = st.text_area(
+            "Pricing, revenue and willingness-to-pay evidence",
+            value=default_revenue,
+            height=90,
+        )
+
+        st.subheader("4. Evidence register")
+        stored_checks = [key for key in existing_market.get("evidence_checks", []) if key in EVIDENCE_LABELS]
+        mg_evidence_checks = st.multiselect(
+            "Which evidence categories are genuinely present?",
+            options=list(EVIDENCE_LABELS.keys()),
+            default=stored_checks,
+            format_func=lambda key: EVIDENCE_LABELS[key],
+            help="Select a category only where a source document, record or traceable result exists.",
+        )
+        mg_sources = st.text_area(
+            "Named sources and dates — one per line *",
+            value=existing_market.get("sources", ""),
+            height=120,
+            placeholder="Example: Industry association report, title, publisher, year, link or file name",
+        )
+        mg_assumptions = st.text_area(
+            "Assumptions, limitations, risks and missing evidence *",
+            value=existing_market.get("assumptions", ""),
+            height=120,
+        )
+        market_uploads = st.file_uploader(
+            "Upload supporting market evidence",
+            type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg", "webp"],
+            accept_multiple_files=True,
+            key="market_growth_uploader",
+            help="Files remain in the current session. Their presence supports review but does not verify their claims.",
+        )
+
+        save_market = st.form_submit_button("Save Market Growth analysis")
+
+        if save_market:
+            required_values = {
+                "Target customers and segments": mg_customer_segments,
+                "Target geography": mg_geography,
+                "Market need": mg_market_need,
+                "Competitors or alternatives": mg_competitors,
+                "Named sources": mg_sources,
+                "Assumptions and limitations": mg_assumptions,
+            }
+            missing_market = [label for label, value in required_values.items() if not str(value or "").strip()]
+            if mg_end_year <= mg_start_year:
+                missing_market.append("A projection year later than the starting year")
+
+            if missing_market:
+                st.error("Please complete: " + ", ".join(missing_market))
+            else:
+                market_data = {
+                    "customer_segments": mg_customer_segments.strip(),
+                    "geography": mg_geography.strip(),
+                    "market_need": mg_market_need.strip(),
+                    "routes_to_market": mg_routes.strip(),
+                    "strategic_partners": mg_partners.strip(),
+                    "figure_status": mg_figure_status,
+                    "currency": mg_currency,
+                    "start_year": int(mg_start_year),
+                    "end_year": int(mg_end_year),
+                    "start_value": float(mg_start_value),
+                    "end_value": float(mg_end_value),
+                    "tam": float(mg_tam),
+                    "sam": float(mg_sam),
+                    "som": float(mg_som),
+                    "competitors": mg_competitors.strip(),
+                    "differentiation": mg_differentiation.strip(),
+                    "pricing_notes": mg_pricing_notes.strip(),
+                    "evidence_checks": list(mg_evidence_checks),
+                    "sources": mg_sources.strip(),
+                    "assumptions": mg_assumptions.strip(),
+                    "evidence_file_names": [getattr(f, "name", "market evidence") for f in (market_uploads or [])]
+                    or existing_market.get("evidence_file_names", []),
+                    "saved_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                }
+                ss["market_growth"] = market_data
+                if market_uploads:
+                    ss["market_evidence_uploads"] = market_uploads
+                st.success("Market Growth analysis saved. Review the calculated indicators below.")
+
+    market_data = ss.get("market_growth", {}) or {}
+    if not market_data:
+        st.warning("Complete and save the form to generate the market indicators and report.")
+    else:
+        metrics = market_metrics(market_data)
+        currency = market_data.get("currency", "Currency")
+
+        st.subheader("5. Calculated indicators")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Evidence completeness", f"{metrics['evidence_score']}/100")
+        m2.metric("Calculated CAGR", f"{metrics['cagr']:.1f}%" if metrics["cagr"] is not None else "Not available")
+        m3.metric("SAM as % of TAM", f"{metrics['sam_share']:.1f}%" if metrics["sam_share"] is not None else "Not available")
+        m4.metric("SOM as % of SAM", f"{metrics['som_share']:.1f}%" if metrics["som_share"] is not None else "Not available")
+
+        if metrics["evidence_score"] >= 75:
+            st.success(metrics["evidence_band"])
+        elif metrics["evidence_score"] >= 45:
+            st.warning(metrics["evidence_band"])
+        else:
+            st.error(metrics["evidence_band"])
+        st.caption(
+            "Evidence completeness records whether key categories and named sources are present. "
+            "It does not verify the evidence or predict commercial success."
+        )
+
+        if metrics["warnings"]:
+            for warning in metrics["warnings"]:
+                st.warning(warning)
+
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1:
+            if any([metrics["tam"], metrics["sam"], metrics["som"]]):
+                funnel_fig = go.Figure(
+                    go.Bar(
+                        x=["TAM", "SAM", "SOM"],
+                        y=[metrics["tam"], metrics["sam"], metrics["som"]],
+                        marker_color=[PRIMARY_NAVY, ACCENT_BLUE, ACCENT_PURPLE],
+                        text=[f"{currency} {value:,.0f}" for value in [metrics["tam"], metrics["sam"], metrics["som"]]],
+                        textposition="auto",
+                    )
+                )
+                funnel_fig.update_layout(title="Addressable-market funnel", yaxis_title=currency, height=360)
+                st.plotly_chart(funnel_fig, width="stretch")
+        with chart_col2:
+            if metrics["start_value"] > 0 and metrics["end_value"] > 0:
+                growth_fig = go.Figure(
+                    go.Scatter(
+                        x=[market_data.get("start_year"), market_data.get("end_year")],
+                        y=[metrics["start_value"], metrics["end_value"]],
+                        mode="lines+markers+text",
+                        line={"color": ACCENT_BLUE, "width": 4},
+                        marker={"size": 10},
+                        text=[f"{currency} {metrics['start_value']:,.0f}", f"{currency} {metrics['end_value']:,.0f}"],
+                        textposition="top center",
+                    )
+                )
+                growth_fig.update_layout(title="Recorded market-growth scenario", yaxis_title=currency, height=360)
+                st.plotly_chart(growth_fig, width="stretch")
+
+        st.subheader("6. Licensing implications for professional review")
+        for implication in licensing_implications(market_data, metrics):
+            st.markdown(f"- {implication}")
+
+        named_sources = source_lines(market_data.get("sources"))
+        with st.expander(f"Evidence register ({len(named_sources)} named source(s))"):
+            if named_sources:
+                for source in named_sources:
+                    st.markdown(f"- {source}")
+            else:
+                st.markdown("No named sources recorded.")
+            for filename in market_data.get("evidence_file_names", []):
+                st.markdown(f"- Uploaded file: {filename}")
+
+        if st.button("Generate Market Growth Report (DOCX/TXT)", key="btn_market_growth_page"):
+            title, body = build_market_growth_report(
+                market_data,
+                ss.get("case_name", "Untitled Company"),
+                ss.get("sector", "Other"),
+            )
+            data, fname, mime = _export_bytes(title, body)
+            market_folder = OUT_ROOT / _safe(ss.get("case_name", "Untitled Company"))
+            path, msg = _save_bytes(market_folder, fname, data)
+            st.download_button(
+                label="Download Market Growth Report",
+                data=data,
+                file_name=fname,
+                mime=mime,
+                key="dl_market_growth_page",
+            )
+            (st.success if path else st.warning)(msg)
+
+# 7) LICENSING TEMPLATES
 elif page == "Licensing Templates":
     st.header("Licensing Templates (editable DOCX/TXT)")
     case = ss.get("case_name", "Untitled Company")
