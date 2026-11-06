@@ -19,6 +19,13 @@ from market_growth import (
     market_metrics,
     source_lines,
 )
+from innovation_capacity import (
+    DIMENSIONS as INNOVATION_DIMENSIONS,
+    EVIDENCE_LABELS as INNOVATION_EVIDENCE_LABELS,
+    MATURITY_LABELS as INNOVATION_MATURITY_LABELS,
+    build_innovation_capacity_report,
+    capacity_metrics,
+)
 
 # -------------------- PROJECT LOGOS -----------------
 IMPACT3T_LOGO_PATH = "demo_assets/impact3t_logo.png"
@@ -1200,6 +1207,10 @@ ss.setdefault("verification_notes", "")
 ss.setdefault("market_growth", {})
 ss.setdefault("market_evidence_uploads", [])
 
+# Innovation Capacity workspace
+ss.setdefault("innovation_capacity", {})
+ss.setdefault("innovation_capacity_uploads", [])
+
 SIZES = [
     "Micro (1–10)",
     "Small (11–50)",
@@ -1258,6 +1269,7 @@ with st.sidebar:
             "Asset Verification",
             "LIP Console",
             "Reports",
+            "Innovation Capacity",
             "Market Growth",
             "Licensing Templates",
             "LIP Assistant",
@@ -2456,13 +2468,180 @@ elif page == "Reports":
                 )
                 (st.success if path else st.warning)(msg)
 
+    st.markdown("#### Organisational capability")
+    if st.button("Generate Innovation Capacity Report (DOCX/TXT)", key="btn_innovation_capacity"):
+        if not ss.get("innovation_capacity"):
+            st.warning("Complete and save the Innovation Capacity page first.")
+        else:
+            title, body = build_innovation_capacity_report(
+                ss.get("innovation_capacity", {}),
+                ss.get("case_name", "Untitled Company"),
+                ss.get("sector", "Other"),
+            )
+            data, fname, mime = _export_bytes(title, body)
+            path, msg = _save_bytes(case_folder, fname, data)
+            st.download_button(
+                label="Download Innovation Capacity Report",
+                data=data,
+                file_name=fname,
+                mime=mime,
+                key="dl_innovation_capacity",
+            )
+            (st.success if path else st.warning)(msg)
+
     st.caption(
         "Server save root: disabled (public mode)"
         if PUBLIC_MODE
         else f"Server save root: {OUT_ROOT}"
     )
 
-# 6) MARKET GROWTH
+# 6) INNOVATION CAPACITY
+elif page == "Innovation Capacity":
+    st.header("Innovation Capacity")
+    st.info(
+        "Assess whether the organisation can repeatedly turn ideas, evidence and partnerships into useful outcomes. "
+        "The score combines maturity with evidence strength so that confident claims do not substitute for proof."
+    )
+
+    existing_capacity = ss.get("innovation_capacity", {}) or {}
+    existing_dimensions = existing_capacity.get("dimensions", {}) or {}
+
+    with st.form("innovation_capacity_form"):
+        st.subheader("1. Assess the eight capacity dimensions")
+        st.caption(
+            "Maturity describes how consistently the practice operates. Evidence describes how confidently it can be verified. "
+            "Incomplete answers are allowed and will appear as gaps."
+        )
+        capacity_values: Dict[str, Dict[str, Any]] = {}
+        capacity_columns = st.columns(2)
+        for index, (key, meta) in enumerate(INNOVATION_DIMENSIONS.items()):
+            stored = existing_dimensions.get(key, {}) or {}
+            with capacity_columns[index % 2]:
+                with st.expander(meta["label"], expanded=True):
+                    st.caption(meta["prompt"])
+                    maturity = st.selectbox(
+                        "Maturity",
+                        options=list(INNOVATION_MATURITY_LABELS.keys()),
+                        index=max(0, min(4, int(stored.get("maturity", 0) or 0))),
+                        format_func=lambda value: f"{value} — {INNOVATION_MATURITY_LABELS[value]}",
+                        key=f"innovation_maturity_{key}",
+                    )
+                    evidence = st.selectbox(
+                        "Evidence strength",
+                        options=list(INNOVATION_EVIDENCE_LABELS.keys()),
+                        index=max(0, min(3, int(stored.get("evidence", 0) or 0))),
+                        format_func=lambda value: f"{value} — {INNOVATION_EVIDENCE_LABELS[value]}",
+                        key=f"innovation_evidence_{key}",
+                    )
+                    notes = st.text_area(
+                        "Evidence note",
+                        value=stored.get("notes", ""),
+                        height=90,
+                        placeholder="Name the practice, owner, date, result and supporting artefact.",
+                        key=f"innovation_notes_{key}",
+                    )
+                    capacity_values[key] = {
+                        "maturity": int(maturity),
+                        "evidence": int(evidence),
+                        "notes": notes.strip(),
+                    }
+
+        st.subheader("2. Supporting evidence")
+        capacity_uploads = st.file_uploader(
+            "Upload innovation-capacity evidence",
+            type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg", "webp"],
+            accept_multiple_files=True,
+            key="innovation_capacity_uploader",
+            help="Examples: strategy or portfolio review, skills register, development log, experiment log, governance pack, partner review and KPI dashboard.",
+        )
+        capacity_limitations = st.text_area(
+            "Known limitations, context or recent changes",
+            value=existing_capacity.get("limitations", ""),
+            height=90,
+        )
+        save_capacity = st.form_submit_button("Save Innovation Capacity assessment")
+
+        if save_capacity:
+            capacity_data = {
+                "dimensions": capacity_values,
+                "limitations": capacity_limitations.strip(),
+                "evidence_file_names": [getattr(f, "name", "capacity evidence") for f in (capacity_uploads or [])]
+                or existing_capacity.get("evidence_file_names", []),
+                "saved_at": datetime.datetime.now().isoformat(timespec="seconds"),
+            }
+            ss["innovation_capacity"] = capacity_data
+            if capacity_uploads:
+                ss["innovation_capacity_uploads"] = capacity_uploads
+            st.success("Innovation Capacity assessment saved.")
+
+    capacity_data = ss.get("innovation_capacity", {}) or {}
+    if not capacity_data:
+        st.warning("Complete and save the assessment to generate capacity indicators and a report.")
+    else:
+        metrics = capacity_metrics(capacity_data)
+        st.subheader("3. Capacity profile")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Overall capacity", f"{metrics['overall']}/100")
+        m2.metric("Evidence confidence", f"{metrics['confidence']}/100")
+        m3.metric("Strongest dimension", metrics["strengths"][0]["label"])
+        m4.metric("First priority", metrics["priorities"][0]["label"])
+
+        if metrics["overall"] >= 75:
+            st.success(metrics["band"])
+        elif metrics["overall"] >= 35:
+            st.warning(metrics["band"])
+        else:
+            st.error(metrics["band"])
+
+        capacity_chart = go.Figure(
+            go.Bar(
+                x=[row["score"] for row in metrics["rows"]],
+                y=[row["label"] for row in metrics["rows"]],
+                orientation="h",
+                marker_color=[ACCENT_BLUE if row["score"] >= 55 else ACCENT_PURPLE for row in metrics["rows"]],
+                text=[f"{row['score']:.0f}" for row in metrics["rows"]],
+                textposition="auto",
+            )
+        )
+        capacity_chart.update_layout(
+            title="Innovation-capacity profile",
+            xaxis={"title": "Score / 100", "range": [0, 100]},
+            height=480,
+            margin={"l": 20, "r": 20, "t": 60, "b": 20},
+        )
+        st.plotly_chart(capacity_chart, width="stretch")
+
+        st.subheader("4. Priority actions")
+        for number, row in enumerate(metrics["priorities"], 1):
+            st.markdown(
+                f"{number}. **{row['label']} ({row['score']}/100):** define one repeatable practice, "
+                "one accountable owner, one measurable outcome and one dated evidence artefact."
+            )
+        for warning in metrics["warnings"]:
+            st.warning(warning)
+
+        st.caption(
+            "The result is a structured discussion aid. It is not an innovation certification, audit or prediction of commercial success."
+        )
+        if st.button("Generate Innovation Capacity Report (DOCX/TXT)", key="btn_innovation_capacity_page"):
+            title, body = build_innovation_capacity_report(
+                capacity_data,
+                ss.get("case_name", "Untitled Company"),
+                ss.get("sector", "Other"),
+            )
+            data, fname, mime = _export_bytes(title, body)
+            capacity_folder = OUT_ROOT / _safe(ss.get("case_name", "Untitled Company"))
+            path, msg = _save_bytes(capacity_folder, fname, data)
+            st.download_button(
+                label="Download Innovation Capacity Report",
+                data=data,
+                file_name=fname,
+                mime=mime,
+                key="dl_innovation_capacity_page",
+            )
+            (st.success if path else st.warning)(msg)
+
+# 7) MARKET GROWTH
 elif page == "Market Growth":
     st.header("Market Growth & Commercial Evidence")
     st.info(

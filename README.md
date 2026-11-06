@@ -65,6 +65,25 @@ Market figures are explicitly labelled as sourced evidence, mixed evidence,
 internal estimates or unverified assumptions. The tool does not independently
 verify the evidence or treat market opportunity as proof of licence readiness.
 
+## Innovation Capacity workspace
+
+The **Innovation Capacity** page assesses eight organisational dimensions:
+
+- innovation strategy;
+- leadership and culture;
+- people and skills;
+- knowledge, data and IP;
+- process and portfolio;
+- partnerships and market learning;
+- resources and funding; and
+- measurement and governance.
+
+Each dimension records both maturity (0–4) and evidence strength (0–3). The
+combined profile highlights strengths, constraints and three 90-day priorities,
+and produces an editable Innovation Capacity report from the page or from
+**Reports & Exports**. The score is a structured discussion aid, not an audit,
+certification or prediction of innovation success.
+
 ---
 
 ## 5) Password
