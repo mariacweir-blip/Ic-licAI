@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 import io, os, tempfile, re, csv, datetime
+from PyPDF2 import PdfReader
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
@@ -482,7 +483,15 @@ TEXT_EXT = {".txt"}
 DOCX_EXT = {".docx"}
 PPTX_EXT = {".pptx"}
 CSV_EXT = {".csv"}
-PDF_EXT = {".pdf"}  # filename cue only (kept for future)
+PDF_EXT = {".pdf"}
+
+
+def _extract_text_pdf(data: bytes) -> str:
+    try:
+        reader = PdfReader(io.BytesIO(data))
+        return "\n".join((page.extract_text() or "") for page in reader.pages[:150])
+    except Exception:
+        return ""
 
 
 def _extract_text_docx(data: bytes) -> str:
@@ -628,7 +637,7 @@ def _read_text(files: List[Any]) -> Tuple[str, Dict[str, int], Dict[str, float]]
             elif ext in CSV_EXT:
                 text = _extract_text_csv(raw, name)
             elif ext in PDF_EXT:
-                text = f"[[PDF:{name}]]"
+                text = _extract_text_pdf(raw)
             else:
                 text = f"[[FILE:{name}]]"
 
@@ -1690,12 +1699,22 @@ if page == "Company":
         
         st.success("TTO / Netval quick-screening enabled: this tool helps identify whether assets are ready for licensing, co-creation, or knowledge transfer.")
         
+        assessment_mode = st.radio("Assessment type", ["New assessment", "Update existing assessment"], horizontal=True)
+        if assessment_mode == "Update existing assessment":
+            st.info("Upload the latest IC-LicAI report (DOCX or text-based PDF) together with the new evidence. Select the previous report below.")
         uploads = st.file_uploader(
             "Upload evidence (PDF, DOCX, TXT, CSV, XLSX, PPTX, images)",
             type=["pdf", "docx", "txt", "csv", "xlsx", "pptx", "png", "jpg", "jpeg", "webp"],
             accept_multiple_files=True,
             key="uploader_main",
         )
+
+        prior_report_name = ""
+        if assessment_mode == "Update existing assessment":
+            prior_report_name = st.selectbox(
+                "Select the previous IC-LicAI report",
+                ["Select a report"] + [f.name for f in (uploads or []) if f.name.lower().endswith((".docx", ".pdf"))],
+            )
 
         submitted = st.form_submit_button("Save details")
 
@@ -1787,6 +1806,8 @@ if page == "Company":
                 ss["full_context_block"] = ""
                 ss["auto_split_on_save"] = False
 
+                ss["assessment_mode"] = assessment_mode
+                ss["prior_report_name"] = prior_report_name if prior_report_name != "Select a report" else ""
                 if uploads:
                     ss["uploads"] = uploads
                     inherited = _populate_specialist_workspaces_from_evidence(uploads)
@@ -1903,7 +1924,19 @@ elif page == "Analyse Evidence":
     if st.button("Run analysis now"):
         uploads: List[Any] = ss.get("uploads") or []
         inherited = _populate_specialist_workspaces_from_evidence(uploads)
-        extracted, counts, weights = _read_text(uploads)
+        prior_name = ss.get("prior_report_name", "") if ss.get("assessment_mode") == "Update existing assessment" else ""
+        prior_files = [f for f in uploads if f.name == prior_name]
+        new_files = [f for f in uploads if f.name != prior_name]
+        extracted, counts, weights = _read_text(new_files)
+        baseline_text, _, _ = _read_text(prior_files)
+        if ss.get("assessment_mode") == "Update existing assessment":
+            if not prior_files:
+                st.error("Select and upload the previous IC-LicAI report on the Company page.")
+                st.stop()
+            if len(baseline_text.strip()) < 120 or "[[NO-TEXT-EXTRACTED]]" in baseline_text:
+                st.error("The previous report has no readable text. Use a text-based PDF or Word version.")
+                st.stop()
+
 
         ss["file_counts"] = counts or {}
 
@@ -1930,6 +1963,16 @@ elif page == "Analyse Evidence":
         case = ss.get("case_name", "Untitled Company")
         interpreted = _build_interpreted_summary(case, leaf_scores, ic_map, ten, quality, context)
 
+        if prior_files:
+            interpreted += (
+                "\n\nASSESSMENT CONTINUITY — PREVIOUS REPORT\n"
+                + "Previous report: " + prior_name + "\n"
+                + "New evidence documents: " + str(len(new_files)) + "\n"
+                + "Current scores are recalculated using the new evidence and current company answers. "
+                + "The previous report below is historical context for professional comparison; "
+                + "earlier scores are not automatically restored or revalidated.\n\n"
+                + baseline_text[:14000]
+            )
         ss["combined_text"] = interpreted
         ss["narrative"] = interpreted
         try:
