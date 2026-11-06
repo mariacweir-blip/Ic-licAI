@@ -141,6 +141,21 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.caption("INTERNAL VERSION — FOR REAL EVIDENCE (PASS-PHRASE PROTECTED)")
+
+# Explain evidence handling before the user enters company data or uploads files.
+with st.expander("How IC-LicAI handles your evidence", expanded=True):
+    st.markdown("""
+**IC-LicAI analyses documents; it is not a document storage system.**
+
+- **No evidence database:** The tool does not maintain a database of uploaded source documents.
+- **During the session:** Uploaded evidence is available across the analysis pages, so it does not need to be uploaded repeatedly.
+- **What reports contain:** Reports summarise and interpret the evidence. They do **not** include or archive the original uploaded files.
+- **After the session:** Keep your original documents and download any reports you wish to retain. Do not rely on the tool to retrieve previous uploads.
+- **Server exports:** In private/internal mode, generated report files may be saved to server storage; public/demo mode disables that server-save function. This is separate from storage of the original evidence.
+
+**Confidentiality:** Only upload documents you are authorised to use. The absence of a database does not guarantee immediate deletion of temporary files, hosting logs or backups; any formal retention or deletion assurance must be confirmed with the hosting administrator.
+""")
+
 st.markdown(
     '<div class="ic-title-bar">IC-LicAI Expert Console</div>',
     unsafe_allow_html=True,
@@ -1655,7 +1670,7 @@ if page == "Company":
             height=60,
         )
 
-        st.caption("Uploads are held in session until analysis. Nothing is written to server until export.")
+        st.caption("Uploaded evidence is used during this session; reports summarise findings rather than retaining source documents. See the evidence-handling notice above.")
         st.markdown("#### Suggested Evidence (for stronger results)")
 
         st.info(
